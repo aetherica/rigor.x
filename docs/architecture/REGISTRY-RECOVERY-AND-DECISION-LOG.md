@@ -143,3 +143,38 @@ A second pass was performed against the connected GitHub account and the current
 | Historical `aetherica/aetherica-rigor` access | BLOCKED — 404 |
 
 This follow-up records observations only. It does not mark WS-01 complete and does not claim implementation or CI completion.
+
+
+## 8. Concrete recovery and machine-readable seed — 2026-11-25
+
+This pass recovered concrete historical material and committed machine-readable seed records to `main`. It supersedes the earlier statement that the 36-domain list was not recovered.
+
+### 8.1 Newly recovered material
+- Ordered 36-name Knowledge Domain list from the 2026-11-24 prior-conversation record; historical assistant-produced list, pending owner ratification.
+- Ordered 14-name analytical-operator list from the same record; canonical target remains 15 and `OP-015` is explicitly `NOT_RECOVERED`.
+- Repository tree enumeration located the 999-entry slash-command research corpus in Markdown, CSV and JSON assets. Its own documentation classifies it as a research/candidate corpus, not a 999-handler operational registry.
+- README and recovery-plan records confirm a separate historical 102-command operational/interface target. The installed plugin's 91 definitions do not prove the missing 11.
+
+### 8.2 New committed artifacts
+- `docs/recovery/RECOVERED-HISTORICAL-INVENTORIES-2026-11-25.md`
+- `registries/knowledge-domains.historical.json`
+- `registries/analytical-operators.historical.json`
+- `registries/registry-recovery-status.json`
+
+### 8.3 Read-back validation
+All four artifacts were read back from `main`. The three JSON files parsed successfully. The Knowledge Domain file contains 36 entries with 36 unique names. The operator file contains 15 reserved IDs, 14 named historical candidates, 15 unique IDs, and an explicit `OP-015` record with `NOT_RECOVERED`.
+
+### 8.4 Current inventory state
+| Inventory | Current state |
+|---|---|
+| 30 formulas | NOT_RECOVERED |
+| 33 algorithms | NOT_RECOVERED |
+| 111 analytical topics | NOT_RECOVERED |
+| 15 operators | PARTIAL: 14 historical candidates + OP-015 unknown |
+| 18 functional groups | NOT_RECOVERED |
+| 36 knowledge domains | RECOVERED as historical assistant record; ratification pending |
+| 999 slash commands | 999-entry research corpus located; operational handler mapping pending |
+| 102 interface/operational commands | Historical target confirmed; 91 plugin reference definitions reported; 11 gap unresolved |
+
+### 8.5 Engineering decision
+Do not hold all engineering until every historical list is recovered. Begin schema, provenance, reserved-slot, validation and crosswalk work using these explicit source/status distinctions. Do not promote historical assistant records or research-corpus entries to owner-approved canonical operational records without the required review.
