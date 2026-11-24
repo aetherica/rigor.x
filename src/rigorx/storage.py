@@ -12,10 +12,11 @@ from __future__ import annotations
 import json
 import os
 import sqlite3
+from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any, Self
 
 from rigorx.pipeline import PipelineRun
 
@@ -73,7 +74,7 @@ class SQLitePipelineStore:
         self._initialize()
 
     @contextmanager
-    def _transaction(self):
+    def _transaction(self) -> Iterator[None]:
         """Explicit transaction even with SQLite autocommit enabled."""
         self._connection.execute("BEGIN IMMEDIATE")
         try:
@@ -201,7 +202,7 @@ class SQLitePipelineStore:
     def close(self) -> None:
         self._connection.close()
 
-    def __enter__(self) -> "SQLitePipelineStore":
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(self, exc_type: object, exc: object, traceback: object) -> None:
