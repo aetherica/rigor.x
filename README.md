@@ -27,6 +27,10 @@ The project requirements include, without reduction:
 
 These are requirements, not claims of current implementation. Item-level registry content and runtime implementation must be independently recovered, ratified, tested and verified; fixed cardinalities do not prove that each entry exists.
 
+## AI System Engineering workspace
+
+The dedicated engineering dossier is stored in [`engineering/ai-system/`](engineering/ai-system/00-ENGINEERING-INDEX.md). It contains the standards applicability map, architecture, threat model, quality/testing protocol, implementation roadmap, execution receipts, quickstart and requirements traceability. This is an evolving engineering workspace; it does not claim formal standards certification.
+
 ## Primary operational pipeline
 
 The owner-defined 11-stage RIGOR-X pipeline is specified in [Primary Operational Pipeline](docs/architecture/PRIMARY-OPERATIONAL-PIPELINE.md). Its first deterministic state-machine implementation is in `src/rigorx/pipeline.py`; implementation and verification status are tracked in [Pipeline Implementation Ledger](docs/recovery/PIPELINE-IMPLEMENTATION-LEDGER.md).
