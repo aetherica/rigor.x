@@ -9,6 +9,9 @@ description = "Deterministic control-plane primitives for the RIGOR-X intelligen
 requires-python = ">=3.13"
 dependencies = []
 
+[project.optional-dependencies]
+test = ["jsonschema>=4.25"]
+
 [tool.setuptools]
 package-dir = {"" = "src"}
 
