@@ -114,6 +114,14 @@ class SQLitePipelineStoreTests(unittest.TestCase):
             self.assertEqual(persisted.snapshot, PipelineRun("durable-rollback").snapshot())
             self.assertEqual(store.integrity_check(), ["ok"])
 
+    def test_file_database_permissions_are_owner_only(self) -> None:
+        import os
+        with tempfile.TemporaryDirectory() as tmp:
+            db = Path(tmp) / "private.sqlite3"
+            with SQLitePipelineStore(db):
+                mode = os.stat(db).st_mode & 0o777
+                self.assertEqual(mode, 0o600)
+
     def test_run_not_found(self) -> None:
         with SQLitePipelineStore(":memory:") as store:
             with self.assertRaises(RunNotFound):
