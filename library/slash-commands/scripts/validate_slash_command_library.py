@@ -103,7 +103,7 @@ def main():
             fail(f"command schema violation for {item['name']}: {errors[0].message}")
 
     registry = Registry().with_resource(
-        "https://aetherica.github.io/rigor.x/schemas/command.schema.json",
+        "https://aetherica.github.io/rigor.x/schemas/slash-command.schema.json",
         Resource.from_contents(command_schema),
     )
     library_validator = Draft202012Validator(library_schema, registry=registry)
