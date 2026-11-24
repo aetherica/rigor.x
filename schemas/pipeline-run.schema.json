@@ -1,0 +1,151 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/aetherica/rigor.x/blob/main/schemas/pipeline-run.schema.json",
+  "title": "RIGOR-X Pipeline Run Snapshot",
+  "description": "Versioned, serializable state snapshot for the 11-stage RIGOR-X pipeline.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "run_id",
+    "pipeline_version",
+    "current_stage",
+    "status",
+    "verification_accepted",
+    "reentry_count",
+    "max_reentries",
+    "stage_status",
+    "events"
+  ],
+  "properties": {
+    "run_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "pipeline_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "current_stage": {
+      "$ref": "#/$defs/stage"
+    },
+    "status": {
+      "enum": [
+        "CREATED",
+        "IN_PROGRESS",
+        "WAITING_FOR_USER",
+        "PARTIAL",
+        "BLOCKED",
+        "FAILED",
+        "VERIFICATION_FAILED",
+        "DECISION_PENDING",
+        "COMPLETED",
+        "CANCELLED"
+      ]
+    },
+    "verification_accepted": {
+      "type": "boolean"
+    },
+    "reentry_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "max_reentries": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "stage_status": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "CONTEXT",
+        "INTENT",
+        "KNOWLEDGE",
+        "RESEARCH",
+        "ROUTING",
+        "REASONING",
+        "EXECUTION",
+        "EVIDENCE",
+        "VERIFICATION",
+        "DECISION",
+        "FEEDBACK"
+      ],
+      "properties": {
+        "CONTEXT": { "$ref": "#/$defs/stageStatus" },
+        "INTENT": { "$ref": "#/$defs/stageStatus" },
+        "KNOWLEDGE": { "$ref": "#/$defs/stageStatus" },
+        "RESEARCH": { "$ref": "#/$defs/stageStatus" },
+        "ROUTING": { "$ref": "#/$defs/stageStatus" },
+        "REASONING": { "$ref": "#/$defs/stageStatus" },
+        "EXECUTION": { "$ref": "#/$defs/stageStatus" },
+        "EVIDENCE": { "$ref": "#/$defs/stageStatus" },
+        "VERIFICATION": { "$ref": "#/$defs/stageStatus" },
+        "DECISION": { "$ref": "#/$defs/stageStatus" },
+        "FEEDBACK": { "$ref": "#/$defs/stageStatus" }
+      }
+    },
+    "events": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/event" }
+    }
+  },
+  "$defs": {
+    "stage": {
+      "enum": [
+        "CONTEXT",
+        "INTENT",
+        "KNOWLEDGE",
+        "RESEARCH",
+        "ROUTING",
+        "REASONING",
+        "EXECUTION",
+        "EVIDENCE",
+        "VERIFICATION",
+        "DECISION",
+        "FEEDBACK"
+      ]
+    },
+    "stageStatus": {
+      "enum": [
+        "NOT_STARTED",
+        "READY",
+        "IN_PROGRESS",
+        "COMPLETED",
+        "PARTIAL",
+        "BLOCKED",
+        "FAILED",
+        "SKIPPED_WITH_REASON"
+      ]
+    },
+    "event": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sequence",
+        "event_type",
+        "stage",
+        "timestamp",
+        "details"
+      ],
+      "properties": {
+        "sequence": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "event_type": {
+          "type": "string",
+          "minLength": 1
+        },
+        "stage": {
+          "$ref": "#/$defs/stage"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "details": {
+          "type": "object"
+        }
+      }
+    }
+  }
+}
