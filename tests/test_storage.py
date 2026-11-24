@@ -54,6 +54,19 @@ class SQLitePipelineStoreTests(unittest.TestCase):
             self.assertEqual(stored.revision, 2)
             self.assertEqual(len(stored.snapshot["events"]), 2)
 
+    def test_concurrent_writer_with_stale_revision_is_rejected(self) -> None:
+        with SQLitePipelineStore(":memory:") as store:
+            initial = PipelineRun("durable-concurrent-001")
+            revision = store.save(initial)
+            writer_a = PipelineRun.from_snapshot(initial.snapshot())
+            writer_b = PipelineRun.from_snapshot(initial.snapshot())
+            writer_a.begin_stage()
+            writer_b.begin_stage()
+            revision = store.save(writer_a, expected_revision=revision)
+            with self.assertRaises(RevisionConflict):
+                store.save(writer_b, expected_revision=1)
+            self.assertEqual(store.load(initial.run_id).snapshot, writer_a.snapshot())
+
     def test_stale_revision_rejected(self) -> None:
         with SQLitePipelineStore(":memory:") as store:
             run = PipelineRun("durable-003")
