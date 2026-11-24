@@ -1,13 +1,13 @@
 {
   "library_id": "AETHERICA-RIGORX-SLASH-COMMAND-LIBRARY",
   "title": "Aetherica RIGOR-X Slash Command Library",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "status": "research_candidate_library",
   "canonical_branch": "main",
   "canonical_path": "library/slash-commands/",
   "total_entries": 999,
   "unique_names": 999,
-  "group_count": 17,
+  "group_count": 18,
   "classification_counts": {
     "MACRO ALIAS": 6,
     "MACRO": 647,
