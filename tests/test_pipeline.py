@@ -138,6 +138,28 @@ class PipelineRunTests(unittest.TestCase):
         run.begin_stage()
         self.assertEqual(run.complete_stage(), Stage.FEEDBACK)
 
+    def test_snapshot_round_trip_restores_pipeline_state(self) -> None:
+        run = PipelineRun("run-012")
+        run.begin_stage()
+        run.record_evidence(
+            evidence_type="source_record",
+            source_ref="https://example.invalid/source",
+            claim_ref="CLM-001",
+        )
+        snapshot = run.snapshot()
+        restored = PipelineRun.from_snapshot(snapshot)
+        self.assertEqual(restored.snapshot(), snapshot)
+        self.assertEqual(restored.current_stage, Stage.CONTEXT)
+        self.assertEqual(restored.stage_status[Stage.CONTEXT], StageStatus.IN_PROGRESS)
+
+    def test_snapshot_rejects_non_contiguous_event_sequence(self) -> None:
+        run = PipelineRun("run-013")
+        run.begin_stage()
+        snapshot = run.snapshot()
+        snapshot["events"][0]["sequence"] = 3
+        with self.assertRaises(ValueError):
+            PipelineRun.from_snapshot(snapshot)
+
     def test_snapshot_is_json_serializable(self) -> None:
         import json
 
