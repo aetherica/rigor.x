@@ -4,7 +4,7 @@
 **Repository:** `aetherica/rigor.x`  
 **Branch:** `main`  
 **Pipeline:** Owner-defined 11-stage sequence  
-**Ledger status:** PARTIAL — specification and first deterministic core increment committed; tests/CI not yet verified.
+**Ledger status:** PARTIAL — specification, deterministic state machine, snapshot contract and 16 passing CI tests committed; external adapters and durable storage remain unimplemented.
 
 ## 1. Governing pipeline
 
@@ -20,8 +20,10 @@ The canonical stage contracts are in `docs/architecture/PRIMARY-OPERATIONAL-PIPE
 | Align cognitive architecture to the owner-defined sequence | `docs/architecture/RIGOR-X-COGNITIVE-INTELLIGENCE-ARCHITECTURE.md` | COMMITTED; read-back verified |
 | Implement deterministic stage/state controller | `src/rigorx/pipeline.py` | COMMITTED; read-back verified |
 | Add stage order, verification, evidence, re-entry and state-transition tests | `tests/test_pipeline.py` | COMMITTED; read-back verified; execution pending |
-| Add Python package metadata | `pyproject.toml` | COMMITTED; read-back verified |
-| Add GitHub Actions pipeline contract workflow | `.github/workflows/rigorx-pipeline.yml` | COMMITTED; read-back verified; run result not returned |
+| Add Python package metadata and test dependency | `pyproject.toml` | COMMITTED; read-back verified |
+| Define strict JSON Schema Draft 2020-12 run snapshot contract | `schemas/pipeline-run.schema.json` | COMMITTED; CI schema validation PASS |
+| Add validated snapshot restoration and event integrity checks | `PipelineRun.from_snapshot()` | COMMITTED; CI tests PASS |
+| Add GitHub Actions pipeline contract workflow | `.github/workflows/rigorx-pipeline.yml` | COMMITTED; run #15 PASS |
 
 ## 3. Runtime core scope in this increment
 
@@ -35,7 +37,9 @@ The first implementation increment provides:
 - bounded re-entry to current/earlier stages;
 - forced corrective re-entry to an earlier stage after failed verification;
 - partial, blocked, waiting-for-user, resume and cancellation transitions;
-- append-only in-memory event list and JSON-serializable state snapshot.
+- append-only in-memory event list and JSON-serializable state snapshot;
+- validated snapshot restoration with strict type, timestamp, stage-set and event-sequence checks;
+- JSON Schema validation of the run snapshot.
 
 This is a deterministic in-memory control-plane primitive. It is not yet a persistent workflow engine, research crawler, tool adapter, model router, knowledge graph, durable evidence store or autonomous executor.
 
@@ -46,9 +50,9 @@ This is a deterministic in-memory control-plane primitive. It is not yet a persi
 | GitHub commit creation | CONFIRMED |
 | File read-back from `main` | CONFIRMED |
 | 11-stage ordering represented in code and tests | INSPECTED |
-| Unit tests executed locally | NOT RUN |
-| GitHub Actions run receipt | NOT RETURNED |
-| CI pass/fail | NOT VERIFIED |
+| Unit test execution | 16 tests PASS in GitHub Actions on CPython 3.15.2 |
+| GitHub Actions run receipt | VERIFIED — [run #15](https://github.com/aetherica/rigor.x/actions/runs/45509490594) |
+| CI pass/fail | PASS — commit `57fe478d48cc8aaf504f13a85ced36acdd557f55` |
 | Persistence/restart recovery | NOT IMPLEMENTED |
 | Live host/tool/provider routing | NOT IMPLEMENTED |
 | Durable evidence/provenance storage | NOT IMPLEMENTED |
@@ -59,14 +63,14 @@ A missing workflow receipt is not a passing CI result. No test-pass claim is mad
 
 ## 5. Next implementation increments
 
-1. Add typed JSON Schema contracts for the run envelope, stage records, evidence records, route receipts, verification reports and feedback records.
-2. Add deterministic serialization/deserialization and restart/resume tests.
+1. Extend the run schema with typed stage payloads, route receipts, evidence records, verification reports and feedback records.
+2. Add a durable storage adapter and restart/recovery integration tests; current snapshots are in-memory only.
 3. Add registry resolution interfaces for KD/TP/FM/AL/OP/FG/CMD while preserving historical/proposed/ratified/implemented/verified status.
 4. Add capability and acquisition-channel interfaces; distinguish plan from actual adapter receipts.
-5. Add evidence/provenance and contradiction-ledger interfaces.
+5. Add durable evidence/provenance and contradiction-ledger interfaces.
 6. Add verification policy and decision authorization gates.
 7. Add adapter contract tests and end-to-end pipeline acceptance tests.
-8. Inspect actual GitHub Actions runs and fix any observed failures before marking tests verified.
+8. Continue inspecting CI and expand adversarial/failure-recovery coverage.
 
 ## 6. Non-regression rules
 
