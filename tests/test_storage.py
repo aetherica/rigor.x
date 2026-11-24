@@ -13,6 +13,18 @@ from rigorx.storage import (
 
 
 class SQLitePipelineStoreTests(unittest.TestCase):
+    def test_persisted_snapshot_schema_valid(self) -> None:
+        schema_path = Path(__file__).resolve().parents[1] / "schemas" / "pipeline-run.schema.json"
+        import json
+        from jsonschema import Draft202012Validator, FormatChecker
+        schema = json.loads(schema_path.read_text(encoding="utf-8"))
+        validator = Draft202012Validator(schema, format_checker=FormatChecker())
+        with SQLitePipelineStore(":memory:") as store:
+            run = PipelineRun("durable-schema-001")
+            run.begin_stage()
+            store.save(run)
+            validator.validate(store.load(run.run_id).snapshot)
+
     def test_create_save_and_restore_across_store_reopen(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             db = Path(tmp) / "runs.sqlite3"
