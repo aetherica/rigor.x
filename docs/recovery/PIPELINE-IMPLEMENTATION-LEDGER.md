@@ -4,7 +4,7 @@
 **Repository:** `aetherica/rigor.x`  
 **Branch:** `main`  
 **Pipeline:** Owner-defined 11-stage sequence  
-**Ledger status:** PARTIAL — specification, deterministic state machine, snapshot contract and 16 passing CI tests committed; external adapters and durable storage remain unimplemented.
+**Ledger status:** PARTIAL — 11-stage controller and transactional SQLite persistence implemented; 28 CI tests passed. External adapters, registry integration and evidence runtime remain unimplemented.
 
 ## 1. Governing pipeline
 
@@ -53,24 +53,24 @@ This is a deterministic in-memory control-plane primitive. It is not yet a persi
 | Unit test execution | 16 tests PASS in GitHub Actions on CPython 3.15.2 |
 | GitHub Actions run receipt | VERIFIED — [run #15](https://github.com/aetherica/rigor.x/actions/runs/45509490594) |
 | CI pass/fail | PASS — commit `57fe478d48cc8aaf504f13a85ced36acdd557f55` |
-| Persistence/restart recovery | NOT IMPLEMENTED |
+| Persistence/restart recovery | IMPLEMENTED — SQLite save/restore tested across reopen |
 | Live host/tool/provider routing | NOT IMPLEMENTED |
-| Durable evidence/provenance storage | NOT IMPLEMENTED |
+| Durable evidence/provenance storage | PARTIAL — stage events persisted; domain evidence store not implemented |
 | Registry integration and version resolution | NOT IMPLEMENTED |
-| Integration/acceptance/adversarial tests | NOT IMPLEMENTED |
+| Integration/acceptance/adversarial tests | PARTIAL — SQLite integration/failure tests; full end-to-end pipeline not implemented |
 
 A missing workflow receipt is not a passing CI result. No test-pass claim is made.
 
 ## 5. Next implementation increments
 
 1. Extend the run schema with typed stage payloads, route receipts, evidence records, verification reports and feedback records.
-2. Add a durable storage adapter and restart/recovery integration tests; current snapshots are in-memory only.
+2. Add backup/restore and data-retention controls; SQLite durability and reopen recovery are now implemented.
 3. Add registry resolution interfaces for KD/TP/FM/AL/OP/FG/CMD while preserving historical/proposed/ratified/implemented/verified status.
 4. Add capability and acquisition-channel interfaces; distinguish plan from actual adapter receipts.
 5. Add durable evidence/provenance and contradiction-ledger interfaces.
 6. Add verification policy and decision authorization gates.
 7. Add adapter contract tests and end-to-end pipeline acceptance tests.
-8. Continue inspecting CI and expand adversarial/failure-recovery coverage.
+8. Add static analysis, dependency/SBOM and release provenance controls; Ruff is added, final lint receipt pending.
 
 ## 6. Non-regression rules
 
