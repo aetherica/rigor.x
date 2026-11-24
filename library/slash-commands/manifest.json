@@ -1,0 +1,33 @@
+{
+  "library_id": "AETHERICA-RIGORX-SLASH-COMMAND-LIBRARY",
+  "title": "Aetherica RIGOR-X Slash Command Library",
+  "version": "0.1.0",
+  "status": "research_candidate_library",
+  "canonical_branch": "main",
+  "canonical_path": "library/slash-commands/",
+  "total_entries": 999,
+  "unique_names": 999,
+  "group_count": 17,
+  "classification_counts": {
+    "MACRO ALIAS": 6,
+    "MACRO": 647,
+    "NATIVE": 31,
+    "UI/MENU": 3,
+    "NATIVE — OPENAI": 14,
+    "NATIVE — CHATGPT": 8,
+    "NATIVE — CODEX": 34,
+    "IMAGE KEYWORD": 256
+  },
+  "compatibility_notice": "This library contains platform-native commands, UI/menu tokens, community prompt macros, aliases, and image-generation keywords. A slash-prefixed entry is not necessarily executable by RIGOR-X or any particular host.",
+  "source_policy": "Preserve source provenance and distinguish discovery from command-level verification. No entry is runtime-enabled by inclusion in this library.",
+  "files": {
+    "commands": "commands.json",
+    "csv": "commands.csv",
+    "groups": "groups.json",
+    "schema": "schema/command.schema.json",
+    "validator": "scripts/validate_slash_command_library.py",
+    "provenance": "provenance/SOURCES.md",
+    "manifest": "manifest.json",
+    "library_schema": "schema/library.schema.json"
+  }
+}
