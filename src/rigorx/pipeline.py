@@ -232,6 +232,47 @@ class PipelineRun:
         self.status = RunStatus.WAITING_FOR_USER
         self._emit("WAITING_FOR_USER", self.current_stage, {"reason": reason})
 
+    def mark_partial(self, *, reason: str) -> None:
+        """Mark the active stage partial while retaining it as the retry point."""
+        if self.status is not RunStatus.IN_PROGRESS:
+            raise InvalidTransition("Only an in-progress run can become partial")
+        if self.stage_status[self.current_stage] is not StageStatus.IN_PROGRESS:
+            raise InvalidTransition("The current stage has not been started")
+        if not reason.strip():
+            raise ValueError("reason is required")
+        self.stage_status[self.current_stage] = StageStatus.PARTIAL
+        self.status = RunStatus.PARTIAL
+        self._emit("STAGE_PARTIAL", self.current_stage, {"reason": reason})
+
+    def mark_blocked(self, *, reason: str) -> None:
+        """Block the active stage when a dependency or authorization is missing."""
+        if self.status is not RunStatus.IN_PROGRESS:
+            raise InvalidTransition("Only an in-progress run can become blocked")
+        if self.stage_status[self.current_stage] is not StageStatus.IN_PROGRESS:
+            raise InvalidTransition("The current stage has not been started")
+        if not reason.strip():
+            raise ValueError("reason is required")
+        self.stage_status[self.current_stage] = StageStatus.BLOCKED
+        self.status = RunStatus.BLOCKED
+        self._emit("STAGE_BLOCKED", self.current_stage, {"reason": reason})
+
+    def resume_blocked(self) -> Stage:
+        """Resume a blocked run after its external dependency is resolved."""
+        if self.status is not RunStatus.BLOCKED:
+            raise InvalidTransition("Only a blocked run can be resumed")
+        self.stage_status[self.current_stage] = StageStatus.READY
+        self.status = RunStatus.IN_PROGRESS
+        self._emit("BLOCK_RESOLVED", self.current_stage)
+        return self.current_stage
+
+    def resume_waiting_for_user(self) -> Stage:
+        """Resume the active stage after the required user input is received."""
+        if self.status is not RunStatus.WAITING_FOR_USER:
+            raise InvalidTransition("Run is not waiting for the user")
+        self.status = RunStatus.IN_PROGRESS
+        self._emit("USER_INPUT_RECEIVED", self.current_stage)
+        return self.current_stage
+
     def cancel(self, *, reason: str) -> None:
         if self.status is RunStatus.COMPLETED:
             raise InvalidTransition("A completed run cannot be cancelled")
