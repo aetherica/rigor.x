@@ -89,6 +89,36 @@ class PipelineRunTests(unittest.TestCase):
         with self.assertRaises(InvalidTransition):
             run.reenter(Stage.DECISION, trigger="invalid", reason="Forward jump")
 
+    def test_blocked_stage_requires_explicit_resume(self) -> None:
+        run = PipelineRun("run-008")
+        run.begin_stage()
+        run.mark_blocked(reason="Connector authorization required")
+        self.assertEqual(run.status, RunStatus.BLOCKED)
+        with self.assertRaises(InvalidTransition):
+            run.complete_stage()
+        self.assertEqual(run.resume_blocked(), Stage.CONTEXT)
+        run.begin_stage()
+        run.complete_stage()
+        self.assertEqual(run.current_stage, Stage.INTENT)
+
+    def test_waiting_for_user_can_resume_same_stage(self) -> None:
+        run = PipelineRun("run-009")
+        run.begin_stage()
+        run.set_waiting_for_user(reason="Need a scope decision")
+        self.assertEqual(run.status, RunStatus.WAITING_FOR_USER)
+        self.assertEqual(run.resume_waiting_for_user(), Stage.CONTEXT)
+        run.complete_stage()
+        self.assertEqual(run.current_stage, Stage.INTENT)
+
+    def test_partial_stage_can_be_retried(self) -> None:
+        run = PipelineRun("run-010")
+        run.begin_stage()
+        run.mark_partial(reason="Some context sources unavailable")
+        self.assertEqual(run.status, RunStatus.PARTIAL)
+        run.begin_stage()
+        run.complete_stage()
+        self.assertEqual(run.current_stage, Stage.INTENT)
+
     def test_snapshot_is_json_serializable(self) -> None:
         import json
 
