@@ -27,7 +27,9 @@
       "groups": "groups.json",
       "schema": "schema/command.schema.json",
       "validator": "scripts/validate_slash_command_library.py",
-      "provenance": "provenance/SOURCES.md"
+      "provenance": "provenance/SOURCES.md",
+      "manifest": "manifest.json",
+      "library_schema": "schema/library.schema.json"
     }
   },
   "groups": [
