@@ -100,6 +100,8 @@ class PipelineRun:
             raise ValueError("run_id must be a non-empty string")
         if self.max_reentries < 0:
             raise ValueError("max_reentries cannot be negative")
+        if self.reentry_count < 0 or self.reentry_count > self.max_reentries:
+            raise ValueError("reentry_count must be between zero and max_reentries")
 
     def begin_stage(self) -> Stage:
         """Begin the current stage; stages cannot be started out of order."""
