@@ -19,11 +19,11 @@ The canonical stage contracts are in `docs/architecture/PRIMARY-OPERATIONAL-PIPE
 | Define 11-stage primary pipeline and stage contracts | `docs/architecture/PRIMARY-OPERATIONAL-PIPELINE.md` | COMMITTED; read-back verified |
 | Align cognitive architecture to the owner-defined sequence | `docs/architecture/RIGOR-X-COGNITIVE-INTELLIGENCE-ARCHITECTURE.md` | COMMITTED; read-back verified |
 | Implement deterministic stage/state controller | `src/rigorx/pipeline.py` | COMMITTED; read-back verified |
-| Add stage order, verification, evidence, re-entry and state-transition tests | `tests/test_pipeline.py` | COMMITTED; read-back verified; execution pending |
+| Add stage order, verification, evidence, re-entry and state-transition tests | `tests/test_pipeline.py` | COMMITTED; 28 tests PASS in current CI |
 | Add Python package metadata and test dependency | `pyproject.toml` | COMMITTED; read-back verified |
 | Define strict JSON Schema Draft 2020-12 run snapshot contract | `schemas/pipeline-run.schema.json` | COMMITTED; CI schema validation PASS |
 | Add validated snapshot restoration and event integrity checks | `PipelineRun.from_snapshot()` | COMMITTED; CI tests PASS |
-| Add GitHub Actions pipeline contract workflow | `.github/workflows/rigorx-pipeline.yml` | COMMITTED; run #15 PASS |
+| Add GitHub Actions pipeline contract workflow with Ruff gate | `.github/workflows/rigorx-pipeline.yml` | COMMITTED; latest CI PASS |
 
 ## 3. Runtime core scope in this increment
 
@@ -41,7 +41,7 @@ The first implementation increment provides:
 - validated snapshot restoration with strict type, timestamp, stage-set and event-sequence checks;
 - JSON Schema validation of the run snapshot.
 
-This is a deterministic in-memory control-plane primitive. It is not yet a persistent workflow engine, research crawler, tool adapter, model router, knowledge graph, durable evidence store or autonomous executor.
+The controller plus SQLite adapter now provide deterministic stage control and local durable run-state/event persistence. It is not yet a research crawler, tool adapter, model router, knowledge graph, domain evidence store or autonomous executor.
 
 ## 4. Verification state
 
@@ -59,7 +59,7 @@ This is a deterministic in-memory control-plane primitive. It is not yet a persi
 | Registry integration and version resolution | NOT IMPLEMENTED |
 | Integration/acceptance/adversarial tests | PARTIAL — SQLite integration/failure tests; full end-to-end pipeline not implemented |
 
-A missing workflow receipt is not a passing CI result. No test-pass claim is made.
+The verified CI receipt applies to commit `bd90871b54e2371eb4d704e5313a7a4d36569249`. Documentation-only commits after that receipt were read-back verified; the code/test tree was unchanged.
 
 ## 5. Next implementation increments
 
@@ -70,7 +70,7 @@ A missing workflow receipt is not a passing CI result. No test-pass claim is mad
 5. Add durable evidence/provenance and contradiction-ledger interfaces.
 6. Add verification policy and decision authorization gates.
 7. Add adapter contract tests and end-to-end pipeline acceptance tests.
-8. Add static analysis, dependency/SBOM and release provenance controls; Ruff is added, final lint receipt pending.
+8. Add dependency/SBOM, build provenance, security scanning and release controls; Ruff static analysis is verified PASS.
 
 ## 6. Non-regression rules
 
