@@ -9,10 +9,12 @@
 A versioned, machine-readable research library containing 999 unique slash-prefixed tokens grouped into 17 functional categories. This is a discovery and normalization corpus, not a declaration that every entry is executable in RIGOR-X.
 
 ## Contents
+- `manifest.json` — standalone library manifest and version/count metadata.
 - `commands.json` — canonical structured dataset with entries, provenance and lifecycle/runtime status.
 - `commands.csv` — spreadsheet/import-friendly export of the same 999 entries.
 - `groups.json` — category definitions and expected counts.
 - `schema/command.schema.json` — JSON Schema for a command record.
+- `schema/library.schema.json` — JSON Schema for the complete library envelope.
 - `scripts/validate_slash_command_library.py` — deterministic structural validator.
 - `provenance/SOURCES.md` — source register, extraction method and limitations.
 - `ENGINEERING-STANDARD.md` — library data, provenance, versioning and acceptance rules.
