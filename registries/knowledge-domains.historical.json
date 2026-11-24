@@ -1,0 +1,262 @@
+{
+  "registry": "knowledge_domains",
+  "schema_version": "0.1.0",
+  "canonical_target_count": 36,
+  "provenance_status": "HISTORICAL_ASSISTANT_RECORD",
+  "canonical_status": "PENDING_OWNER_RATIFICATION",
+  "source": "Prior conversation record 2026-11-24T17:16:27Z; retrieved 2026-11-25",
+  "entries": [
+    {
+      "sequence": 1,
+      "name": "Psychology / Human Nature",
+      "source_status": "HISTORICAL_ASSISTANT_RECORD",
+      "canonical_status": "PENDING_OWNER_RATIFICATION",
+      "definition_status": "NOT_SPECIFIED"
+    },
+    {
+      "sequence": 2,
+      "name": "Behavioral Psychology",
+      "source_status": "HISTORICAL_ASSISTANT_RECORD",
+      "canonical_status": "PENDING_OWNER_RATIFICATION",
+      "definition_status": "NOT_SPECIFIED"
+    },
+    {
+      "sequence": 3,
+      "name": "Power / Authority",
+      "source_status": "HISTORICAL_ASSISTANT_RECORD",
+      "canonical_status": "PENDING_OWNER_RATIFICATION",
+      "definition_status": "NOT_SPECIFIED"
+    },
+    {
+      "sequence": 4,
+      "name": "Positioning / Strategic Advantage",
+      "source_status": "HISTORICAL_ASSISTANT_RECORD",
+      "canonical_status": "PENDING_OWNER_RATIFICATION",
+      "definition_status": "NOT_SPECIFIED"
+    },
+    {
+      "sequence": 5,
+      "name": "Influence / Persuasion",
+      "source_status": "HISTORICAL_ASSISTANT_RECORD",
+      "canonical_status": "PENDING_OWNER_RATIFICATION",
+      "definition_status": "NOT_SPECIFIED"
+    },
+    {
+      "sequence": 6,
+      "name": "Political Strategy / Statecraft",
+      "source_status": "HISTORICAL_ASSISTANT_RECORD",
+      "canonical_status": "PENDING_OWNER_RATIFICATION",
+      "definition_status": "NOT_SPECIFIED"
+    },
+    {
+      "sequence": 7,
+      "name": "Military / Warfare",
+      "source_status": "HISTORICAL_ASSISTANT_RECORD",
+      "canonical_status": "PENDING_OWNER_RATIFICATION",
+      "definition_status": "NOT_SPECIFIED"
+    },
+    {
+      "sequence": 8,
+      "name": "Geopolitics / International Relations",
+      "source_status": "HISTORICAL_ASSISTANT_RECORD",
+      "canonical_status": "PENDING_OWNER_RATIFICATION",
+      "definition_status": "NOT_SPECIFIED"
+    },
+    {
+      "sequence": 9,
+      "name": "Economics / Political Economy",
+      "source_status": "HISTORICAL_ASSISTANT_RECORD",
+      "canonical_status": "PENDING_OWNER_RATIFICATION",
+      "definition_status": "NOT_SPECIFIED"
+    },
+    {
+      "sequence": 10,
+      "name": "Finance / Wealth",
+      "source_status": "HISTORICAL_ASSISTANT_RECORD",
+      "canonical_status": "PENDING_OWNER_RATIFICATION",
+      "definition_status": "NOT_SPECIFIED"
+    },
+    {
+      "sequence": 11,
+      "name": "Negotiation",
+      "source_status": "HISTORICAL_ASSISTANT_RECORD",
+      "canonical_status": "PENDING_OWNER_RATIFICATION",
+      "definition_status": "NOT_SPECIFIED"
+    },
+    {
+      "sequence": 12,
+      "name": "Intelligence / Information",
+      "source_status": "HISTORICAL_ASSISTANT_RECORD",
+      "canonical_status": "PENDING_OWNER_RATIFICATION",
+      "definition_status": "NOT_SPECIFIED"
+    },
+    {
+      "sequence": 13,
+      "name": "Deception",
+      "source_status": "HISTORICAL_ASSISTANT_RECORD",
+      "canonical_status": "PENDING_OWNER_RATIFICATION",
+      "definition_status": "NOT_SPECIFIED"
+    },
+    {
+      "sequence": 14,
+      "name": "Leadership / Command",
+      "source_status": "HISTORICAL_ASSISTANT_RECORD",
+      "canonical_status": "PENDING_OWNER_RATIFICATION",
+      "definition_status": "NOT_SPECIFIED"
+    },
+    {
+      "sequence": 15,
+      "name": "Organizational Strategy",
+      "source_status": "HISTORICAL_ASSISTANT_RECORD",
+      "canonical_status": "PENDING_OWNER_RATIFICATION",
+      "definition_status": "NOT_SPECIFIED"
+    },
+    {
+      "sequence": 16,
+      "name": "Governance / Administration",
+      "source_status": "HISTORICAL_ASSISTANT_RECORD",
+      "canonical_status": "PENDING_OWNER_RATIFICATION",
+      "definition_status": "NOT_SPECIFIED"
+    },
+    {
+      "sequence": 17,
+      "name": "Sociology / Social Structure",
+      "source_status": "HISTORICAL_ASSISTANT_RECORD",
+      "canonical_status": "PENDING_OWNER_RATIFICATION",
+      "definition_status": "NOT_SPECIFIED"
+    },
+    {
+      "sequence": 18,
+      "name": "Mass Psychology / Ideology",
+      "source_status": "HISTORICAL_ASSISTANT_RECORD",
+      "canonical_status": "PENDING_OWNER_RATIFICATION",
+      "definition_status": "NOT_SPECIFIED"
+    },
+    {
+      "sequence": 19,
+      "name": "Communication / Rhetoric",
+      "source_status": "HISTORICAL_ASSISTANT_RECORD",
+      "canonical_status": "PENDING_OWNER_RATIFICATION",
+      "definition_status": "NOT_SPECIFIED"
+    },
+    {
+      "sequence": 20,
+      "name": "Competition / Game Theory",
+      "source_status": "HISTORICAL_ASSISTANT_RECORD",
+      "canonical_status": "PENDING_OWNER_RATIFICATION",
+      "definition_status": "NOT_SPECIFIED"
+    },
+    {
+      "sequence": 21,
+      "name": "Strategy / Planning",
+      "source_status": "HISTORICAL_ASSISTANT_RECORD",
+      "canonical_status": "PENDING_OWNER_RATIFICATION",
+      "definition_status": "NOT_SPECIFIED"
+    },
+    {
+      "sequence": 22,
+      "name": "Decision Science / Judgment",
+      "source_status": "HISTORICAL_ASSISTANT_RECORD",
+      "canonical_status": "PENDING_OWNER_RATIFICATION",
+      "definition_status": "NOT_SPECIFIED"
+    },
+    {
+      "sequence": 23,
+      "name": "Risk / Survival",
+      "source_status": "HISTORICAL_ASSISTANT_RECORD",
+      "canonical_status": "PENDING_OWNER_RATIFICATION",
+      "definition_status": "NOT_SPECIFIED"
+    },
+    {
+      "sequence": 24,
+      "name": "Conflict Management",
+      "source_status": "HISTORICAL_ASSISTANT_RECORD",
+      "canonical_status": "PENDING_OWNER_RATIFICATION",
+      "definition_status": "NOT_SPECIFIED"
+    },
+    {
+      "sequence": 25,
+      "name": "Ethics",
+      "source_status": "HISTORICAL_ASSISTANT_RECORD",
+      "canonical_status": "PENDING_OWNER_RATIFICATION",
+      "definition_status": "NOT_SPECIFIED"
+    },
+    {
+      "sequence": 26,
+      "name": "Law / Rules",
+      "source_status": "HISTORICAL_ASSISTANT_RECORD",
+      "canonical_status": "PENDING_OWNER_RATIFICATION",
+      "definition_status": "NOT_SPECIFIED"
+    },
+    {
+      "sequence": 27,
+      "name": "History / Civilizational Dynamics",
+      "source_status": "HISTORICAL_ASSISTANT_RECORD",
+      "canonical_status": "PENDING_OWNER_RATIFICATION",
+      "definition_status": "NOT_SPECIFIED"
+    },
+    {
+      "sequence": 28,
+      "name": "Education / Knowledge Acquisition",
+      "source_status": "HISTORICAL_ASSISTANT_RECORD",
+      "canonical_status": "PENDING_OWNER_RATIFICATION",
+      "definition_status": "NOT_SPECIFIED"
+    },
+    {
+      "sequence": 29,
+      "name": "Personal Strategy / Self-Mastery",
+      "source_status": "HISTORICAL_ASSISTANT_RECORD",
+      "canonical_status": "PENDING_OWNER_RATIFICATION",
+      "definition_status": "NOT_SPECIFIED"
+    },
+    {
+      "sequence": 30,
+      "name": "Operations / Execution",
+      "source_status": "HISTORICAL_ASSISTANT_RECORD",
+      "canonical_status": "PENDING_OWNER_RATIFICATION",
+      "definition_status": "NOT_SPECIFIED"
+    },
+    {
+      "sequence": 31,
+      "name": "Resources / Dependency",
+      "source_status": "HISTORICAL_ASSISTANT_RECORD",
+      "canonical_status": "PENDING_OWNER_RATIFICATION",
+      "definition_status": "NOT_SPECIFIED"
+    },
+    {
+      "sequence": 32,
+      "name": "Innovation / Adaptation",
+      "source_status": "HISTORICAL_ASSISTANT_RECORD",
+      "canonical_status": "PENDING_OWNER_RATIFICATION",
+      "definition_status": "NOT_SPECIFIED"
+    },
+    {
+      "sequence": 33,
+      "name": "Psychological Resilience",
+      "source_status": "HISTORICAL_ASSISTANT_RECORD",
+      "canonical_status": "PENDING_OWNER_RATIFICATION",
+      "definition_status": "NOT_SPECIFIED"
+    },
+    {
+      "sequence": 34,
+      "name": "Human Relationships / Social Dynamics",
+      "source_status": "HISTORICAL_ASSISTANT_RECORD",
+      "canonical_status": "PENDING_OWNER_RATIFICATION",
+      "definition_status": "NOT_SPECIFIED"
+    },
+    {
+      "sequence": 35,
+      "name": "Strategic Models / Frameworks",
+      "source_status": "HISTORICAL_ASSISTANT_RECORD",
+      "canonical_status": "PENDING_OWNER_RATIFICATION",
+      "definition_status": "NOT_SPECIFIED"
+    },
+    {
+      "sequence": 36,
+      "name": "Culture / Identity / Symbolic Systems",
+      "source_status": "HISTORICAL_ASSISTANT_RECORD",
+      "canonical_status": "PENDING_OWNER_RATIFICATION",
+      "definition_status": "NOT_SPECIFIED"
+    }
+  ]
+}
