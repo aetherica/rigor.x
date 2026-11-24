@@ -1,6 +1,6 @@
 # Standards & Protocol Applicability Map
 
-Standards are mapped to the specific system risk and control. Compliance/certification is not claimed merely because the engineering approach references a standard. Verify edition/version and applicability before formal compliance claims.
+Standards are mapped to the specific system risk and control. Compliance/certification is not claimed merely because the engineering approach references a standard. **Source-status check: 2026-11-25.** NIST SSDF 1.1 remains final; SSDF 1.2 Rev.1 is listed as initial public draft in the official NIST publication status. The final NIST AI-specific companion SP 800-218A (July 2024) supplements 1.1. OWASP ASVS 5.0.0 is the current stable release found during this check. Recheck authoritative registries before release gates.
 
 | Standard / protocol | Scope to apply | RIGOR-X engineering controls | Evidence needed |
 |---|---|---|---|
@@ -12,11 +12,11 @@ Standards are mapped to the specific system risk and control. Compliance/certifi
 | ISO/IEC 27001 concepts | Information security management | Risk-based controls, asset inventory, access, incident management | Risk register, control evidence; no certification claim |
 | ISO/IEC 27002 | Security control guidance | Least privilege, secrets, access logging, secure configuration | Security control checks |
 | ISO/IEC 27005 | Security risk | Threat/risk assessment and treatment | Risk register with owners/treatment |
-| NIST SSDF SP 800-218 | Secure development | Protect software, secure environments, produce well-secured software, respond to vulnerabilities | SDLC control checklist and CI receipts |
+| NIST SSDF SP 800-218 v1.1 (Final); Rev.1 v1.2 (Initial Public Draft) | Secure development | Protect software, secure environments, produce well-secured software, respond to vulnerabilities; track draft deltas separately | SDLC control checklist and CI receipts; draft is not normative final |
 | NIST SP 800-53 Rev. 5 | Control catalogue | Select relevant controls for identity, audit, configuration, contingency and integrity | Applicability rationale and control tests |
 | NIST SP 800-61 Rev. 3 | Incident response | Incident readiness, detection, response, recovery | Incident runbook and exercises |
 | NIST SP 800-63 | Digital identity | Auth/authentication assurance and lifecycle if user identity introduced | Threat-based identity requirements |
-| OWASP ASVS 5.x | Application security | Validation, auth, session, access, crypto, logging, API, data protection | Versioned ASVS checklist; automated/manual checks |
+| OWASP ASVS 5.0.0 (stable release) | Application security | Validation, auth, session, access, crypto, logging, API, data protection | Versioned ASVS checklist; automated/manual checks |
 | OWASP Top 10 2025 | Web application risk | Common web risk review; supplement, not replace, threat model | Risk-specific checks |
 | OWASP API Security Top 10 2023 | API risks | Object/function authorization, resource limits, SSRF, inventory, auth | API test matrix |
 | OWASP SAMM 2.x | Secure maturity | Governance, design, implementation, verification, operations maturity | Maturity roadmap |
@@ -36,3 +36,13 @@ Standards are mapped to the specific system risk and control. Compliance/certifi
 ## Standards lifecycle
 
 For standards requiring current editions, maintain version and last-checked date in a future machine-readable standards registry. This table is an applicability baseline, not an audited current-edition list.
+
+## Official status sources checked 2026-11-25
+
+- NIST SSDF publications/status: https://csrc.nist.gov/Projects/ssdf/publications
+- NIST SSDF v1.1 final: https://csrc.nist.gov/pubs/sp/800/218/final
+- NIST SSDF v1.2 initial public draft: https://csrc.nist.gov/pubs/sp/800/218/r1/ipd
+- NIST SP 800-218A final AI profile: https://csrc.nist.gov/pubs/sp/800/218/a/final
+- OWASP ASVS official release status: https://asvs.owasp.org/
+
+**Version-control rule:** Standards changes must be logged with source URL, status (draft/final), edition/version, checked date, affected RIGOR-X control IDs and review outcome. A draft is informative, not a compliance baseline.
