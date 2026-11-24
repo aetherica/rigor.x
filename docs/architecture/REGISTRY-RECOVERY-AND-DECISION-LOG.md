@@ -97,3 +97,49 @@ Until authoritative item-level records are found or explicitly ratified:
 | Runtime implementation verification | NOT VERIFIED |
 
 **No claim of final registry completion is made.** This log exists to prevent the recovery process from looping, silently changing the target counts, or converting assistant-generated candidates into false historical facts.
+
+
+## 7. Follow-up audit evidence — 2026-11-25
+
+A second pass was performed against the connected GitHub account and the current `main` branch before continuing recovery.
+
+### 7.1 Repository and commit verification
+- Repository search resolves `aetherica/rigor.x` as a private repository with default branch `main`; the connected account reports admin/maintain/push access.
+- Branch search for `aetherica/rigor.x` returns `main` only.
+- All three previously supplied commit references resolve to real commits in this repository:
+  - `8000167c16ba320d48522f0bf8a4f2576ca6a3a5` — architecture specification.
+  - `7f079ce9c9d16d63e88a8260648ddc7e718a66ab` — README canonical-count alignment.
+  - `a9f10bf051abb6bc8887451d4204f2b2bd882d68` — this recovery log.
+- The current recovery-log commit has no combined status checks and no workflow runs returned by the connected GitHub actions queries. This is **NO CI EVIDENCE RETURNED**, not a passing CI result.
+
+### 7.2 Targeted implementation-path checks
+- Targeted GitHub code searches for `REASONING-MECHANISM`, `NEURAL-THINKING-CAPABILITY`, `package.json`, `registry.json`, and formula/algorithm/topic/operator/command registry terms returned no matching files.
+- Direct fetches for root `package.json` and `.github/workflows/ci.yml` returned 404.
+- These are path/search checks, not a complete Git tree enumeration. They do not prove that no implementation exists anywhere in the repository. Runtime, tests, schema and workflow status remain **NOT VERIFIED** until the tree can be enumerated or exact paths are recovered.
+
+### 7.3 Related repository access
+- Repository search and branch lookup did not resolve `aetherica/aetherica-rigor`; branch lookup returned repository-not-found and the recent-commit query returned 404.
+- The connected account's accessible repository listing for owner `aetherica` returned `aetherica/rigor.x` and `aetherica/Global-Imagine-Protocol`, but not `aetherica/aetherica-rigor`.
+- Do not substitute `Global-Imagine-Protocol` for the inaccessible historical repository.
+
+### 7.4 Additional historical recovery boundary
+- The 36 Knowledge Domain plan is recorded in the current owner handoff, but an authoritative itemized 36-domain register was not present in the retrieved historical context or the inspected repository documents.
+- The exact itemized 18 Functional Group register and the 999-command operational map also remain **NOT RECOVERED**. The README's prior 102 count and the plugin's reported 91 command definitions are separate historical/interface artifacts; neither establishes the 999 operational records.
+- No proposed or reconstructed entry has been promoted to a canonical registry in this pass.
+
+### 7.5 Updated state
+| Area | Status after follow-up |
+|---|---|
+| Primary repository identity/access/main branch | VERIFIED |
+| Three supplied commit references | VERIFIED |
+| Architecture and recovery-log files | VERIFIED |
+| Combined CI/workflow evidence for recovery-log commit | NO EVIDENCE RETURNED |
+| Full repository tree enumeration | NOT VERIFIED |
+| Runtime/package/test implementation | NOT VERIFIED |
+| Exact 30/33/111/15 item lists | NOT RECOVERED |
+| Exact 18 FG names and ownership | NOT RECOVERED |
+| Exact 36 Knowledge Domain list | NOT RECOVERED |
+| Exact 999 operational command map | NOT RECOVERED |
+| Historical `aetherica/aetherica-rigor` access | BLOCKED — 404 |
+
+This follow-up records observations only. It does not mark WS-01 complete and does not claim implementation or CI completion.
