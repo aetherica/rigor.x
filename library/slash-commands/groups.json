@@ -14,7 +14,7 @@
   {
     "id": "comparison_evaluation_and_decision_support",
     "name": "Comparison, evaluation & decision support",
-    "count": 22,
+    "count": 21,
     "description": "Commands associated with comparison, evaluation & decision support."
   },
   {
@@ -28,6 +28,12 @@
     "name": "Education, learning & tutoring",
     "count": 27,
     "description": "Commands associated with education, learning & tutoring."
+  },
+  {
+    "id": "finance_business_and_investment",
+    "name": "Finance, business & investment",
+    "count": 7,
+    "description": "Commands for financial analysis, budgeting, investment, business models and market-oriented business work."
   },
   {
     "id": "general_purpose_ai_workflows",
@@ -44,7 +50,7 @@
   {
     "id": "information_extraction_and_knowledge_organization",
     "name": "Information extraction & knowledge organization",
-    "count": 47,
+    "count": 46,
     "description": "Commands associated with information extraction & knowledge organization."
   },
   {
@@ -56,7 +62,7 @@
   {
     "id": "platform_native_commands_and_interface_controls",
     "name": "Platform-native commands & interface controls",
-    "count": 34,
+    "count": 33,
     "description": "Commands associated with platform-native commands & interface controls."
   },
   {
@@ -92,7 +98,7 @@
   {
     "id": "visual_design_image_generation_and_photography",
     "name": "Visual design, image generation & photography",
-    "count": 350,
+    "count": 346,
     "description": "Commands associated with visual design, image generation & photography."
   },
   {
