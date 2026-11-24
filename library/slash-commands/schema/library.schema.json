@@ -61,7 +61,7 @@
         },
         "group_count": {
           "type": "integer",
-          "minimum": 1
+          "const": 18
         },
         "classification_counts": {
           "type": "object",
@@ -109,7 +109,9 @@
             "type": "string"
           }
         }
-      }
+      },
+      "minItems": 18,
+      "maxItems": 18
     },
     "commands": {
       "type": "array",
