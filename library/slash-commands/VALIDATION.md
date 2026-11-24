@@ -1,7 +1,7 @@
 # Validation Record
 
 **Library version:** 0.1.0  
-**Status:** Repository read-back structural checks passed; standalone Python validator, JSON Schema engine and CI execution remain pending.
+**Status:** Repository read-back structural checks passed; validator Python syntax compiled; standalone validator execution, JSON Schema engine and CI execution remain pending.
 
 ## Executed read-back checks
 - [x] `commands.json` fetched from `main` and parsed successfully.
@@ -14,7 +14,8 @@
 - [x] All records have source IDs, source references, URLs and verification states.
 - [x] All six source IDs are represented in the provenance register.
 - [x] `commands.csv` fetched and parsed; 999 data rows; command order/name parity with JSON.
-- [x] All eight library files fetched back from `main`.
+- [x] All ten library files fetched back from `main`.
+- [x] Validator source compiled successfully with Python `compile()` (syntax check only; validator was not executed against repository files).
 - [x] Repository branch search returned only `main`.
 
 ## Pending checks
