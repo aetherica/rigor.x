@@ -102,7 +102,12 @@ class PipelineRun:
 
     def begin_stage(self) -> Stage:
         """Begin the current stage; stages cannot be started out of order."""
-        if self.status in {RunStatus.COMPLETED, RunStatus.CANCELLED, RunStatus.VERIFICATION_FAILED}:
+        if self.status in {
+            RunStatus.COMPLETED,
+            RunStatus.CANCELLED,
+            RunStatus.VERIFICATION_FAILED,
+            RunStatus.BLOCKED,
+        }:
             raise InvalidTransition(
                 f"Cannot start a stage for a {self.status.value} run; re-enter an earlier stage first"
             )
@@ -210,7 +215,8 @@ class PipelineRun:
         self.stage_status[target] = StageStatus.READY
         self.current_stage = target
         self.status = RunStatus.IN_PROGRESS
-        self.verification_accepted = False
+        if target_index <= STAGE_ORDER.index(Stage.VERIFICATION):
+            self.verification_accepted = False
         self.reentry_count += 1
         self._emit(
             "PIPELINE_REENTERED",
