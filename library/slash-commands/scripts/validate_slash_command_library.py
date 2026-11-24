@@ -2,10 +2,10 @@
 """Validate structural invariants of the RIGOR-X slash-command library."""
 import csv, json, pathlib, re, sys
 ROOT=pathlib.Path(__file__).resolve().parents[1]
-DATA,CSV,GROUPS=ROOT/"commands.json",ROOT/"commands.csv",ROOT/"groups.json"
+DATA,CSV,GROUPS,MANIFEST=ROOT/"commands.json",ROOT/"commands.csv",ROOT/"groups.json",ROOT/"manifest.json"
 def fail(message): print("FAIL: "+message,file=sys.stderr); raise SystemExit(1)
 def main():
-    payload=json.loads(DATA.read_text(encoding="utf-8")); groups=json.loads(GROUPS.read_text(encoding="utf-8")); commands=payload.get("commands",[]); manifest=payload.get("manifest",{})
+    payload=json.loads(DATA.read_text(encoding="utf-8")); groups=json.loads(GROUPS.read_text(encoding="utf-8")); commands=payload.get("commands",[]); manifest=payload.get("manifest",{}); standalone=json.loads(MANIFEST.read_text(encoding="utf-8"))
     if len(commands)!=999: fail("expected 999 records; got "+str(len(commands)))
     ids=[x.get("id") for x in commands]; names=[x.get("name") for x in commands]
     if len(set(ids))!=999: fail("command IDs are not unique")
@@ -26,6 +26,7 @@ def main():
     for g in groups:
         if counts.get(g["id"],0)!=g["count"]: fail("group count mismatch "+g["id"])
     if manifest.get("total_entries")!=999 or manifest.get("unique_names")!=999: fail("manifest count mismatch")
+    if standalone!=manifest: fail("standalone and embedded manifests differ")
     with CSV.open(newline="",encoding="utf-8") as f: rows=list(csv.DictReader(f))
     if len(rows)!=999: fail("CSV row count is not 999")
     if [r["name"] for r in rows]!=names: fail("CSV/JSON parity mismatch")
