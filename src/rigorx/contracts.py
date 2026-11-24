@@ -6,9 +6,10 @@ referenced tools, models, research channels or evidence stores exist.
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import Any, Mapping
+from typing import Any
 
 from .pipeline import Stage
 
@@ -69,7 +70,7 @@ class StageArtifact:
         }
 
     @classmethod
-    def from_dict(cls, payload: Mapping[str, Any]) -> "StageArtifact":
+    def from_dict(cls, payload: Mapping[str, Any]) -> StageArtifact:
         try:
             return cls(
                 stage=Stage(payload["stage"]),
