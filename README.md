@@ -27,6 +27,12 @@ The project requirements include, without reduction:
 
 These are requirements, not claims of current implementation. Item-level registry content and runtime implementation must be independently recovered, ratified, tested and verified; fixed cardinalities do not prove that each entry exists.
 
+## Primary operational pipeline
+
+The owner-defined 11-stage RIGOR-X pipeline is specified in [Primary Operational Pipeline](docs/architecture/PRIMARY-OPERATIONAL-PIPELINE.md). Its first deterministic state-machine implementation is in `src/rigorx/pipeline.py`; implementation and verification status are tracked in [Pipeline Implementation Ledger](docs/recovery/PIPELINE-IMPLEMENTATION-LEDGER.md).
+
+The state-machine core and contract tests are an initial implementation increment only. Runtime adapters, durable persistence, registry integration and CI verification remain separate acceptance gates.
+
 ## Initial repository recovery record
 
 Initial inspection on 2026-11-25 through the connected GitHub integration established:
