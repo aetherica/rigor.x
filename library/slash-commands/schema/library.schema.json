@@ -1,0 +1,121 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aetherica.github.io/rigor.x/schemas/slash-command-library.schema.json",
+  "title": "Aetherica RIGOR-X Slash Command Library",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "manifest",
+    "groups",
+    "commands"
+  ],
+  "properties": {
+    "manifest": {
+      "type": "object",
+      "required": [
+        "library_id",
+        "title",
+        "version",
+        "status",
+        "canonical_branch",
+        "canonical_path",
+        "total_entries",
+        "unique_names",
+        "group_count",
+        "classification_counts",
+        "compatibility_notice",
+        "source_policy",
+        "files"
+      ],
+      "properties": {
+        "library_id": {
+          "const": "AETHERICA-RIGORX-SLASH-COMMAND-LIBRARY"
+        },
+        "title": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+        },
+        "status": {
+          "enum": [
+            "research_candidate_library",
+            "approved_library",
+            "deprecated_library"
+          ]
+        },
+        "canonical_branch": {
+          "const": "main"
+        },
+        "canonical_path": {
+          "const": "library/slash-commands/"
+        },
+        "total_entries": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "unique_names": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "group_count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "classification_counts": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "compatibility_notice": {
+          "type": "string"
+        },
+        "source_policy": {
+          "type": "string"
+        },
+        "files": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "groups": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "count",
+          "description"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "description": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "commands": {
+      "type": "array",
+      "items": {
+        "$ref": "command.schema.json"
+      }
+    }
+  }
+}
