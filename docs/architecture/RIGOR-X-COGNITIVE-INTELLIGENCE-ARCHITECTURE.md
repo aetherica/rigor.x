@@ -107,28 +107,41 @@ No feature may be described as operational solely because it appears in this doc
 - Token, latency, cost and resource telemetry
 - Fallback and provider health management
 
-### 4.2 Core request lifecycle
+### 4.2 Primary operational pipeline
 
-`INPUT → UNDERSTAND → OBSERVE → PLAN → EXECUTE → VERIFY → DELIVER → LEARN`
+The owner-defined 11-stage pipeline is the primary request-processing sequence:
 
-| Stage | Contract | Required output |
+`CONTEXT → INTENT → KNOWLEDGE → RESEARCH → ROUTING → REASONING → EXECUTION → EVIDENCE → VERIFICATION → DECISION → FEEDBACK`.
+
+The complete stage contracts, inputs/outputs, gates, runtime states, evidence model, feedback routing and implementation acceptance criteria are specified in [PRIMARY-OPERATIONAL-PIPELINE.md](PRIMARY-OPERATIONAL-PIPELINE.md).
+
+| Stage | Core responsibility | Required record |
 |---|---|---|
-| INPUT | Capture request, permissions, format and constraints | Immutable request envelope |
-| UNDERSTAND | Resolve intent, entities, domain, ambiguity and stakes | Task model + uncertainty |
-| OBSERVE | Retrieve context, evidence, capabilities and state | Observation/evidence set |
-| PLAN | Select methods, operators, algorithms, models, tools and budget | Versioned execution plan |
-| EXECUTE | Run approved steps with checkpoints | Events + artefacts + receipts |
-| VERIFY | Validate claims, logic, provenance, tests and outcomes | Verification report |
-| DELIVER | Produce requested output with limitations | Deliverable + traceability |
-| LEARN | Update only approved policies/knowledge from validated feedback | Versioned learning event |
+| CONTEXT | Reconstruct relevant context, memory, decisions and constraints | ContextSnapshot, ConstraintSet |
+| INTENT | Determine desired outcome, scope and acceptance criteria | IntentRecord |
+| KNOWLEDGE | Classify through KD/TP and activate relevant validated knowledge | KnowledgeActivation, KnowledgeGaps |
+| RESEARCH | Select research methods and acquisition channels | ResearchPlan, ResearchRisks |
+| ROUTING | Map to FG/CMD and actually available tools/adapters | RoutePlan, CapabilityReceipt |
+| REASONING | Decompose, analyse, select OP/AL/FM and form executable plan | ReasoningPlan, VerificationPlan |
+| EXECUTION | Perform approved operations and record receipts | ExecutionEvents, Artifacts |
+| EVIDENCE | Consolidate provenance, claims, contradictions and gaps | EvidenceBundle, ContradictionRegister |
+| VERIFICATION | Independently test claims, outputs and acceptance criteria | VerificationReport |
+| DECISION | Select an authorized next action from verified findings | DecisionRecord |
+| FEEDBACK | Evaluate outcomes and control context/knowledge updates | FeedbackRecord, LearningProposal |
 
-### 4.3 Cognitive control loop
+Evidence capture is cross-cutting and starts at CONTEXT; Stage EVIDENCE consolidates and evaluates records gathered throughout the run. The sequence is not a rigid one-pass chain: a failed verification or material new discovery returns to the smallest relevant earlier stage with a recorded re-entry reason and bounded retry budget.
 
-`CLASSIFY → DECOMPOSE → SELECT → EXECUTE → EVALUATE → RECOVER/STOP`
+### 4.3 Cognitive control and execution loop
 
-The controller selects a **minimum-sufficient operator stack**, then binds operators to algorithms and formulas as required. It must not activate every capability for every task.
+The controller enforces the primary pipeline while selecting a **minimum-sufficient capability stack**. Knowledge classification, research-method selection, capability routing, reasoning, execution, evidence consolidation, verification, decision and feedback remain distinct operations.
 
-Hard constraints and authorization are evaluated before utility optimization. If constraints fail, the controller blocks or replans; it must not trade away a hard constraint for a higher score.
+- Research method selection precedes execution routing.
+- Functional Group and command resolution occur in ROUTING; actual handler availability must be observed.
+- Operators, algorithms and formulas are activated and composed for REASONING, then bound to execution work units where applicable.
+- A plan, registry entry, model name or connector description is not proof of execution or capability.
+- Decision-critical actions are blocked when required verification fails, unless the user explicitly accepts a documented residual uncertainty and the action is authorized.
+- Retries, replanning and recovery use explicit budgets, progress tests, idempotency and stop conditions.
+- Feedback can update task-local context; durable knowledge, registry or policy promotion requires provenance and the applicable approval gate.
 
 ## 5. Canonical registry contracts
 
