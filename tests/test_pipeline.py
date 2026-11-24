@@ -1,5 +1,9 @@
 """Contract tests for the RIGOR-X primary operational pipeline."""
+import json
 import unittest
+from pathlib import Path
+
+from jsonschema import Draft202012Validator, FormatChecker
 
 from rigorx.pipeline import (
     InvalidTransition,
@@ -159,6 +163,15 @@ class PipelineRunTests(unittest.TestCase):
         snapshot["events"][0]["sequence"] = 3
         with self.assertRaises(ValueError):
             PipelineRun.from_snapshot(snapshot)
+
+    def test_snapshot_conforms_to_json_schema(self) -> None:
+        schema_path = Path(__file__).resolve().parents[1] / "schemas" / "pipeline-run.schema.json"
+        schema = json.loads(schema_path.read_text(encoding="utf-8"))
+        Draft202012Validator.check_schema(schema)
+        validator = Draft202012Validator(schema, format_checker=FormatChecker())
+        run = PipelineRun("run-014")
+        run.begin_stage()
+        validator.validate(run.snapshot())
 
     def test_snapshot_is_json_serializable(self) -> None:
         import json
