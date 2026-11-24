@@ -18,14 +18,14 @@ The project requirements include, without reduction:
 
 - Six adaptive intelligence levels: L01 BASIC, L02 STANDARD, L03 DEEP, L04 COMPLEX, L05 CRITICAL, L06 HYPER RIGOROUS.
 - Nine distinct research acquisition channels: DIRECT, SURFACE, DEEP, DARK, LOCAL, SOCIAL MEDIA, ALTERNATE MEDIA, BLOG, MAINSTREAM MEDIA.
-- A canonical registry of 102 unique slash commands.
-- Dynamic, context-aware, multi-mode selection.
+- A canonical registry of 999 unique slash commands across 18 Functional Groups.
+- Six adaptive intensity levels (L01–L06) and dynamic, context-aware, multi-mode selection.
 - Three coordinated memory backends: Host, GitHub, Cloudflare; including durable SQL-backed storage.
 - Unified Web, Android, and iOS product architecture.
-- A canonical register of 45 distinct feature/system entries.
+- Canonical knowledge registries: 30 formulas, 33 algorithms, 111 topics, and 15 analytical operators.
 - Evidence, provenance, validation, execution, security, recovery, MCP, provider, and Human Experience systems.
 
-These are requirements, not claims of current implementation.
+These are requirements, not claims of current implementation. Item-level registry content and runtime implementation must be independently recovered, ratified, tested and verified; fixed cardinalities do not prove that each entry exists.
 
 ## Initial repository recovery record
 
