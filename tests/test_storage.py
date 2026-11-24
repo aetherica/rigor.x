@@ -128,9 +128,11 @@ class SQLitePipelineStoreTests(unittest.TestCase):
                 self.assertEqual(mode, 0o600)
 
     def test_run_not_found(self) -> None:
-        with SQLitePipelineStore(":memory:") as store:
-            with self.assertRaises(RunNotFound):
-                store.load("missing")
+        with (
+            SQLitePipelineStore(":memory:") as store,
+            self.assertRaises(RunNotFound),
+        ):
+            store.load("missing")
 
     def test_append_only_event_history_enforced(self) -> None:
         with SQLitePipelineStore(":memory:") as store:
