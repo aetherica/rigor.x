@@ -1,0 +1,77 @@
+{
+  "schema_version": "0.1.0",
+  "registries": [
+    {
+      "name": "formulas",
+      "target_count": 30,
+      "id_prefix": "FM",
+      "id_start": 1,
+      "id_end": 30,
+      "recovered_count": 0,
+      "status": "NOT_RECOVERED"
+    },
+    {
+      "name": "algorithms",
+      "target_count": 33,
+      "id_prefix": "AL",
+      "id_start": 1,
+      "id_end": 33,
+      "recovered_count": 0,
+      "status": "NOT_RECOVERED"
+    },
+    {
+      "name": "analytical_topics",
+      "target_count": 111,
+      "id_prefix": "TP",
+      "id_start": 1,
+      "id_end": 111,
+      "recovered_count": 0,
+      "status": "NOT_RECOVERED"
+    },
+    {
+      "name": "analytical_operators",
+      "target_count": 15,
+      "id_prefix": "OP",
+      "id_start": 1,
+      "id_end": 15,
+      "recovered_count": 14,
+      "status": "PARTIAL_HISTORICAL_CANDIDATES"
+    },
+    {
+      "name": "functional_groups",
+      "target_count": 18,
+      "id_prefix": "FG",
+      "id_start": 1,
+      "id_end": 18,
+      "recovered_count": 0,
+      "status": "NOT_RECOVERED"
+    },
+    {
+      "name": "knowledge_domains",
+      "target_count": 36,
+      "id_prefix": "KD",
+      "id_start": 1,
+      "id_end": 36,
+      "recovered_count": 36,
+      "status": "HISTORICAL_LIST_PENDING_RATIFICATION"
+    },
+    {
+      "name": "slash_commands",
+      "target_count": 999,
+      "id_prefix": "CMD",
+      "id_start": 1,
+      "id_end": 999,
+      "recovered_count": 999,
+      "status": "RESEARCH_CORPUS_RECOVERED_OPERATIONAL_MAPPING_PENDING"
+    },
+    {
+      "name": "interface_commands",
+      "target_count": 102,
+      "id_prefix": "IFC",
+      "id_start": 1,
+      "id_end": 102,
+      "recovered_count": 91,
+      "status": "91_REFERENCE_DEFINITIONS_11_GAP"
+    }
+  ]
+}
