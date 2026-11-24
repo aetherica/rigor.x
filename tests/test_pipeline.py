@@ -96,6 +96,8 @@ class PipelineRunTests(unittest.TestCase):
         self.assertEqual(run.status, RunStatus.BLOCKED)
         with self.assertRaises(InvalidTransition):
             run.complete_stage()
+        with self.assertRaises(InvalidTransition):
+            run.begin_stage()
         self.assertEqual(run.resume_blocked(), Stage.CONTEXT)
         run.begin_stage()
         run.complete_stage()
@@ -118,6 +120,23 @@ class PipelineRunTests(unittest.TestCase):
         run.begin_stage()
         run.complete_stage()
         self.assertEqual(run.current_stage, Stage.INTENT)
+
+    def test_decision_reentry_preserves_passed_verification(self) -> None:
+        run = PipelineRun("run-011")
+        for stage in STAGE_ORDER[: STAGE_ORDER.index(Stage.VERIFICATION)]:
+            run.begin_stage()
+            run.complete_stage()
+        run.begin_stage()
+        run.complete_stage(verification_passed=True)
+        self.assertTrue(run.verification_accepted)
+        run.reenter(
+            Stage.DECISION,
+            trigger="decision_reassessment",
+            reason="Re-evaluate options using the same verified evidence",
+        )
+        self.assertTrue(run.verification_accepted)
+        run.begin_stage()
+        self.assertEqual(run.complete_stage(), Stage.FEEDBACK)
 
     def test_snapshot_is_json_serializable(self) -> None:
         import json
