@@ -24,6 +24,7 @@ class RegistryTests(unittest.TestCase):
             "functional_groups": 18, "knowledge_domains": 36, "slash_commands": 999,
         })
         self.assertEqual(catalog.resolve("KD-01").canonical_status, "PENDING_OWNER_RATIFICATION")
+        self.assertEqual(catalog.architecture["registries"]["interface_operational_commands"]["unresolved_slots"], 11)
         command = catalog.resolve("SLC-0001")
         self.assertEqual(command.payload["name"], "/tldr")
         self.assertEqual(command.runtime_status, "not_implemented_in_rigor_x")
