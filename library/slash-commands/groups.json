@@ -1,0 +1,104 @@
+[
+  {
+    "id": "aliases_and_shorthand_variants",
+    "name": "Aliases & shorthand variants",
+    "count": 6,
+    "description": "Commands associated with aliases & shorthand variants."
+  },
+  {
+    "id": "communication_email_and_social_messaging",
+    "name": "Communication, email & social messaging",
+    "count": 26,
+    "description": "Commands associated with communication, email & social messaging."
+  },
+  {
+    "id": "comparison_evaluation_and_decision_support",
+    "name": "Comparison, evaluation & decision support",
+    "count": 22,
+    "description": "Commands associated with comparison, evaluation & decision support."
+  },
+  {
+    "id": "documents_projects_and_automation",
+    "name": "Documents, projects & automation",
+    "count": 46,
+    "description": "Commands associated with documents, projects & automation."
+  },
+  {
+    "id": "education_learning_and_tutoring",
+    "name": "Education, learning & tutoring",
+    "count": 27,
+    "description": "Commands associated with education, learning & tutoring."
+  },
+  {
+    "id": "general_purpose_ai_workflows",
+    "name": "General-purpose AI workflows",
+    "count": 30,
+    "description": "Commands associated with general-purpose ai workflows."
+  },
+  {
+    "id": "hardware_maker_and_digital_fabrication",
+    "name": "Hardware, maker & digital fabrication",
+    "count": 32,
+    "description": "Commands associated with hardware, maker & digital fabrication."
+  },
+  {
+    "id": "information_extraction_and_knowledge_organization",
+    "name": "Information extraction & knowledge organization",
+    "count": 47,
+    "description": "Commands associated with information extraction & knowledge organization."
+  },
+  {
+    "id": "output_format_and_response_control",
+    "name": "Output format & response control",
+    "count": 31,
+    "description": "Commands associated with output format & response control."
+  },
+  {
+    "id": "platform_native_commands_and_interface_controls",
+    "name": "Platform-native commands & interface controls",
+    "count": 34,
+    "description": "Commands associated with platform-native commands & interface controls."
+  },
+  {
+    "id": "reasoning_diagnosis_and_critical_analysis",
+    "name": "Reasoning, diagnosis & critical analysis",
+    "count": 41,
+    "description": "Commands associated with reasoning, diagnosis & critical analysis."
+  },
+  {
+    "id": "research_discovery_and_source_verification",
+    "name": "Research, discovery & source verification",
+    "count": 30,
+    "description": "Commands associated with research, discovery & source verification."
+  },
+  {
+    "id": "science_mathematics_and_data_analysis",
+    "name": "Science, mathematics & data analysis",
+    "count": 51,
+    "description": "Commands associated with science, mathematics & data analysis."
+  },
+  {
+    "id": "software_coding_and_technical_engineering",
+    "name": "Software, coding & technical engineering",
+    "count": 159,
+    "description": "Commands associated with software, coding & technical engineering."
+  },
+  {
+    "id": "translation_language_and_localization",
+    "name": "Translation, language & localization",
+    "count": 20,
+    "description": "Commands associated with translation, language & localization."
+  },
+  {
+    "id": "visual_design_image_generation_and_photography",
+    "name": "Visual design, image generation & photography",
+    "count": 350,
+    "description": "Commands associated with visual design, image generation & photography."
+  },
+  {
+    "id": "writing_editing_and_content_refinement",
+    "name": "Writing, editing & content refinement",
+    "count": 47,
+    "description": "Commands associated with writing, editing & content refinement."
+  }
+]
