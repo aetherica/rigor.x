@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import json
 import unittest
-from unittest import mock
 from pathlib import Path
+from unittest import mock
 
 from rigorx.registry import RegistryCatalog, RegistryValidationError
 
@@ -39,16 +39,14 @@ class RegistryTests(unittest.TestCase):
         architecture = json.loads((ROOT / "registries/proposed-count-fit-architecture.v0.1.json").read_text())
         commands = json.loads((ROOT / "library/slash-commands/commands.json").read_text())
         commands["commands"].pop()
-        with mock.patch("rigorx.registry._read_json", side_effect=[architecture, commands]):
-            with self.assertRaisesRegex(RegistryValidationError, "exactly 999"):
+        with mock.patch("rigorx.registry._read_json", side_effect=[architecture, commands]), self.assertRaisesRegex(RegistryValidationError, "exactly 999"):
                 RegistryCatalog.load(Path("unused-arch"), Path("unused-cmd"))
 
     def test_duplicate_command_name_fails(self):
         architecture = json.loads((ROOT / "registries/proposed-count-fit-architecture.v0.1.json").read_text())
         commands = json.loads((ROOT / "library/slash-commands/commands.json").read_text())
         commands["commands"][1]["name"] = commands["commands"][0]["name"]
-        with unittest.mock.patch("rigorx.registry._read_json", side_effect=[architecture, commands]):
-            with self.assertRaisesRegex(RegistryValidationError, "duplicate command name"):
+        with mock.patch("rigorx.registry._read_json", side_effect=[architecture, commands]), self.assertRaisesRegex(RegistryValidationError, "duplicate command name"):
                 RegistryCatalog.load(Path("unused-arch"), Path("unused-cmd"))
 
 
