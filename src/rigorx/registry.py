@@ -176,8 +176,9 @@ def _validate_commands(
         raise RegistryValidationError("Per-group command census does not match declared group counts")
     if dict(actual_classes) != manifest.get("classification_counts"):
         raise RegistryValidationError("Command classification census does not match manifest")
-    if targets.get("interface_operational_commands") != 102 or expected.get("interface", {}).get("target_count") != 102:
+    interface = registries.get("interface_operational_commands", {})
+    if targets.get("interface_operational_commands") != 102 or interface.get("target_count") != 102:
         raise RegistryValidationError("Interface/operational command target must remain 102")
-    if expected.get("interface", {}).get("historical_reference_definitions_reported") != 91 or expected.get("interface", {}).get("unresolved_slots") != 11:
+    if interface.get("historical_reference_definitions_reported") != 91 or interface.get("unresolved_slots") != 11:
         raise RegistryValidationError("Interface command partial-recovery census is inconsistent")
     return tuple(parsed)
