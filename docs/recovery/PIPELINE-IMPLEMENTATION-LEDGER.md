@@ -23,7 +23,11 @@ The canonical stage contracts are in `docs/architecture/PRIMARY-OPERATIONAL-PIPE
 | Add Python package metadata and test dependency | `pyproject.toml` | COMMITTED; read-back verified |
 | Define strict JSON Schema Draft 2020-12 run snapshot contract | `schemas/pipeline-run.schema.json` | COMMITTED; CI schema validation PASS |
 | Add validated snapshot restoration and event integrity checks | `PipelineRun.from_snapshot()` | COMMITTED; CI tests PASS |
-| Add GitHub Actions pipeline contract workflow with Ruff gate | `.github/workflows/rigorx-pipeline.yml` | COMMITTED; latest CI PASS |
+| Add transactional SQLite persistence and append-only event ledger | `src/rigorx/storage.py` | COMMITTED; integration tests PASS |
+| Add durable-store tests including rollback and multi-connection concurrency | `tests/test_storage.py` | COMMITTED; CI PASS |
+| Define durable record schema | `schemas/pipeline-store-record.schema.json` | COMMITTED; snapshot contract tested |
+| Add engineering dossier in dedicated folder | `engineering/ai-system/` | COMMITTED; 9 documents read-back verified |
+| Add GitHub Actions pipeline workflow with Ruff gate and Dependabot | `.github/workflows/rigorx-pipeline.yml`, `.github/dependabot.yml` | COMMITTED; CI PASS |
 
 ## 3. Runtime core scope in this increment
 
@@ -37,7 +41,10 @@ The first implementation increment provides:
 - bounded re-entry to current/earlier stages;
 - forced corrective re-entry to an earlier stage after failed verification;
 - partial, blocked, waiting-for-user, resume and cancellation transitions;
-- append-only in-memory event list and JSON-serializable state snapshot;
+- append-only event list and JSON-serializable state snapshot;
+- durable SQLite run snapshots and event ledger with atomic transaction;
+- optimistic concurrency revision checks;
+- database integrity checks and owner-only file permissions;
 - validated snapshot restoration with strict type, timestamp, stage-set and event-sequence checks;
 - JSON Schema validation of the run snapshot.
 
