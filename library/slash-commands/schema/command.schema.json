@@ -1,0 +1,118 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aetherica.github.io/rigor.x/schemas/slash-command.schema.json",
+  "title": "RIGOR-X Slash Command Entry",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "ordinal",
+    "name",
+    "description",
+    "group_id",
+    "group",
+    "classification",
+    "aliases_or_equivalents",
+    "source",
+    "lifecycle_status",
+    "runtime_status"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^SLC-[0-9]{4}$"
+    },
+    "ordinal": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 999
+    },
+    "name": {
+      "type": "string",
+      "pattern": "^/[A-Za-z0-9][A-Za-z0-9_-]*$"
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1
+    },
+    "group_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9_]+$"
+    },
+    "group": {
+      "type": "string",
+      "minLength": 1
+    },
+    "classification": {
+      "enum": [
+        "NATIVE",
+        "NATIVE — OPENAI",
+        "NATIVE — CHATGPT",
+        "NATIVE — CODEX",
+        "UI/MENU",
+        "MACRO",
+        "MACRO ALIAS",
+        "IMAGE KEYWORD",
+        "UNCLASSIFIED"
+      ]
+    },
+    "aliases_or_equivalents": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^/[A-Za-z0-9][A-Za-z0-9_-]*$"
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_id",
+        "repository_or_platform",
+        "source_ref",
+        "url",
+        "source_type",
+        "verification_status"
+      ],
+      "properties": {
+        "source_id": {
+          "type": "string"
+        },
+        "repository_or_platform": {
+          "type": "string"
+        },
+        "source_ref": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "source_type": {
+          "enum": [
+            "official_platform_documentation",
+            "community_catalogue"
+          ]
+        },
+        "verification_status": {
+          "type": "string"
+        }
+      }
+    },
+    "lifecycle_status": {
+      "enum": [
+        "candidate",
+        "accepted",
+        "rejected",
+        "deprecated"
+      ]
+    },
+    "runtime_status": {
+      "enum": [
+        "not_implemented_in_rigor_x",
+        "implemented",
+        "verified"
+      ]
+    }
+  }
+}
