@@ -319,6 +319,13 @@ class PipelineRun:
         if missing:
             raise ValueError(f"Snapshot is missing required fields: {sorted(missing)}")
 
+        if not isinstance(payload["run_id"], str) or not isinstance(payload["pipeline_version"], str):
+            raise ValueError("run_id and pipeline_version must be strings")
+        if type(payload["verification_accepted"]) is not bool:
+            raise ValueError("verification_accepted must be a boolean")
+        if type(payload["reentry_count"]) is not int or type(payload["max_reentries"]) is not int:
+            raise ValueError("reentry_count and max_reentries must be integers")
+
         raw_statuses = payload["stage_status"]
         if not isinstance(raw_statuses, Mapping):
             raise ValueError("stage_status must be an object")
@@ -327,13 +334,13 @@ class PipelineRun:
             raise ValueError("stage_status must contain exactly the 11 pipeline stages")
 
         run = cls(
-            run_id=str(payload["run_id"]),
-            pipeline_version=str(payload["pipeline_version"]),
-            max_reentries=int(payload["max_reentries"]),
+            run_id=payload["run_id"],
+            pipeline_version=payload["pipeline_version"],
+            max_reentries=payload["max_reentries"],
             current_stage=Stage(payload["current_stage"]),
             status=RunStatus(payload["status"]),
-            verification_accepted=bool(payload["verification_accepted"]),
-            reentry_count=int(payload["reentry_count"]),
+            verification_accepted=payload["verification_accepted"],
+            reentry_count=payload["reentry_count"],
             stage_status={
                 Stage(stage): StageStatus(status)
                 for stage, status in raw_statuses.items()
@@ -349,18 +356,27 @@ class PipelineRun:
         for expected_sequence, item in enumerate(raw_events, start=1):
             if not isinstance(item, Mapping):
                 raise ValueError("each event must be an object")
-            sequence = int(item["sequence"])
+            if type(item.get("sequence")) is not int:
+                raise ValueError("event sequence must be an integer")
+            sequence = item["sequence"]
             if sequence != expected_sequence:
                 raise ValueError("event sequence must be contiguous and append-only")
-            timestamp = str(item["timestamp"])
-            datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+            if not isinstance(item.get("timestamp"), str):
+                raise ValueError("event timestamp must be a string")
+            timestamp = item["timestamp"]
+            parsed_timestamp = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+            if parsed_timestamp.tzinfo is None:
+                raise ValueError("event timestamp must include a timezone")
+            if not isinstance(item.get("event_type"), str) or not item["event_type"].strip():
+                raise ValueError("event_type must be a non-empty string")
             details = item.get("details", {})
             if not isinstance(details, Mapping):
                 raise ValueError("event details must be an object")
+            json.dumps(dict(details))
             restored_events.append(
                 PipelineEvent(
                     sequence=sequence,
-                    event_type=str(item["event_type"]),
+                    event_type=item["event_type"],
                     stage=Stage(item["stage"]),
                     timestamp=timestamp,
                     details=dict(details),
