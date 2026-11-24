@@ -160,7 +160,7 @@ class PipelineRunTests(unittest.TestCase):
         run = PipelineRun("run-015")
         snapshot = run.snapshot()
         snapshot["verification_accepted"] = "false"
-        with self.assertRaises(ValueError):
+        with self.assertRaises(TypeError):
             PipelineRun.from_snapshot(snapshot)
 
     def test_snapshot_rejects_non_contiguous_event_sequence(self) -> None:
@@ -181,8 +181,6 @@ class PipelineRunTests(unittest.TestCase):
         validator.validate(run.snapshot())
 
     def test_snapshot_is_json_serializable(self) -> None:
-        import json
-
         run = PipelineRun("run-007")
         run.begin_stage()
         json.dumps(run.snapshot())
