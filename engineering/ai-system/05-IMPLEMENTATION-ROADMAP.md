@@ -3,10 +3,10 @@
 | Workstream | Deliverable | Dependency | Acceptance | State |
 |---|---|---|---|---|
 | WS-01 | Architecture + 11-stage spec | Owner sequence | Review + traceability | COMPLETED |
-| WS-02 | Pipeline controller | Stage contracts | Unit tests + CI | VERIFIED |
-| WS-03 | Durable persistence | Controller | SQLite transactions, restore, concurrency, integrity | IMPLEMENTING |
-| WS-04 | Typed contracts | Schema base | Stage payload schema + validation | PARTIAL |
-| WS-05 | Registry resolver | Registries | lifecycle-aware lookup and crosswalks | NOT STARTED |
+| WS-02 | Pipeline controller | Stage order | Unit tests + CI | VERIFIED |
+| WS-03 | Durable persistence | Controller | SQLite transactions, restore, concurrency, integrity | VERIFIED |
+| WS-04 | Typed stage contracts | Pipeline | Artifact schema, stage match, serialization, validation | VERIFIED (base contract) |
+| WS-05 | Registry resolver | Registry corpus | Census, exact-ID resolution, crosswalk integrity, fail-closed tests | VERIFIED (read-only) |
 | WS-06 | Research plan/acquisition | Source taxonomy | channel receipts, provenance and gaps | NOT STARTED |
 | WS-07 | Capability routing | Host/tool inventory | actual capability receipts | NOT STARTED |
 | WS-08 | Execution adapter contracts | Routing | authorization/idempotency/failure types | NOT STARTED |
@@ -22,3 +22,6 @@
 `WS-03 → WS-04 → WS-05 → WS-06/07 → WS-08 → WS-09 → WS-10 → WS-11`
 
 Security, test, observability and release controls are cross-cutting from the beginning, not postponed to the end.
+
+## WS15 acceptance status
+WS15 is complete and merged. It resolves the proposed records and candidate command corpus by stable ID while preserving their status, validates the recovered census, and defines typed artifacts for stage outputs. It does **not** activate command handlers, make the proposed architecture canonical, or implement routing/execution.
