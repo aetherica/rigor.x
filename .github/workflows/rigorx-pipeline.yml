@@ -15,6 +15,7 @@ on:
       - "src/rigorx/**"
       - "tests/**"
       - "pyproject.toml"
+      - "schemas/**"
       - ".github/workflows/rigorx-pipeline.yml"
   workflow_dispatch:
 
