@@ -1,7 +1,12 @@
 """Durable-store contract tests for RIGOR-X."""
+import json
+import os
+import sqlite3
 import tempfile
 import unittest
 from pathlib import Path
+
+from jsonschema import Draft202012Validator, FormatChecker
 
 from rigorx.pipeline import PipelineRun, Stage
 from rigorx.storage import (
@@ -15,8 +20,6 @@ from rigorx.storage import (
 class SQLitePipelineStoreTests(unittest.TestCase):
     def test_persisted_snapshot_schema_valid(self) -> None:
         schema_path = Path(__file__).resolve().parents[1] / "schemas" / "pipeline-run.schema.json"
-        import json
-        from jsonschema import Draft202012Validator, FormatChecker
         schema = json.loads(schema_path.read_text(encoding="utf-8"))
         validator = Draft202012Validator(schema, format_checker=FormatChecker())
         with SQLitePipelineStore(":memory:") as store:
@@ -86,7 +89,10 @@ class SQLitePipelineStoreTests(unittest.TestCase):
     def test_revision_conflict_across_two_store_connections(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             db = Path(tmp) / "shared.sqlite3"
-            with SQLitePipelineStore(db) as first, SQLitePipelineStore(db) as second:
+            with (
+                SQLitePipelineStore(db) as first,
+                SQLitePipelineStore(db) as second,
+            ):
                 run = PipelineRun("durable-multi-connection")
                 rev = first.save(run)
                 loaded, second_rev = second.restore(run.run_id)
@@ -107,7 +113,7 @@ class SQLitePipelineStoreTests(unittest.TestCase):
                 """CREATE TRIGGER fail_event_insert BEFORE INSERT ON pipeline_events
                 BEGIN SELECT RAISE(ABORT, 'injected test failure'); END;"""
             )
-            with self.assertRaises(Exception):
+            with self.assertRaises(sqlite3.IntegrityError):
                 store.save(run, expected_revision=revision)
             persisted = store.load(run.run_id)
             self.assertEqual(persisted.revision, revision)
@@ -115,7 +121,6 @@ class SQLitePipelineStoreTests(unittest.TestCase):
             self.assertEqual(store.integrity_check(), ["ok"])
 
     def test_file_database_permissions_are_owner_only(self) -> None:
-        import os
         with tempfile.TemporaryDirectory() as tmp:
             db = Path(tmp) / "private.sqlite3"
             with SQLitePipelineStore(db):
