@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aetherica.github.io/rigor-x/schemas/stage-artifact.schema.json",
+  "title": "RIGOR-X Stage Artifact Contract",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "stage",
+    "artifact_id",
+    "kind",
+    "schema_version",
+    "input_refs",
+    "output_refs",
+    "evidence_refs",
+    "metadata"
+  ],
+  "properties": {
+    "stage": {
+      "type": "string",
+      "enum": [
+        "CONTEXT",
+        "INTENT",
+        "KNOWLEDGE",
+        "RESEARCH",
+        "ROUTING",
+        "REASONING",
+        "EXECUTION",
+        "EVIDENCE",
+        "VERIFICATION",
+        "DECISION",
+        "FEEDBACK"
+      ]
+    },
+    "artifact_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "CONTEXT",
+        "INTENT",
+        "KNOWLEDGE",
+        "RESEARCH",
+        "ROUTING",
+        "REASONING",
+        "EXECUTION",
+        "EVIDENCE",
+        "VERIFICATION",
+        "DECISION",
+        "FEEDBACK"
+      ]
+    },
+    "schema_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "input_refs": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "output_refs": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "evidence_refs": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "metadata": {
+      "type": "object"
+    }
+  }
+}
