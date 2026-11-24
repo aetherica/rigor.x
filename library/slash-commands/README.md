@@ -15,6 +15,8 @@ A versioned, machine-readable research library containing 999 unique slash-prefi
 - `schema/command.schema.json` — JSON Schema for a command record.
 - `scripts/validate_slash_command_library.py` — deterministic structural validator.
 - `provenance/SOURCES.md` — source register, extraction method and limitations.
+- `ENGINEERING-STANDARD.md` — library data, provenance, versioning and acceptance rules.
+- `CHANGELOG.md` — version history.
 - `VALIDATION.md` — validation record and reproduction steps.
 
 ## Classification
