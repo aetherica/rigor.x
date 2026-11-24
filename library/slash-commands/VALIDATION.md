@@ -1,32 +1,29 @@
 # Validation Record
 
-**Library version:** 0.1.0  
-**Status:** Repository read-back structural checks passed; validator Python syntax compiled; standalone validator execution, JSON Schema engine and CI execution remain pending.
+**Library version:** 0.2.0  
+**Status:** Taxonomy correction committed; repository-side automated execution is pending the first GitHub Actions run.
 
-## Executed read-back checks
-- [x] `commands.json` fetched from `main` and parsed successfully.
-- [x] Exactly 999 command records.
-- [x] Exactly 999 unique IDs and 999 unique slash names.
-- [x] Ordinals and IDs are contiguous from `SLC-0001` through `SLC-0999`.
-- [x] All command names conform to the library token grammar, including punctuation-bearing tokens such as `/tl;dr`, `/f1.4` and `/f2.8`.
-- [x] All descriptions are non-empty.
-- [x] Exactly 17 groups; recorded group counts match actual membership.
-- [x] All records have source IDs, source references, URLs and verification states.
-- [x] All six source IDs are represented in the provenance register.
-- [x] `commands.csv` fetched and parsed; 999 data rows; command order/name parity with JSON.
-- [x] All ten library files fetched back from `main`.
-- [x] Validator source compiled successfully with Python `compile()` (syntax check only; validator was not executed against repository files).
-- [x] Repository branch search returned only `main`.
+## Taxonomy correction
+- [x] Corrected the functional taxonomy from 17 to 18 groups.
+- [x] Added **Finance, business & investment** as the 18th group.
+- [x] Reclassified 7 directly relevant entries: `/roi`, `/budget`, `/finances`, `/marketmap`, `/businessmodel`, `/pitch`, and `/investor`.
+- [x] Preserved all 999 records, IDs, ordinals, source provenance, lifecycle and runtime states.
+- [x] Updated JSON, CSV, group catalogue, embedded/standalone manifests, validator and documentation.
 
-## Pending checks
-- [ ] Execute `scripts/validate_slash_command_library.py` in Python 3.
-- [ ] Validate all records against `schema/command.schema.json` using a Draft 2020-12 JSON Schema validator.
-- [ ] Add/run repository CI for this library.
+## Validation gates
+- [x] Deterministic repository validator updated for 18 groups, group/name parity, embedded metadata parity and full CSV/JSON field parity.
+- [x] Validator now checks every record against JSON Schema Draft 2020-12 and validates the complete library envelope.
+- [x] GitHub Actions workflow added for Python 3.15 and schema/structural checks.
+- [ ] GitHub Actions run result: pending first push-triggered execution.
 - [ ] Independently revalidate each command against its current original source and platform version.
 - [ ] Complete alias semantic review and RIGOR-X capability/compatibility mapping.
 
 ## Reproduction
+From this directory, install the validator dependency and run:
+
 ```bash
+python3 -m pip install jsonschema
 python3 scripts/validate_slash_command_library.py
 ```
-Read-back checks above were performed against the files fetched from GitHub `main`; they are not a claim that the Python script or CI has executed.
+
+The automated workflow uses the latest stable Python 3.15 patch release available from the official setup action at run time. A workflow definition is not evidence of a successful run; the run must be inspected separately.
