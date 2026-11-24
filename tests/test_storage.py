@@ -83,6 +83,37 @@ class SQLitePipelineStoreTests(unittest.TestCase):
             with self.assertRaises(RevisionConflict):
                 store.save(run)
 
+    def test_revision_conflict_across_two_store_connections(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            db = Path(tmp) / "shared.sqlite3"
+            with SQLitePipelineStore(db) as first, SQLitePipelineStore(db) as second:
+                run = PipelineRun("durable-multi-connection")
+                rev = first.save(run)
+                loaded, second_rev = second.restore(run.run_id)
+                self.assertEqual(second_rev, rev)
+                run.begin_stage()
+                new_rev = first.save(run, expected_revision=rev)
+                loaded.begin_stage()
+                with self.assertRaises(RevisionConflict):
+                    second.save(loaded, expected_revision=second_rev)
+                self.assertEqual(first.load(run.run_id).revision, new_rev)
+
+    def test_transaction_rolls_back_snapshot_when_event_insert_fails(self) -> None:
+        with SQLitePipelineStore(":memory:") as store:
+            run = PipelineRun("durable-rollback")
+            revision = store.save(run)
+            run.begin_stage()
+            store._connection.execute(
+                """CREATE TRIGGER fail_event_insert BEFORE INSERT ON pipeline_events
+                BEGIN SELECT RAISE(ABORT, 'injected test failure'); END;"""
+            )
+            with self.assertRaises(Exception):
+                store.save(run, expected_revision=revision)
+            persisted = store.load(run.run_id)
+            self.assertEqual(persisted.revision, revision)
+            self.assertEqual(persisted.snapshot, PipelineRun("durable-rollback").snapshot())
+            self.assertEqual(store.integrity_check(), ["ok"])
+
     def test_run_not_found(self) -> None:
         with SQLitePipelineStore(":memory:") as store:
             with self.assertRaises(RunNotFound):
