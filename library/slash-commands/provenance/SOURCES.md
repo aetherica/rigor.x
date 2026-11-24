@@ -10,6 +10,22 @@
 | SRC-CHATGPT-001 | ChatGPT slash command reference | Official OpenAI documentation | https://learn.chatgpt.com/docs/reference/slash-commands | ChatGPT desktop composer commands |
 | SRC-CODEX-001 | Codex developer command reference | Official OpenAI documentation | https://learn.chatgpt.com/docs/developer-commands | Codex developer-surface commands |
 
+## Community source files
+
+| Source reference | Exact source file |
+|---|---|
+| 01-chatgpt-output | https://github.com/Cris0338/GPT-Slash-Prompts/blob/main/EN/01-chatgpt-output.md |
+| 02-search-analysis | https://github.com/Cris0338/GPT-Slash-Prompts/blob/main/EN/02-search-analysis.md |
+| 03-writing-languages-communication | https://github.com/Cris0338/GPT-Slash-Prompts/blob/main/EN/03-writing-languages-communication.md |
+| 04-science-data | https://github.com/Cris0338/GPT-Slash-Prompts/blob/main/EN/04-science-data.md |
+| 05-code-systems-github | https://github.com/Cris0338/GPT-Slash-Prompts/blob/main/EN/05-code-systems-github.md |
+| 06-documents-projects-automations | https://github.com/Cris0338/GPT-Slash-Prompts/blob/main/EN/06-documents-projects-automations.md |
+| 07-images-camera-light-atmosphere | https://github.com/Cris0338/GPT-Slash-Prompts/blob/main/EN/07-images-camera-light-atmosphere.md |
+| 08-images-styles-effects-composition | https://github.com/Cris0338/GPT-Slash-Prompts/blob/main/EN/08-images-styles-effects-composition.md |
+| 09-maker-laser-cnc-3d | https://github.com/Cris0338/GPT-Slash-Prompts/blob/main/EN/09-maker-laser-cnc-3d.md |
+| 10-v1.2-additions | https://github.com/Cris0338/GPT-Slash-Prompts/blob/main/EN/10-v1.2-additions.md |
+| 11-aliases | https://github.com/Cris0338/GPT-Slash-Prompts/blob/main/EN/11-aliases.md |
+
 ## Extraction and normalization
 - The community catalogue extraction contains 986 slash rows; 17 repeated tokens were collapsed, yielding 969 unique slash tokens.
 - 30 additional unique CLI tokens were added from Aider, OpenCode and Gemini CLI documentation families, yielding 999 unique names.
