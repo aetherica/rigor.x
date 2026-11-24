@@ -1,0 +1,115 @@
+{
+  "registry": "analytical_operators",
+  "schema_version": "0.1.0",
+  "canonical_target_count": 15,
+  "recovered_count": 14,
+  "entries": [
+    {
+      "id": "OP-001",
+      "name": "Deductive Reasoning",
+      "source_status": "HISTORICAL_ASSISTANT_RECORD",
+      "canonical_status": "PENDING_OWNER_RATIFICATION",
+      "definition_status": "NOT_SPECIFIED"
+    },
+    {
+      "id": "OP-002",
+      "name": "Inductive Reasoning",
+      "source_status": "HISTORICAL_ASSISTANT_RECORD",
+      "canonical_status": "PENDING_OWNER_RATIFICATION",
+      "definition_status": "NOT_SPECIFIED"
+    },
+    {
+      "id": "OP-003",
+      "name": "Abductive Reasoning",
+      "source_status": "HISTORICAL_ASSISTANT_RECORD",
+      "canonical_status": "PENDING_OWNER_RATIFICATION",
+      "definition_status": "NOT_SPECIFIED"
+    },
+    {
+      "id": "OP-004",
+      "name": "Causal Reasoning",
+      "source_status": "HISTORICAL_ASSISTANT_RECORD",
+      "canonical_status": "PENDING_OWNER_RATIFICATION",
+      "definition_status": "NOT_SPECIFIED"
+    },
+    {
+      "id": "OP-005",
+      "name": "Counterfactual Reasoning",
+      "source_status": "HISTORICAL_ASSISTANT_RECORD",
+      "canonical_status": "PENDING_OWNER_RATIFICATION",
+      "definition_status": "NOT_SPECIFIED"
+    },
+    {
+      "id": "OP-006",
+      "name": "Bayesian Reasoning",
+      "source_status": "HISTORICAL_ASSISTANT_RECORD",
+      "canonical_status": "PENDING_OWNER_RATIFICATION",
+      "definition_status": "NOT_SPECIFIED"
+    },
+    {
+      "id": "OP-007",
+      "name": "Analogical Reasoning",
+      "source_status": "HISTORICAL_ASSISTANT_RECORD",
+      "canonical_status": "PENDING_OWNER_RATIFICATION",
+      "definition_status": "NOT_SPECIFIED"
+    },
+    {
+      "id": "OP-008",
+      "name": "Systems Thinking",
+      "source_status": "HISTORICAL_ASSISTANT_RECORD",
+      "canonical_status": "PENDING_OWNER_RATIFICATION",
+      "definition_status": "NOT_SPECIFIED"
+    },
+    {
+      "id": "OP-009",
+      "name": "Game-Theoretic Reasoning",
+      "source_status": "HISTORICAL_ASSISTANT_RECORD",
+      "canonical_status": "PENDING_OWNER_RATIFICATION",
+      "definition_status": "NOT_SPECIFIED"
+    },
+    {
+      "id": "OP-010",
+      "name": "Adversarial Reasoning",
+      "source_status": "HISTORICAL_ASSISTANT_RECORD",
+      "canonical_status": "PENDING_OWNER_RATIFICATION",
+      "definition_status": "NOT_SPECIFIED"
+    },
+    {
+      "id": "OP-011",
+      "name": "Temporal Reasoning",
+      "source_status": "HISTORICAL_ASSISTANT_RECORD",
+      "canonical_status": "PENDING_OWNER_RATIFICATION",
+      "definition_status": "NOT_SPECIFIED"
+    },
+    {
+      "id": "OP-012",
+      "name": "Probabilistic Forecasting",
+      "source_status": "HISTORICAL_ASSISTANT_RECORD",
+      "canonical_status": "PENDING_OWNER_RATIFICATION",
+      "definition_status": "NOT_SPECIFIED"
+    },
+    {
+      "id": "OP-013",
+      "name": "Decision-Theoretic Reasoning",
+      "source_status": "HISTORICAL_ASSISTANT_RECORD",
+      "canonical_status": "PENDING_OWNER_RATIFICATION",
+      "definition_status": "NOT_SPECIFIED"
+    },
+    {
+      "id": "OP-014",
+      "name": "Optimization",
+      "source_status": "HISTORICAL_ASSISTANT_RECORD",
+      "canonical_status": "PENDING_OWNER_RATIFICATION",
+      "definition_status": "NOT_SPECIFIED"
+    },
+    {
+      "id": "OP-015",
+      "name": null,
+      "source_status": "NOT_RECOVERED",
+      "canonical_status": "RESERVED",
+      "definition_status": "NOT_RECOVERED"
+    }
+  ],
+  "source": "Prior conversation record 2026-11-24T17:16:27Z; retrieved 2026-11-25",
+  "note": "The 14 names are a historical assistant-produced list, not an owner-ratified canonical operator register."
+}
