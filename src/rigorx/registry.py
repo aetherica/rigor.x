@@ -8,9 +8,10 @@ from __future__ import annotations
 
 import json
 from collections import Counter
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
 
 EXPECTED_TARGETS = {
     "formulas": 30,
@@ -59,7 +60,7 @@ class RegistryCatalog:
     commands: tuple[RegistryRecord, ...]
 
     @classmethod
-    def load(cls, architecture_path: Path, slash_library_path: Path) -> "RegistryCatalog":
+    def load(cls, architecture_path: Path, slash_library_path: Path) -> RegistryCatalog:
         architecture = _read_json(architecture_path)
         slash_library = _read_json(slash_library_path)
         if not isinstance(architecture, dict) or not isinstance(slash_library, dict):
