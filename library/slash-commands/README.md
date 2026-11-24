@@ -6,7 +6,7 @@
 **Canonical branch:** `main`
 
 ## Purpose
-A versioned, machine-readable research library containing 999 unique slash-prefixed tokens grouped into 17 functional categories. This is a discovery and normalization corpus, not a declaration that every entry is executable in RIGOR-X.
+A versioned, machine-readable research library containing 999 unique slash-prefixed tokens grouped into 18 functional categories. This is a discovery and normalization corpus, not a declaration that every entry is executable in RIGOR-X.
 
 ## Contents
 - `manifest.json` — standalone library manifest and version/count metadata.
@@ -20,6 +20,9 @@ A versioned, machine-readable research library containing 999 unique slash-prefi
 - `ENGINEERING-STANDARD.md` — library data, provenance, versioning and acceptance rules.
 - `CHANGELOG.md` — version history.
 - `VALIDATION.md` — validation record and reproduction steps.
+
+## Functional groups
+The 18th functional group, **Finance, business & investment**, separates financial analysis, budgeting, investment, business-model and market-oriented business commands from broader workflow, information and visual-design categories. The current group contains 7 records; total library size remains 999.
 
 ## Classification
 | Classification | Meaning |
