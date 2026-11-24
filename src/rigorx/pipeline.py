@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+import json
 from enum import StrEnum
 from typing import Any, Mapping
 
@@ -301,18 +302,94 @@ class PipelineRun:
             "events": [event.to_dict() for event in self.events],
         }
 
+    @classmethod
+    def from_snapshot(cls, payload: Mapping[str, Any]) -> "PipelineRun":
+        """Restore a run from a validated JSON-compatible snapshot.
+
+        Persistence is intentionally delegated to a storage adapter. This
+        constructor validates the snapshot's structural invariants before
+        recreating the in-memory control state.
+        """
+        required = {
+            "run_id", "pipeline_version", "current_stage", "status",
+            "verification_accepted", "reentry_count", "max_reentries",
+            "stage_status", "events",
+        }
+        missing = required.difference(payload)
+        if missing:
+            raise ValueError(f"Snapshot is missing required fields: {sorted(missing)}")
+
+        raw_statuses = payload["stage_status"]
+        if not isinstance(raw_statuses, Mapping):
+            raise ValueError("stage_status must be an object")
+        expected_stages = {stage.value for stage in STAGE_ORDER}
+        if set(raw_statuses) != expected_stages:
+            raise ValueError("stage_status must contain exactly the 11 pipeline stages")
+
+        run = cls(
+            run_id=str(payload["run_id"]),
+            pipeline_version=str(payload["pipeline_version"]),
+            max_reentries=int(payload["max_reentries"]),
+            current_stage=Stage(payload["current_stage"]),
+            status=RunStatus(payload["status"]),
+            verification_accepted=bool(payload["verification_accepted"]),
+            reentry_count=int(payload["reentry_count"]),
+            stage_status={
+                Stage(stage): StageStatus(status)
+                for stage, status in raw_statuses.items()
+            },
+        )
+        if run.reentry_count > run.max_reentries:
+            raise ValueError("reentry_count cannot exceed max_reentries")
+
+        raw_events = payload["events"]
+        if not isinstance(raw_events, list):
+            raise ValueError("events must be an array")
+        restored_events: list[PipelineEvent] = []
+        for expected_sequence, item in enumerate(raw_events, start=1):
+            if not isinstance(item, Mapping):
+                raise ValueError("each event must be an object")
+            sequence = int(item["sequence"])
+            if sequence != expected_sequence:
+                raise ValueError("event sequence must be contiguous and append-only")
+            timestamp = str(item["timestamp"])
+            datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+            details = item.get("details", {})
+            if not isinstance(details, Mapping):
+                raise ValueError("event details must be an object")
+            restored_events.append(
+                PipelineEvent(
+                    sequence=sequence,
+                    event_type=str(item["event_type"]),
+                    stage=Stage(item["stage"]),
+                    timestamp=timestamp,
+                    details=dict(details),
+                )
+            )
+        run.events = restored_events
+
+        if run.verification_accepted and run.stage_status[Stage.VERIFICATION] is not StageStatus.COMPLETED:
+            raise ValueError("verification_accepted requires a completed VERIFICATION stage")
+        if run.status is RunStatus.COMPLETED and run.stage_status[Stage.FEEDBACK] is not StageStatus.COMPLETED:
+            raise ValueError("a completed run must have a completed FEEDBACK stage")
+        if run.status is RunStatus.VERIFICATION_FAILED and run.stage_status[Stage.VERIFICATION] is not StageStatus.FAILED:
+            raise ValueError("VERIFICATION_FAILED requires a failed VERIFICATION stage")
+        return run
+
     def _emit(
         self,
         event_type: str,
         stage: Stage,
         details: Mapping[str, Any] | None = None,
     ) -> PipelineEvent:
+        event_details = dict(details or {})
+        json.dumps(event_details)  # Reject non-serializable event payloads at capture time.
         event = PipelineEvent(
             sequence=len(self.events) + 1,
             event_type=event_type,
             stage=stage,
             timestamp=datetime.now(timezone.utc).isoformat(),
-            details=dict(details or {}),
+            details=event_details,
         )
         self.events.append(event)
         return event
