@@ -102,8 +102,10 @@ class PipelineRun:
 
     def begin_stage(self) -> Stage:
         """Begin the current stage; stages cannot be started out of order."""
-        if self.status in {RunStatus.COMPLETED, RunStatus.CANCELLED}:
-            raise InvalidTransition(f"Cannot start a stage for a {self.status.value} run")
+        if self.status in {RunStatus.COMPLETED, RunStatus.CANCELLED, RunStatus.VERIFICATION_FAILED}:
+            raise InvalidTransition(
+                f"Cannot start a stage for a {self.status.value} run; re-enter an earlier stage first"
+            )
         state = self.stage_status[self.current_stage]
         if state not in {StageStatus.READY, StageStatus.PARTIAL, StageStatus.BLOCKED, StageStatus.FAILED}:
             raise InvalidTransition(
@@ -194,12 +196,15 @@ class PipelineRun:
             raise InvalidTransition(f"Cannot re-enter a {self.status.value} run")
         if not trigger.strip() or not reason.strip():
             raise ValueError("trigger and reason are required")
-        if STAGE_ORDER.index(target) > STAGE_ORDER.index(self.current_stage):
+        target_index = STAGE_ORDER.index(target)
+        current_index = STAGE_ORDER.index(self.current_stage)
+        if target_index > current_index:
             raise InvalidTransition("Re-entry may target the current or an earlier stage")
+        if self.status is RunStatus.VERIFICATION_FAILED and target_index >= STAGE_ORDER.index(Stage.VERIFICATION):
+            raise InvalidTransition("Failed verification must re-enter an earlier corrective stage")
         if self.reentry_count >= self.max_reentries:
             raise InvalidTransition("Maximum re-entry budget exhausted")
 
-        target_index = STAGE_ORDER.index(target)
         for stage in STAGE_ORDER[target_index:]:
             self.stage_status[stage] = StageStatus.NOT_STARTED
         self.stage_status[target] = StageStatus.READY
