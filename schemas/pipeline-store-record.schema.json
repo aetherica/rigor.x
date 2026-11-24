@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/aetherica/rigor.x/blob/main/schemas/pipeline-store-record.schema.json",
+  "title": "RIGOR-X Durable Pipeline Store Record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["run_id", "revision", "snapshot"],
+  "properties": {
+    "run_id": {"type": "string", "minLength": 1},
+    "revision": {"type": "integer", "minimum": 1},
+    "snapshot": {"$ref": "pipeline-run.schema.json"}
+  }
+}
