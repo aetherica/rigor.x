@@ -2,13 +2,13 @@
   "manifest": {
     "library_id": "AETHERICA-RIGORX-SLASH-COMMAND-LIBRARY",
     "title": "Aetherica RIGOR-X Slash Command Library",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "status": "research_candidate_library",
     "canonical_branch": "main",
     "canonical_path": "library/slash-commands/",
     "total_entries": 999,
     "unique_names": 999,
-    "group_count": 17,
+    "group_count": 18,
     "classification_counts": {
       "MACRO ALIAS": 6,
       "MACRO": 647,
@@ -48,7 +48,7 @@
     {
       "id": "comparison_evaluation_and_decision_support",
       "name": "Comparison, evaluation & decision support",
-      "count": 22,
+      "count": 21,
       "description": "Commands associated with comparison, evaluation & decision support."
     },
     {
@@ -62,6 +62,12 @@
       "name": "Education, learning & tutoring",
       "count": 27,
       "description": "Commands associated with education, learning & tutoring."
+    },
+    {
+      "id": "finance_business_and_investment",
+      "name": "Finance, business & investment",
+      "count": 7,
+      "description": "Commands for financial analysis, budgeting, investment, business models and market-oriented business work."
     },
     {
       "id": "general_purpose_ai_workflows",
@@ -78,7 +84,7 @@
     {
       "id": "information_extraction_and_knowledge_organization",
       "name": "Information extraction & knowledge organization",
-      "count": 47,
+      "count": 46,
       "description": "Commands associated with information extraction & knowledge organization."
     },
     {
@@ -90,7 +96,7 @@
     {
       "id": "platform_native_commands_and_interface_controls",
       "name": "Platform-native commands & interface controls",
-      "count": 34,
+      "count": 33,
       "description": "Commands associated with platform-native commands & interface controls."
     },
     {
@@ -126,7 +132,7 @@
     {
       "id": "visual_design_image_generation_and_photography",
       "name": "Visual design, image generation & photography",
-      "count": 350,
+      "count": 346,
       "description": "Commands associated with visual design, image generation & photography."
     },
     {
@@ -976,8 +982,8 @@
       "ordinal": 42,
       "name": "/roi",
       "description": "Calculate or discuss return on investment.",
-      "group_id": "comparison_evaluation_and_decision_support",
-      "group": "Comparison, evaluation & decision support",
+      "group_id": "finance_business_and_investment",
+      "group": "Finance, business & investment",
       "classification": "MACRO",
       "aliases_or_equivalents": [],
       "source": {
@@ -4756,8 +4762,8 @@
       "ordinal": 231,
       "name": "/budget",
       "description": "Prepare a budget or cost estimate.",
-      "group_id": "information_extraction_and_knowledge_organization",
-      "group": "Information extraction & knowledge organization",
+      "group_id": "finance_business_and_investment",
+      "group": "Finance, business & investment",
       "classification": "MACRO",
       "aliases_or_equivalents": [],
       "source": {
@@ -5496,8 +5502,8 @@
       "ordinal": 268,
       "name": "/finances",
       "description": "Opens/directs to the Finance function where available; uses authorized linked financial data.",
-      "group_id": "platform_native_commands_and_interface_controls",
-      "group": "Platform-native commands & interface controls",
+      "group_id": "finance_business_and_investment",
+      "group": "Finance, business & investment",
       "classification": "NATIVE",
       "aliases_or_equivalents": [],
       "source": {
@@ -17776,8 +17782,8 @@
       "ordinal": 882,
       "name": "/marketmap",
       "description": "Map an industry or market landscape.",
-      "group_id": "visual_design_image_generation_and_photography",
-      "group": "Visual design, image generation & photography",
+      "group_id": "finance_business_and_investment",
+      "group": "Finance, business & investment",
       "classification": "MACRO",
       "aliases_or_equivalents": [],
       "source": {
@@ -17796,8 +17802,8 @@
       "ordinal": 883,
       "name": "/businessmodel",
       "description": "Explain or design a business model.",
-      "group_id": "visual_design_image_generation_and_photography",
-      "group": "Visual design, image generation & photography",
+      "group_id": "finance_business_and_investment",
+      "group": "Finance, business & investment",
       "classification": "MACRO",
       "aliases_or_equivalents": [],
       "source": {
@@ -17816,8 +17822,8 @@
       "ordinal": 884,
       "name": "/pitch",
       "description": "Build an investor/startup pitch.",
-      "group_id": "visual_design_image_generation_and_photography",
-      "group": "Visual design, image generation & photography",
+      "group_id": "finance_business_and_investment",
+      "group": "Finance, business & investment",
       "classification": "MACRO",
       "aliases_or_equivalents": [],
       "source": {
@@ -17836,8 +17842,8 @@
       "ordinal": 885,
       "name": "/investor",
       "description": "Analyze from an investor perspective.",
-      "group_id": "visual_design_image_generation_and_photography",
-      "group": "Visual design, image generation & photography",
+      "group_id": "finance_business_and_investment",
+      "group": "Finance, business & investment",
       "classification": "MACRO",
       "aliases_or_equivalents": [],
       "source": {
