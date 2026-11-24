@@ -1,0 +1,1779 @@
+{
+  "schema_version": "0.1.0",
+  "project": "RIGOR-X",
+  "classification": "PROPOSED_ARCHITECTURE_DERIVED_FROM_RECOVERED_MATERIAL",
+  "canonical_targets": {
+    "formulas": 30,
+    "algorithms": 33,
+    "topics": 111,
+    "operators": 15,
+    "functional_groups": 18,
+    "knowledge_domains": 36,
+    "slash_command_corpus": 999,
+    "interface_operational_commands": 102
+  },
+  "registries": {
+    "knowledge_domains": [
+      {
+        "id": "KD-01",
+        "name": "Psychology / Human Nature",
+        "source_status": "HISTORICAL_ASSISTANT_RECORD",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "KD-02",
+        "name": "Behavioral Psychology",
+        "source_status": "HISTORICAL_ASSISTANT_RECORD",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "KD-03",
+        "name": "Power / Authority",
+        "source_status": "HISTORICAL_ASSISTANT_RECORD",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "KD-04",
+        "name": "Positioning / Strategic Advantage",
+        "source_status": "HISTORICAL_ASSISTANT_RECORD",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "KD-05",
+        "name": "Influence / Persuasion",
+        "source_status": "HISTORICAL_ASSISTANT_RECORD",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "KD-06",
+        "name": "Political Strategy / Statecraft",
+        "source_status": "HISTORICAL_ASSISTANT_RECORD",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "KD-07",
+        "name": "Military / Warfare",
+        "source_status": "HISTORICAL_ASSISTANT_RECORD",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "KD-08",
+        "name": "Geopolitics / International Relations",
+        "source_status": "HISTORICAL_ASSISTANT_RECORD",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "KD-09",
+        "name": "Economics / Political Economy",
+        "source_status": "HISTORICAL_ASSISTANT_RECORD",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "KD-10",
+        "name": "Finance / Wealth",
+        "source_status": "HISTORICAL_ASSISTANT_RECORD",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "KD-11",
+        "name": "Negotiation",
+        "source_status": "HISTORICAL_ASSISTANT_RECORD",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "KD-12",
+        "name": "Intelligence / Information",
+        "source_status": "HISTORICAL_ASSISTANT_RECORD",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "KD-13",
+        "name": "Deception",
+        "source_status": "HISTORICAL_ASSISTANT_RECORD",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "KD-14",
+        "name": "Leadership / Command",
+        "source_status": "HISTORICAL_ASSISTANT_RECORD",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "KD-15",
+        "name": "Organizational Strategy",
+        "source_status": "HISTORICAL_ASSISTANT_RECORD",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "KD-16",
+        "name": "Governance / Administration",
+        "source_status": "HISTORICAL_ASSISTANT_RECORD",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "KD-17",
+        "name": "Sociology / Social Structure",
+        "source_status": "HISTORICAL_ASSISTANT_RECORD",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "KD-18",
+        "name": "Mass Psychology / Ideology",
+        "source_status": "HISTORICAL_ASSISTANT_RECORD",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "KD-19",
+        "name": "Communication / Rhetoric",
+        "source_status": "HISTORICAL_ASSISTANT_RECORD",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "KD-20",
+        "name": "Competition / Game Theory",
+        "source_status": "HISTORICAL_ASSISTANT_RECORD",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "KD-21",
+        "name": "Strategy / Planning",
+        "source_status": "HISTORICAL_ASSISTANT_RECORD",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "KD-22",
+        "name": "Decision Science / Judgment",
+        "source_status": "HISTORICAL_ASSISTANT_RECORD",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "KD-23",
+        "name": "Risk / Survival",
+        "source_status": "HISTORICAL_ASSISTANT_RECORD",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "KD-24",
+        "name": "Conflict Management",
+        "source_status": "HISTORICAL_ASSISTANT_RECORD",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "KD-25",
+        "name": "Ethics",
+        "source_status": "HISTORICAL_ASSISTANT_RECORD",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "KD-26",
+        "name": "Law / Rules",
+        "source_status": "HISTORICAL_ASSISTANT_RECORD",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "KD-27",
+        "name": "History / Civilizational Dynamics",
+        "source_status": "HISTORICAL_ASSISTANT_RECORD",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "KD-28",
+        "name": "Education / Knowledge Acquisition",
+        "source_status": "HISTORICAL_ASSISTANT_RECORD",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "KD-29",
+        "name": "Personal Strategy / Self-Mastery",
+        "source_status": "HISTORICAL_ASSISTANT_RECORD",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "KD-30",
+        "name": "Operations / Execution",
+        "source_status": "HISTORICAL_ASSISTANT_RECORD",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "KD-31",
+        "name": "Resources / Dependency",
+        "source_status": "HISTORICAL_ASSISTANT_RECORD",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "KD-32",
+        "name": "Innovation / Adaptation",
+        "source_status": "HISTORICAL_ASSISTANT_RECORD",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "KD-33",
+        "name": "Psychological Resilience",
+        "source_status": "HISTORICAL_ASSISTANT_RECORD",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "KD-34",
+        "name": "Human Relationships / Social Dynamics",
+        "source_status": "HISTORICAL_ASSISTANT_RECORD",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "KD-35",
+        "name": "Strategic Models / Frameworks",
+        "source_status": "HISTORICAL_ASSISTANT_RECORD",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "KD-36",
+        "name": "Culture / Identity / Symbolic Systems",
+        "source_status": "HISTORICAL_ASSISTANT_RECORD",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      }
+    ],
+    "operators": [
+      {
+        "id": "OP-001",
+        "name": "Deductive Reasoning",
+        "definition": "Derive necessary conclusions from explicit premises.",
+        "source_status": "HISTORICAL_ASSISTANT_RECORD",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "OP-002",
+        "name": "Inductive Reasoning",
+        "definition": "Generalize cautiously from observed cases and patterns.",
+        "source_status": "HISTORICAL_ASSISTANT_RECORD",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "OP-003",
+        "name": "Abductive Reasoning",
+        "definition": "Generate and compare the best explanations for observations.",
+        "source_status": "HISTORICAL_ASSISTANT_RECORD",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "OP-004",
+        "name": "Causal Reasoning",
+        "definition": "Model causal mechanisms, confounders and interventions.",
+        "source_status": "HISTORICAL_ASSISTANT_RECORD",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "OP-005",
+        "name": "Counterfactual Reasoning",
+        "definition": "Evaluate alternative outcomes under changed conditions.",
+        "source_status": "HISTORICAL_ASSISTANT_RECORD",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "OP-006",
+        "name": "Bayesian Reasoning",
+        "definition": "Update beliefs from evidence and prior probabilities.",
+        "source_status": "HISTORICAL_ASSISTANT_RECORD",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "OP-007",
+        "name": "Analogical Reasoning",
+        "definition": "Transfer structural insight across comparable domains.",
+        "source_status": "HISTORICAL_ASSISTANT_RECORD",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "OP-008",
+        "name": "Systems Thinking",
+        "definition": "Analyse interdependence, feedback and emergent behaviour.",
+        "source_status": "HISTORICAL_ASSISTANT_RECORD",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "OP-009",
+        "name": "Game-Theoretic Reasoning",
+        "definition": "Analyse strategic interaction and incentive-compatible choices.",
+        "source_status": "HISTORICAL_ASSISTANT_RECORD",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "OP-010",
+        "name": "Adversarial Reasoning",
+        "definition": "Test claims and systems against capable opposition.",
+        "source_status": "HISTORICAL_ASSISTANT_RECORD",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "OP-011",
+        "name": "Temporal Reasoning",
+        "definition": "Analyse sequence, duration, timing and path dependence.",
+        "source_status": "HISTORICAL_ASSISTANT_RECORD",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "OP-012",
+        "name": "Probabilistic Forecasting",
+        "definition": "Estimate uncertain future states and calibrate forecasts.",
+        "source_status": "HISTORICAL_ASSISTANT_RECORD",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "OP-013",
+        "name": "Decision-Theoretic Reasoning",
+        "definition": "Choose actions under objectives, uncertainty and trade-offs.",
+        "source_status": "HISTORICAL_ASSISTANT_RECORD",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "OP-014",
+        "name": "Optimization",
+        "definition": "Search for best feasible outcomes under constraints.",
+        "source_status": "HISTORICAL_ASSISTANT_RECORD",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "OP-015",
+        "name": "Constraint-Based Reasoning",
+        "definition": "Find feasible solutions while enforcing hard constraints.",
+        "source_status": "PROPOSED_DERIVED",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      }
+    ],
+    "formulas": [
+      {
+        "id": "FM-001",
+        "name": "Weighted score",
+        "equation": "S=Σ(wᵢxᵢ)",
+        "purpose": "Aggregate normalized indicators with explicit weights.",
+        "status": "PROPOSED_DERIVED",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "FM-002",
+        "name": "Bayes' theorem",
+        "equation": "P(H|E)=P(E|H)P(H)/P(E)",
+        "purpose": "Update hypothesis probability from evidence.",
+        "status": "PROPOSED_DERIVED",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "FM-003",
+        "name": "Odds update",
+        "equation": "O(H|E)=O(H)×LR(E)",
+        "purpose": "Update odds using likelihood ratios.",
+        "status": "PROPOSED_DERIVED",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "FM-004",
+        "name": "Shannon entropy",
+        "equation": "H(X)=−Σp(x)log₂p(x)",
+        "purpose": "Quantify uncertainty in a distribution.",
+        "status": "PROPOSED_DERIVED",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "FM-005",
+        "name": "Information gain",
+        "equation": "IG=H(prior)−E[H(posterior)]",
+        "purpose": "Measure uncertainty reduction from evidence.",
+        "status": "PROPOSED_DERIVED",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "FM-006",
+        "name": "Kullback–Leibler divergence",
+        "equation": "Dₖₗ(P||Q)=ΣP(x)log(P(x)/Q(x))",
+        "purpose": "Measure distribution shift.",
+        "status": "PROPOSED_DERIVED",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "FM-007",
+        "name": "Jaccard similarity",
+        "equation": "J(A,B)=|A∩B|/|A∪B|",
+        "purpose": "Compare overlap between sets.",
+        "status": "PROPOSED_DERIVED",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "FM-008",
+        "name": "Cosine similarity",
+        "equation": "cos(θ)=a·b/(||a||||b||)",
+        "purpose": "Compare vector direction.",
+        "status": "PROPOSED_DERIVED",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "FM-009",
+        "name": "Pearson correlation",
+        "equation": "r=cov(X,Y)/(σXσY)",
+        "purpose": "Measure linear association, not causation.",
+        "status": "PROPOSED_DERIVED",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "FM-010",
+        "name": "Covariance",
+        "equation": "Cov(X,Y)=E[(X−μX)(Y−μY)]",
+        "purpose": "Measure joint variation.",
+        "status": "PROPOSED_DERIVED",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "FM-011",
+        "name": "Linear regression",
+        "equation": "ŷ=β₀+Σβᵢxᵢ",
+        "purpose": "Estimate conditional linear relationships.",
+        "status": "PROPOSED_DERIVED",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "FM-012",
+        "name": "Bayesian posterior predictive",
+        "equation": "p(y*|D)=∫p(y*|θ)p(θ|D)dθ",
+        "purpose": "Predict while propagating parameter uncertainty.",
+        "status": "PROPOSED_DERIVED",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "FM-013",
+        "name": "Confidence interval",
+        "equation": "estimate ± critical_value×SE",
+        "purpose": "Represent sampling uncertainty under stated assumptions.",
+        "status": "PROPOSED_DERIVED",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "FM-014",
+        "name": "Standard score",
+        "equation": "z=(x−μ)/σ",
+        "purpose": "Normalize observations against a reference distribution.",
+        "status": "PROPOSED_DERIVED",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "FM-015",
+        "name": "Min–max normalization",
+        "equation": "x'=(x−min)/(max−min)",
+        "purpose": "Scale values to a common range.",
+        "status": "PROPOSED_DERIVED",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "FM-016",
+        "name": "Robust normalization",
+        "equation": "x'=(x−median)/IQR",
+        "purpose": "Scale while reducing outlier sensitivity.",
+        "status": "PROPOSED_DERIVED",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "FM-017",
+        "name": "Uncertainty propagation",
+        "equation": "Var(f)≈∇fᵀΣ∇f",
+        "purpose": "Propagate input uncertainty through a function.",
+        "status": "PROPOSED_DERIVED",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "FM-018",
+        "name": "Expected value",
+        "equation": "E[X]=Σpᵢxᵢ",
+        "purpose": "Calculate probability-weighted outcomes.",
+        "status": "PROPOSED_DERIVED",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "FM-019",
+        "name": "Expected utility",
+        "equation": "EU(a)=Σp(s|a)U(s)",
+        "purpose": "Evaluate actions by utility under uncertainty.",
+        "status": "PROPOSED_DERIVED",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "FM-020",
+        "name": "Risk-adjusted return",
+        "equation": "RAR=(R−R_f)/risk_measure",
+        "purpose": "Compare return against an explicit risk measure.",
+        "status": "PROPOSED_DERIVED",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "FM-021",
+        "name": "Value of information",
+        "equation": "VOI=E[max_a EU(a|E)]−max_a EU(a)",
+        "purpose": "Estimate the decision value of additional evidence.",
+        "status": "PROPOSED_DERIVED",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "FM-022",
+        "name": "Cost-benefit net value",
+        "equation": "NB=ΣBenefits−ΣCosts",
+        "purpose": "Compare monetized benefits and costs.",
+        "status": "PROPOSED_DERIVED",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "FM-023",
+        "name": "Return on investment",
+        "equation": "ROI=(Gain−Cost)/Cost",
+        "purpose": "Measure return relative to investment.",
+        "status": "PROPOSED_DERIVED",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "FM-024",
+        "name": "Pareto dominance",
+        "equation": "x≻y iff xᵢ≥yᵢ ∀i and xⱼ>yⱼ",
+        "purpose": "Identify options dominated across objectives.",
+        "status": "PROPOSED_DERIVED",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "FM-025",
+        "name": "Reliability series system",
+        "equation": "Rₛ=ΠRᵢ",
+        "purpose": "Estimate joint reliability of serial components.",
+        "status": "PROPOSED_DERIVED",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "FM-026",
+        "name": "Reliability parallel system",
+        "equation": "Rₚ=1−Π(1−Rᵢ)",
+        "purpose": "Estimate redundancy-based reliability.",
+        "status": "PROPOSED_DERIVED",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "FM-027",
+        "name": "Bayesian evidence reliability",
+        "equation": "wᵢ=log LRᵢ with dependence correction",
+        "purpose": "Weight evidence while accounting for dependence.",
+        "status": "PROPOSED_DERIVED",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "FM-028",
+        "name": "Source independence penalty",
+        "equation": "I_eff=n/(1+ρ(n−1))",
+        "purpose": "Discount repeated or correlated sources.",
+        "status": "PROPOSED_DERIVED",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "FM-029",
+        "name": "Time decay",
+        "equation": "w(t)=e^(−λΔt)",
+        "purpose": "Reduce relevance of stale time-sensitive evidence.",
+        "status": "PROPOSED_DERIVED",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "FM-030",
+        "name": "Calibration error",
+        "equation": "ECE=Σ_b(|B_b|/N)|acc(B_b)−conf(B_b)|",
+        "purpose": "Measure confidence calibration.",
+        "status": "PROPOSED_DERIVED",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      }
+    ],
+    "algorithms": [
+      {
+        "id": "AL-001",
+        "name": "Task and intent classification",
+        "purpose": "Classify request, deliverable, domain, stakes and constraints.",
+        "status": "PROPOSED_DERIVED",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "AL-002",
+        "name": "Adaptive intensity selection",
+        "purpose": "Select L01–L06 from complexity, uncertainty and consequence.",
+        "status": "PROPOSED_DERIVED",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "AL-003",
+        "name": "Context reconstruction",
+        "purpose": "Rebuild relevant context with provenance and conflict checks.",
+        "status": "PROPOSED_DERIVED",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "AL-004",
+        "name": "Task decomposition",
+        "purpose": "Split goals into dependency-aware executable subtasks.",
+        "status": "PROPOSED_DERIVED",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "AL-005",
+        "name": "Knowledge activation",
+        "purpose": "Select relevant domains, topics, formulas and operators.",
+        "status": "PROPOSED_DERIVED",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "AL-006",
+        "name": "Dynamic mode selection",
+        "purpose": "Choose the minimum sufficient reasoning and research modes.",
+        "status": "PROPOSED_DERIVED",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "AL-007",
+        "name": "Source discovery",
+        "purpose": "Discover candidate sources across enabled acquisition channels.",
+        "status": "PROPOSED_DERIVED",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "AL-008",
+        "name": "Source acquisition and provenance",
+        "purpose": "Retrieve, identify and preserve source lineage and retrieval state.",
+        "status": "PROPOSED_DERIVED",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "AL-009",
+        "name": "Entity resolution",
+        "purpose": "Resolve aliases and distinguish entities with similar identifiers.",
+        "status": "PROPOSED_DERIVED",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "AL-010",
+        "name": "Claim extraction",
+        "purpose": "Convert source material into atomic, attributable claims.",
+        "status": "PROPOSED_DERIVED",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "AL-011",
+        "name": "Evidence grading",
+        "purpose": "Classify claim support, limitations and uncertainty.",
+        "status": "PROPOSED_DERIVED",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "AL-012",
+        "name": "Source-dependence analysis",
+        "purpose": "Detect copied, circular or correlated reporting.",
+        "status": "PROPOSED_DERIVED",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "AL-013",
+        "name": "Contradiction detection",
+        "purpose": "Find incompatible claims, definitions, dates and denominators.",
+        "status": "PROPOSED_DERIVED",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "AL-014",
+        "name": "Bayesian evidence updating",
+        "purpose": "Update confidence as evidence is added or challenged.",
+        "status": "PROPOSED_DERIVED",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "AL-015",
+        "name": "Hypothesis generation",
+        "purpose": "Generate competing explanations for observed facts.",
+        "status": "PROPOSED_DERIVED",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "AL-016",
+        "name": "Causal graph construction",
+        "purpose": "Represent causal variables, mechanisms and confounders.",
+        "status": "PROPOSED_DERIVED",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "AL-017",
+        "name": "Counterfactual evaluation",
+        "purpose": "Compare observed outcomes with plausible alternatives.",
+        "status": "PROPOSED_DERIVED",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "AL-018",
+        "name": "Temporal sequence reconstruction",
+        "purpose": "Build event timelines and detect temporal inconsistencies.",
+        "status": "PROPOSED_DERIVED",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "AL-019",
+        "name": "Actor and power-network mapping",
+        "purpose": "Map actors, authority, dependencies and control relations.",
+        "status": "PROPOSED_DERIVED",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "AL-020",
+        "name": "Incentive and game analysis",
+        "purpose": "Model strategic choices, payoffs and equilibrium pressures.",
+        "status": "PROPOSED_DERIVED",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "AL-021",
+        "name": "Adversarial review",
+        "purpose": "Attempt to falsify claims, plans and system assumptions.",
+        "status": "PROPOSED_DERIVED",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "AL-022",
+        "name": "Risk and failure analysis",
+        "purpose": "Identify failure modes, likelihood, impact and detectability.",
+        "status": "PROPOSED_DERIVED",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "AL-023",
+        "name": "Multi-objective optimization",
+        "purpose": "Find feasible trade-offs across competing objectives.",
+        "status": "PROPOSED_DERIVED",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "AL-024",
+        "name": "Decision analysis",
+        "purpose": "Rank options against objectives, constraints and uncertainty.",
+        "status": "PROPOSED_DERIVED",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "AL-025",
+        "name": "Forecast and scenario analysis",
+        "purpose": "Generate conditional scenarios with calibrated uncertainty.",
+        "status": "PROPOSED_DERIVED",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "AL-026",
+        "name": "Memory retrieval and relevance",
+        "purpose": "Retrieve useful memory while separating relevance from reliability.",
+        "status": "PROPOSED_DERIVED",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "AL-027",
+        "name": "Memory conflict resolution",
+        "purpose": "Reconcile conflicting memories with source and version priority.",
+        "status": "PROPOSED_DERIVED",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "AL-028",
+        "name": "Command routing",
+        "purpose": "Route commands to groups, handlers and supported host capabilities.",
+        "status": "PROPOSED_DERIVED",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "AL-029",
+        "name": "Tool and model capability routing",
+        "purpose": "Select only actually available and authorized tools/models.",
+        "status": "PROPOSED_DERIVED",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "AL-030",
+        "name": "Execution orchestration",
+        "purpose": "Execute dependency-ordered tasks with checkpoints and receipts.",
+        "status": "PROPOSED_DERIVED",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "AL-031",
+        "name": "Loop and stagnation detection",
+        "purpose": "Detect repeated actions, no-progress states and stop conditions.",
+        "status": "PROPOSED_DERIVED",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "AL-032",
+        "name": "Independent verification",
+        "purpose": "Validate outputs, calculations, citations, tests and side effects.",
+        "status": "PROPOSED_DERIVED",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "AL-033",
+        "name": "Feedback and adaptive refinement",
+        "purpose": "Use measured feedback to update routing and improve future execution.",
+        "status": "PROPOSED_DERIVED",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      }
+    ],
+    "topics": [
+      {
+        "id": "TP-001",
+        "domain_id": "KD-01",
+        "domain": "Psychology / Human Nature",
+        "name": "Cognitive architecture",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-002",
+        "domain_id": "KD-01",
+        "domain": "Psychology / Human Nature",
+        "name": "Human needs and drives",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-003",
+        "domain_id": "KD-01",
+        "domain": "Psychology / Human Nature",
+        "name": "Personality and individual differences",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-004",
+        "domain_id": "KD-02",
+        "domain": "Behavioral Psychology",
+        "name": "Behavioural biases",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-005",
+        "domain_id": "KD-02",
+        "domain": "Behavioral Psychology",
+        "name": "Heuristics and bounded rationality",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-006",
+        "domain_id": "KD-02",
+        "domain": "Behavioral Psychology",
+        "name": "Habit formation and behavioural change",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-007",
+        "domain_id": "KD-03",
+        "domain": "Power / Authority",
+        "name": "Authority structures",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-008",
+        "domain_id": "KD-03",
+        "domain": "Power / Authority",
+        "name": "Power resources and asymmetry",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-009",
+        "domain_id": "KD-03",
+        "domain": "Power / Authority",
+        "name": "Legitimacy and compliance",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-010",
+        "domain_id": "KD-04",
+        "domain": "Positioning / Strategic Advantage",
+        "name": "Strategic positioning",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-011",
+        "domain_id": "KD-04",
+        "domain": "Positioning / Strategic Advantage",
+        "name": "Competitive advantage",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-012",
+        "domain_id": "KD-04",
+        "domain": "Positioning / Strategic Advantage",
+        "name": "Bargaining position and leverage",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-013",
+        "domain_id": "KD-05",
+        "domain": "Influence / Persuasion",
+        "name": "Persuasion mechanisms",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-014",
+        "domain_id": "KD-05",
+        "domain": "Influence / Persuasion",
+        "name": "Influence networks",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-015",
+        "domain_id": "KD-05",
+        "domain": "Influence / Persuasion",
+        "name": "Trust and credibility",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-016",
+        "domain_id": "KD-06",
+        "domain": "Political Strategy / Statecraft",
+        "name": "State capacity",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-017",
+        "domain_id": "KD-06",
+        "domain": "Political Strategy / Statecraft",
+        "name": "Political institutions",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-018",
+        "domain_id": "KD-06",
+        "domain": "Political Strategy / Statecraft",
+        "name": "Policy formation and statecraft",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-019",
+        "domain_id": "KD-07",
+        "domain": "Military / Warfare",
+        "name": "Deterrence and coercion",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-020",
+        "domain_id": "KD-07",
+        "domain": "Military / Warfare",
+        "name": "Conflict strategy",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-021",
+        "domain_id": "KD-07",
+        "domain": "Military / Warfare",
+        "name": "Operational command and control",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-022",
+        "domain_id": "KD-08",
+        "domain": "Geopolitics / International Relations",
+        "name": "Geopolitical alignment",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-023",
+        "domain_id": "KD-08",
+        "domain": "Geopolitics / International Relations",
+        "name": "Regional security complexes",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-024",
+        "domain_id": "KD-08",
+        "domain": "Geopolitics / International Relations",
+        "name": "International institutions and order",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-025",
+        "domain_id": "KD-09",
+        "domain": "Economics / Political Economy",
+        "name": "Market structure",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-026",
+        "domain_id": "KD-09",
+        "domain": "Economics / Political Economy",
+        "name": "Political economy",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-027",
+        "domain_id": "KD-09",
+        "domain": "Economics / Political Economy",
+        "name": "Incentives and externalities",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-028",
+        "domain_id": "KD-10",
+        "domain": "Finance / Wealth",
+        "name": "Capital allocation",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-029",
+        "domain_id": "KD-10",
+        "domain": "Finance / Wealth",
+        "name": "Liquidity and solvency",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-030",
+        "domain_id": "KD-10",
+        "domain": "Finance / Wealth",
+        "name": "Wealth formation and distribution",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-031",
+        "domain_id": "KD-11",
+        "domain": "Negotiation",
+        "name": "Negotiation architecture",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-032",
+        "domain_id": "KD-11",
+        "domain": "Negotiation",
+        "name": "Bargaining models",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-033",
+        "domain_id": "KD-11",
+        "domain": "Negotiation",
+        "name": "Commitment and credible signalling",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-034",
+        "domain_id": "KD-12",
+        "domain": "Intelligence / Information",
+        "name": "Intelligence cycles",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-035",
+        "domain_id": "KD-12",
+        "domain": "Intelligence / Information",
+        "name": "Information asymmetry",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-036",
+        "domain_id": "KD-12",
+        "domain": "Intelligence / Information",
+        "name": "Collection and analytic tradecraft",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-037",
+        "domain_id": "KD-13",
+        "domain": "Deception",
+        "name": "Deception indicators",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-038",
+        "domain_id": "KD-13",
+        "domain": "Deception",
+        "name": "Disinformation dynamics",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-039",
+        "domain_id": "KD-13",
+        "domain": "Deception",
+        "name": "Verification and attribution",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-040",
+        "domain_id": "KD-14",
+        "domain": "Leadership / Command",
+        "name": "Leadership models",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-041",
+        "domain_id": "KD-14",
+        "domain": "Leadership / Command",
+        "name": "Command responsibility",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-042",
+        "domain_id": "KD-14",
+        "domain": "Leadership / Command",
+        "name": "Delegation and accountability",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-043",
+        "domain_id": "KD-15",
+        "domain": "Organizational Strategy",
+        "name": "Organizational design",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-044",
+        "domain_id": "KD-15",
+        "domain": "Organizational Strategy",
+        "name": "Organizational culture",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-045",
+        "domain_id": "KD-15",
+        "domain": "Organizational Strategy",
+        "name": "Principal-agent problems",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-046",
+        "domain_id": "KD-16",
+        "domain": "Governance / Administration",
+        "name": "Institutional governance",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-047",
+        "domain_id": "KD-16",
+        "domain": "Governance / Administration",
+        "name": "Administrative capacity",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-048",
+        "domain_id": "KD-16",
+        "domain": "Governance / Administration",
+        "name": "Regulatory design and enforcement",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-049",
+        "domain_id": "KD-17",
+        "domain": "Sociology / Social Structure",
+        "name": "Social stratification",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-050",
+        "domain_id": "KD-17",
+        "domain": "Sociology / Social Structure",
+        "name": "Collective action",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-051",
+        "domain_id": "KD-17",
+        "domain": "Sociology / Social Structure",
+        "name": "Networks and social capital",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-052",
+        "domain_id": "KD-18",
+        "domain": "Mass Psychology / Ideology",
+        "name": "Ideology formation",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-053",
+        "domain_id": "KD-18",
+        "domain": "Mass Psychology / Ideology",
+        "name": "Group identity and polarization",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-054",
+        "domain_id": "KD-18",
+        "domain": "Mass Psychology / Ideology",
+        "name": "Collective belief dynamics",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-055",
+        "domain_id": "KD-19",
+        "domain": "Communication / Rhetoric",
+        "name": "Rhetorical framing",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-056",
+        "domain_id": "KD-19",
+        "domain": "Communication / Rhetoric",
+        "name": "Narrative structures",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-057",
+        "domain_id": "KD-19",
+        "domain": "Communication / Rhetoric",
+        "name": "Communication channels and effects",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-058",
+        "domain_id": "KD-20",
+        "domain": "Competition / Game Theory",
+        "name": "Competitive dynamics",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-059",
+        "domain_id": "KD-20",
+        "domain": "Competition / Game Theory",
+        "name": "Game theory and strategic interaction",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-060",
+        "domain_id": "KD-20",
+        "domain": "Competition / Game Theory",
+        "name": "Market entry and rivalry",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-061",
+        "domain_id": "KD-21",
+        "domain": "Strategy / Planning",
+        "name": "Strategic planning",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-062",
+        "domain_id": "KD-21",
+        "domain": "Strategy / Planning",
+        "name": "Objective decomposition",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-063",
+        "domain_id": "KD-21",
+        "domain": "Strategy / Planning",
+        "name": "Path dependency and sequencing",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-064",
+        "domain_id": "KD-22",
+        "domain": "Decision Science / Judgment",
+        "name": "Judgment under uncertainty",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-065",
+        "domain_id": "KD-22",
+        "domain": "Decision Science / Judgment",
+        "name": "Decision biases",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-066",
+        "domain_id": "KD-22",
+        "domain": "Decision Science / Judgment",
+        "name": "Multi-criteria decision analysis",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-067",
+        "domain_id": "KD-23",
+        "domain": "Risk / Survival",
+        "name": "Risk identification",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-068",
+        "domain_id": "KD-23",
+        "domain": "Risk / Survival",
+        "name": "Resilience and survival",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-069",
+        "domain_id": "KD-23",
+        "domain": "Risk / Survival",
+        "name": "Tail risk and systemic exposure",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-070",
+        "domain_id": "KD-24",
+        "domain": "Conflict Management",
+        "name": "Conflict escalation",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-071",
+        "domain_id": "KD-24",
+        "domain": "Conflict Management",
+        "name": "Mediation and settlement",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-072",
+        "domain_id": "KD-24",
+        "domain": "Conflict Management",
+        "name": "Coalition and stakeholder management",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-073",
+        "domain_id": "KD-25",
+        "domain": "Ethics",
+        "name": "Normative frameworks",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-074",
+        "domain_id": "KD-25",
+        "domain": "Ethics",
+        "name": "Ethical trade-offs",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-075",
+        "domain_id": "KD-25",
+        "domain": "Ethics",
+        "name": "Legitimacy and accountability",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-076",
+        "domain_id": "KD-26",
+        "domain": "Law / Rules",
+        "name": "Legal institutions",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-077",
+        "domain_id": "KD-26",
+        "domain": "Law / Rules",
+        "name": "Rule systems and compliance",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-078",
+        "domain_id": "KD-26",
+        "domain": "Law / Rules",
+        "name": "Rights, duties and enforcement",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-079",
+        "domain_id": "KD-27",
+        "domain": "History / Civilizational Dynamics",
+        "name": "Historical causation",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-080",
+        "domain_id": "KD-27",
+        "domain": "History / Civilizational Dynamics",
+        "name": "Institutional path dependence",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-081",
+        "domain_id": "KD-27",
+        "domain": "History / Civilizational Dynamics",
+        "name": "Civilizational change",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-082",
+        "domain_id": "KD-28",
+        "domain": "Education / Knowledge Acquisition",
+        "name": "Learning science",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-083",
+        "domain_id": "KD-28",
+        "domain": "Education / Knowledge Acquisition",
+        "name": "Knowledge transfer",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-084",
+        "domain_id": "KD-28",
+        "domain": "Education / Knowledge Acquisition",
+        "name": "Skill acquisition and retention",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-085",
+        "domain_id": "KD-29",
+        "domain": "Personal Strategy / Self-Mastery",
+        "name": "Self-regulation",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-086",
+        "domain_id": "KD-29",
+        "domain": "Personal Strategy / Self-Mastery",
+        "name": "Personal capability development",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-087",
+        "domain_id": "KD-29",
+        "domain": "Personal Strategy / Self-Mastery",
+        "name": "Goal formation and discipline",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-088",
+        "domain_id": "KD-30",
+        "domain": "Operations / Execution",
+        "name": "Process design",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-089",
+        "domain_id": "KD-30",
+        "domain": "Operations / Execution",
+        "name": "Execution control",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-090",
+        "domain_id": "KD-30",
+        "domain": "Operations / Execution",
+        "name": "Performance measurement and improvement",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-091",
+        "domain_id": "KD-31",
+        "domain": "Resources / Dependency",
+        "name": "Resource allocation",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-092",
+        "domain_id": "KD-31",
+        "domain": "Resources / Dependency",
+        "name": "Dependency mapping",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-093",
+        "domain_id": "KD-31",
+        "domain": "Resources / Dependency",
+        "name": "Scarcity and bottleneck analysis",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-094",
+        "domain_id": "KD-32",
+        "domain": "Innovation / Adaptation",
+        "name": "Innovation systems",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-095",
+        "domain_id": "KD-32",
+        "domain": "Innovation / Adaptation",
+        "name": "Adaptation and diffusion",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-096",
+        "domain_id": "KD-32",
+        "domain": "Innovation / Adaptation",
+        "name": "Technological transition",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-097",
+        "domain_id": "KD-33",
+        "domain": "Psychological Resilience",
+        "name": "Stress response",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-098",
+        "domain_id": "KD-33",
+        "domain": "Psychological Resilience",
+        "name": "Psychological recovery",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-099",
+        "domain_id": "KD-33",
+        "domain": "Psychological Resilience",
+        "name": "Coping and adaptive capacity",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-100",
+        "domain_id": "KD-34",
+        "domain": "Human Relationships / Social Dynamics",
+        "name": "Interpersonal trust",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-101",
+        "domain_id": "KD-34",
+        "domain": "Human Relationships / Social Dynamics",
+        "name": "Relationship dynamics",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-102",
+        "domain_id": "KD-34",
+        "domain": "Human Relationships / Social Dynamics",
+        "name": "Cooperation and reciprocity",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-103",
+        "domain_id": "KD-35",
+        "domain": "Strategic Models / Frameworks",
+        "name": "Model design and selection",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-104",
+        "domain_id": "KD-35",
+        "domain": "Strategic Models / Frameworks",
+        "name": "Framework validation",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-105",
+        "domain_id": "KD-35",
+        "domain": "Strategic Models / Frameworks",
+        "name": "Systems integration",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-106",
+        "domain_id": "KD-36",
+        "domain": "Culture / Identity / Symbolic Systems",
+        "name": "Cultural transmission",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-107",
+        "domain_id": "KD-36",
+        "domain": "Culture / Identity / Symbolic Systems",
+        "name": "Symbols and meaning systems",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-108",
+        "domain_id": "KD-36",
+        "domain": "Culture / Identity / Symbolic Systems",
+        "name": "Identity formation and change",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-109",
+        "domain_id": "KD-CROSS",
+        "domain": "Cross-domain",
+        "name": "Cross-domain systems and feedback loops",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-110",
+        "domain_id": "KD-CROSS",
+        "domain": "Cross-domain",
+        "name": "Evidence integrity and uncertainty calibration",
+        "status": "PROPOSED_DERIVED"
+      },
+      {
+        "id": "TP-111",
+        "domain_id": "KD-CROSS",
+        "domain": "Cross-domain",
+        "name": "Human-machine collaboration and adaptive orchestration",
+        "status": "PROPOSED_DERIVED"
+      }
+    ],
+    "functional_groups": [
+      {
+        "id": "FG-01",
+        "name": "Aliases & shorthand variants",
+        "source_group_id": "aliases_and_shorthand_variants",
+        "corpus_count": 6,
+        "status": "PROPOSED_MAPPING",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "FG-02",
+        "name": "Communication, email & social messaging",
+        "source_group_id": "communication_email_and_social_messaging",
+        "corpus_count": 26,
+        "status": "PROPOSED_MAPPING",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "FG-03",
+        "name": "Comparison, evaluation & decision support",
+        "source_group_id": "comparison_evaluation_and_decision_support",
+        "corpus_count": 21,
+        "status": "PROPOSED_MAPPING",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "FG-04",
+        "name": "Documents, projects & automation",
+        "source_group_id": "documents_projects_and_automation",
+        "corpus_count": 46,
+        "status": "PROPOSED_MAPPING",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "FG-05",
+        "name": "Education, learning & tutoring",
+        "source_group_id": "education_learning_and_tutoring",
+        "corpus_count": 27,
+        "status": "PROPOSED_MAPPING",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "FG-06",
+        "name": "Finance, business & investment",
+        "source_group_id": "finance_business_and_investment",
+        "corpus_count": 7,
+        "status": "PROPOSED_MAPPING",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "FG-07",
+        "name": "General-purpose AI workflows",
+        "source_group_id": "general_purpose_ai_workflows",
+        "corpus_count": 30,
+        "status": "PROPOSED_MAPPING",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "FG-08",
+        "name": "Hardware, maker & digital fabrication",
+        "source_group_id": "hardware_maker_and_digital_fabrication",
+        "corpus_count": 32,
+        "status": "PROPOSED_MAPPING",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "FG-09",
+        "name": "Information extraction & knowledge organization",
+        "source_group_id": "information_extraction_and_knowledge_organization",
+        "corpus_count": 46,
+        "status": "PROPOSED_MAPPING",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "FG-10",
+        "name": "Output format & response control",
+        "source_group_id": "output_format_and_response_control",
+        "corpus_count": 31,
+        "status": "PROPOSED_MAPPING",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "FG-11",
+        "name": "Platform-native commands & interface controls",
+        "source_group_id": "platform_native_commands_and_interface_controls",
+        "corpus_count": 33,
+        "status": "PROPOSED_MAPPING",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "FG-12",
+        "name": "Reasoning, diagnosis & critical analysis",
+        "source_group_id": "reasoning_diagnosis_and_critical_analysis",
+        "corpus_count": 41,
+        "status": "PROPOSED_MAPPING",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "FG-13",
+        "name": "Research, discovery & source verification",
+        "source_group_id": "research_discovery_and_source_verification",
+        "corpus_count": 30,
+        "status": "PROPOSED_MAPPING",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "FG-14",
+        "name": "Science, mathematics & data analysis",
+        "source_group_id": "science_mathematics_and_data_analysis",
+        "corpus_count": 51,
+        "status": "PROPOSED_MAPPING",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "FG-15",
+        "name": "Software, coding & technical engineering",
+        "source_group_id": "software_coding_and_technical_engineering",
+        "corpus_count": 159,
+        "status": "PROPOSED_MAPPING",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "FG-16",
+        "name": "Translation, language & localization",
+        "source_group_id": "translation_language_and_localization",
+        "corpus_count": 20,
+        "status": "PROPOSED_MAPPING",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "FG-17",
+        "name": "Visual design, image generation & photography",
+        "source_group_id": "visual_design_image_generation_and_photography",
+        "corpus_count": 346,
+        "status": "PROPOSED_MAPPING",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      },
+      {
+        "id": "FG-18",
+        "name": "Writing, editing & content refinement",
+        "source_group_id": "writing_editing_and_content_refinement",
+        "corpus_count": 47,
+        "status": "PROPOSED_MAPPING",
+        "canonical_status": "PENDING_OWNER_RATIFICATION"
+      }
+    ],
+    "slash_commands": {
+      "corpus_count": 999,
+      "unique_names": 999,
+      "source_registry": "library/slash-commands/commands.json",
+      "classification_counts": {
+        "MACRO ALIAS": 6,
+        "MACRO": 647,
+        "NATIVE": 31,
+        "UI/MENU": 3,
+        "NATIVE — OPENAI": 14,
+        "NATIVE — CHATGPT": 8,
+        "NATIVE — CODEX": 34,
+        "IMAGE KEYWORD": 256
+      },
+      "runtime_status": "NOT_IMPLEMENTED_IN_RIGOR_X"
+    },
+    "interface_operational_commands": {
+      "target_count": 102,
+      "historical_reference_definitions_reported": 91,
+      "unresolved_slots": 11,
+      "status": "PARTIAL_HISTORICAL_TARGET"
+    }
+  },
+  "structural_rules": {
+    "topics": "36 domains × 3 = 108; plus 3 cross-domain topics = 111.",
+    "operator_15": "OP-015 Constraint-Based Reasoning is proposed, not historically recovered.",
+    "functional_groups": "18 groups map one-to-one to the 18 categories in the 999-command corpus; counts sum to 999.",
+    "status_separation": [
+      "HISTORICAL_ASSISTANT_RECORD",
+      "PROPOSED_DERIVED",
+      "PROPOSED_MAPPING",
+      "PENDING_OWNER_RATIFICATION",
+      "NOT_RECOVERED",
+      "IMPLEMENTED",
+      "TESTED",
+      "VERIFIED"
+    ]
+  }
+}
