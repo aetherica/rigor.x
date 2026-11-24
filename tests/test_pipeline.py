@@ -6,12 +6,12 @@ from pathlib import Path
 from jsonschema import Draft202012Validator, FormatChecker
 
 from rigorx.pipeline import (
+    STAGE_ORDER,
     InvalidTransition,
     PipelineRun,
     RunStatus,
     Stage,
     StageStatus,
-    STAGE_ORDER,
 )
 
 
