@@ -10,6 +10,7 @@ Guarantees:
 from __future__ import annotations
 
 import json
+import os
 import sqlite3
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -61,6 +62,8 @@ class SQLitePipelineStore:
             timeout=busy_timeout_ms / 1000,
             isolation_level=None,
         )
+        if self.database_path != ":memory:":
+            os.chmod(self.database_path, 0o600)
         self._connection.row_factory = sqlite3.Row
         self._connection.execute(f"PRAGMA busy_timeout = {busy_timeout_ms}")
         self._connection.execute("PRAGMA foreign_keys = ON")
