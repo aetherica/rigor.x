@@ -14,7 +14,7 @@ def main():
     known={g["id"]:g for g in groups}; allowed={"NATIVE","NATIVE — OPENAI","NATIVE — CHATGPT","NATIVE — CODEX","UI/MENU","MACRO","MACRO ALIAS","IMAGE KEYWORD","UNCLASSIFIED"}
     for x in commands:
         if not re.fullmatch(r"SLC-[0-9]{4}",x.get("id","")): fail("invalid ID "+str(x.get("id")))
-        if not re.fullmatch(r"/[A-Za-z0-9][A-Za-z0-9_-]*",x.get("name","")): fail("invalid name "+str(x.get("name")))
+        if not re.fullmatch(r"/[A-Za-z0-9][A-Za-z0-9_.;:-]*",x.get("name","")): fail("invalid name "+str(x.get("name")))
         if not x.get("description","").strip(): fail("empty description "+x["name"])
         if x.get("group_id") not in known: fail("unknown group "+x["name"])
         if x.get("classification") not in allowed: fail("unknown classification "+x["name"])
