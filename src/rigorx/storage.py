@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Mapping
@@ -68,8 +69,20 @@ class SQLitePipelineStore:
             self._connection.execute("PRAGMA synchronous = FULL")
         self._initialize()
 
+    @contextmanager
+    def _transaction(self):
+        """Explicit transaction even with SQLite autocommit enabled."""
+        self._connection.execute("BEGIN IMMEDIATE")
+        try:
+            yield
+        except BaseException:
+            self._connection.rollback()
+            raise
+        else:
+            self._connection.commit()
+
     def _initialize(self) -> None:
-        with self._connection:
+        with self._transaction():
             self._connection.execute(
                 """CREATE TABLE IF NOT EXISTS store_meta (
                     key TEXT PRIMARY KEY,
@@ -115,9 +128,10 @@ class SQLitePipelineStore:
         observed revision. The return value is the newly committed revision.
         """
         snapshot = run.snapshot()
+        PipelineRun.from_snapshot(snapshot)  # Validate before any durable mutation.
         snapshot_json = _canonical_json(snapshot)
         events = snapshot["events"]
-        with self._connection:
+        with self._transaction():
             row = self._connection.execute(
                 "SELECT revision, snapshot_json FROM pipeline_runs WHERE run_id = ?",
                 (run.run_id,),
