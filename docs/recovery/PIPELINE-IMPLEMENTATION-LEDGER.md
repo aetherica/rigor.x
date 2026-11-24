@@ -50,9 +50,9 @@ This is a deterministic in-memory control-plane primitive. It is not yet a persi
 | GitHub commit creation | CONFIRMED |
 | File read-back from `main` | CONFIRMED |
 | 11-stage ordering represented in code and tests | INSPECTED |
-| Unit test execution | 16 tests PASS in GitHub Actions on CPython 3.15.2 |
-| GitHub Actions run receipt | VERIFIED — [run #15](https://github.com/aetherica/rigor.x/actions/runs/45509490594) |
-| CI pass/fail | PASS — commit `57fe478d48cc8aaf504f13a85ced36acdd557f55` |
+| Unit/integration test execution | 28 tests PASS in GitHub Actions on CPython 3.15.2 |
+| GitHub Actions run receipt | VERIFIED — [run #45512671713](https://github.com/aetherica/rigor.x/actions/runs/45512671713) |
+| CI pass/fail | PASS — [run #45512671713](https://github.com/aetherica/rigor.x/actions/runs/45512671713), 28 tests + Ruff; tested commit `bd90871b54e2371eb4d704e5313a7a4d36569249` |
 | Persistence/restart recovery | IMPLEMENTED — SQLite save/restore tested across reopen |
 | Live host/tool/provider routing | NOT IMPLEMENTED |
 | Durable evidence/provenance storage | PARTIAL — stage events persisted; domain evidence store not implemented |
