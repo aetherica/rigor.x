@@ -6,11 +6,12 @@ capabilities; adapters must provide their own receipts to the run ledger.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from datetime import datetime, timezone
 import json
+from collections.abc import Mapping
+from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from enum import StrEnum
-from typing import Any, Mapping
+from typing import Any
 
 
 class Stage(StrEnum):
@@ -305,7 +306,7 @@ class PipelineRun:
         }
 
     @classmethod
-    def from_snapshot(cls, payload: Mapping[str, Any]) -> "PipelineRun":
+    def from_snapshot(cls, payload: Mapping[str, Any]) -> PipelineRun:
         """Restore a run from a validated JSON-compatible snapshot.
 
         Persistence is intentionally delegated to a storage adapter. This
@@ -322,15 +323,15 @@ class PipelineRun:
             raise ValueError(f"Snapshot is missing required fields: {sorted(missing)}")
 
         if not isinstance(payload["run_id"], str) or not isinstance(payload["pipeline_version"], str):
-            raise ValueError("run_id and pipeline_version must be strings")
+            raise TypeError("run_id and pipeline_version must be strings")
         if type(payload["verification_accepted"]) is not bool:
-            raise ValueError("verification_accepted must be a boolean")
+            raise TypeError("verification_accepted must be a boolean")
         if type(payload["reentry_count"]) is not int or type(payload["max_reentries"]) is not int:
             raise ValueError("reentry_count and max_reentries must be integers")
 
         raw_statuses = payload["stage_status"]
         if not isinstance(raw_statuses, Mapping):
-            raise ValueError("stage_status must be an object")
+            raise TypeError("stage_status must be an object")
         expected_stages = {stage.value for stage in STAGE_ORDER}
         if set(raw_statuses) != expected_stages:
             raise ValueError("stage_status must contain exactly the 11 pipeline stages")
@@ -353,27 +354,27 @@ class PipelineRun:
 
         raw_events = payload["events"]
         if not isinstance(raw_events, list):
-            raise ValueError("events must be an array")
+            raise TypeError("events must be an array")
         restored_events: list[PipelineEvent] = []
         for expected_sequence, item in enumerate(raw_events, start=1):
             if not isinstance(item, Mapping):
-                raise ValueError("each event must be an object")
+                raise TypeError("each event must be an object")
             if type(item.get("sequence")) is not int:
-                raise ValueError("event sequence must be an integer")
+                raise TypeError("event sequence must be an integer")
             sequence = item["sequence"]
             if sequence != expected_sequence:
                 raise ValueError("event sequence must be contiguous and append-only")
             if not isinstance(item.get("timestamp"), str):
-                raise ValueError("event timestamp must be a string")
+                raise TypeError("event timestamp must be a string")
             timestamp = item["timestamp"]
-            parsed_timestamp = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+            parsed_timestamp = datetime.fromisoformat(timestamp)
             if parsed_timestamp.tzinfo is None:
                 raise ValueError("event timestamp must include a timezone")
             if not isinstance(item.get("event_type"), str) or not item["event_type"].strip():
                 raise ValueError("event_type must be a non-empty string")
             details = item.get("details", {})
             if not isinstance(details, Mapping):
-                raise ValueError("event details must be an object")
+                raise TypeError("event details must be an object")
             json.dumps(dict(details))
             restored_events.append(
                 PipelineEvent(
@@ -406,7 +407,7 @@ class PipelineRun:
             sequence=len(self.events) + 1,
             event_type=event_type,
             stage=stage,
-            timestamp=datetime.now(timezone.utc).isoformat(),
+            timestamp=datetime.now(UTC).isoformat(),
             details=event_details,
         )
         self.events.append(event)
