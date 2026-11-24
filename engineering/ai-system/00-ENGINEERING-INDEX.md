@@ -13,6 +13,7 @@
 - [Roadmap](05-IMPLEMENTATION-ROADMAP.md)
 - [Execution receipts](06-EXECUTION-RECEIPTS.md)
 - [Durable pipeline quickstart](07-DURABLE-PIPELINE-QUICKSTART.md)
+- [Requirements traceability](08-REQUIREMENTS-TRACEABILITY.md)
 
 ## Verified baseline
 - 11-stage primary pipeline: specification and deterministic controller implemented.
@@ -23,7 +24,7 @@
 - Rollback on injected event insert failure: tested.
 - SQLite integrity: tested.
 - File database mode 0600: tested on Linux CI.
-- CI tests: **28 passed** (current verified run [#45512305126](https://github.com/aetherica/rigor.x/actions/runs/45512305126)); Ruff gate is the next verification increment.
+- CI tests: **28 passed**; Ruff static analysis: **PASS** in [run #45512671713](https://github.com/aetherica/rigor.x/actions/runs/45512671713).
 
 ## Still incomplete
 - Registry integration and crosswalks.
