@@ -19,6 +19,10 @@ on:
       - ".github/workflows/rigorx-pipeline.yml"
   workflow_dispatch:
 
+concurrency:
+  group: rigorx-pipeline-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
