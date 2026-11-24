@@ -116,7 +116,7 @@
     "commands": {
       "type": "array",
       "items": {
-        "$ref": "command.schema.json"
+        "$ref": "https://aetherica.github.io/rigor.x/schemas/slash-command.schema.json"
       }
     }
   }
