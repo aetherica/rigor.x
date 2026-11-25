@@ -69,7 +69,10 @@
 - Specification: `engineering/ai-system/13-REASONING-MONITOR-CONTROLLER-WS19.md`.
 - Isolated local tests: **14 controller tests + 1 benchmark test passed**.
 - At lexical Jaccard 0.88: TP=2, FP=0, TN=3, FN=3; precision=1.00, recall=0.40, false-positive rate=0.00. Tiny fixture only; not production evidence.
-- CI: pending.
+- CI: verified.
 - Limits: lexical heuristic; not pipeline-integrated, no model/tool execution or hidden-state control.
 
 - Corrective CI attempt [Run #45565392858](https://github.com/aetherica/rigor.x/actions/runs/45565392858): Ruff PASS; 62/63 tests passed; benchmark fixture expected class totals were incorrect (actual 4 loop-positive/4 negative); corrected in subsequent commit. This run is not a pass.
+
+- Corrected WS19 exact-head CI: [Run #45565480667 — SUCCESS](https://github.com/aetherica/rigor.x/actions/runs/45565480667), tested commit `36c8ca8e7d1b1e29aaccefbb3d3bc9bfe65275ea` (source/controller unchanged on later documentation-only commits). **Ruff PASS; all 63 repository tests PASS.**
+- Final fixture expected counts: TP=2, FP=0, TN=4, FN=2; precision=1.00, recall=0.50, FPR=0.00. Tiny hand-authored fixture only.
