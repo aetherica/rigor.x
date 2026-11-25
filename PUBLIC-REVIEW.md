@@ -5,6 +5,17 @@
 **Stable release:** not published  
 **Purpose:** independent technical review of the current source baseline
 
+## Pre-publication verification status
+
+This document is a review guide, not a security attestation. At the time of this revision:
+
+- The repository is still private; the owner has not yet changed visibility.
+- A full-clone, full-history secret and sensitive-data scan has **not** been completed.
+- CI status for the exact publication candidate has **not** been verified by the available repository checks.
+- The owner must confirm that all source, documentation, datasets, examples, and historical commits are authorized for public disclosure.
+
+Do not treat the presence of this guide, a clean code-search spot check, or an earlier successful CI run as evidence that these gates have passed. Complete the full-history scan before changing visibility.
+
 ## What this publication is
 
 This repository is being made available for independent review of its architecture, implementation, tests, documentation, security posture, and engineering maturity. It is not a declaration that RIGOR-X is a stable release, production-ready autonomous AI system, certified product, or complete implementation of every catalogued requirement.
