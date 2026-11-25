@@ -32,6 +32,8 @@ class DomainActivation:
     name: str
     matched_keywords: tuple[str, ...]
     score: int
+    source_status: str
+    canonical_status: str
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -39,6 +41,8 @@ class DomainActivation:
             "name": self.name,
             "matched_keywords": list(self.matched_keywords),
             "score": self.score,
+            "source_status": self.source_status,
+            "canonical_status": self.canonical_status,
         }
 
 
@@ -101,6 +105,6 @@ class DomainRouter:
                 if re.search(rf"(?<![a-z0-9]){re.escape(keyword)}(?![a-z0-9])", normalized)
             )
             if matches:
-                results.append(DomainActivation(domain.domain_id, domain.name, matches, len(matches)))
+                results.append(DomainActivation(domain.domain_id, domain.name, matches, len(matches), domain.source_status, domain.canonical_status))
         results.sort(key=lambda item: (-item.score, item.domain_id))
         return tuple(results[:self.max_activations])

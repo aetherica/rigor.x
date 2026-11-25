@@ -329,8 +329,8 @@ class AgentRuntime:
         if domain_activations:
             domain_header = (
                 "Contextually activated knowledge domains (heuristic; source/canonical status is retained): "
-                + "; ".join(f"{domain.domain_id} {domain.name}" for domain in domain_activations)
-                + ".\\n"
+                + "; ".join(f"{domain.domain_id} {domain.name} [{domain.canonical_status}]" for domain in domain_activations)
+                + ".\n"
             )
         adaptive_header = (
             "Adaptive route (heuristic, may be refined): "

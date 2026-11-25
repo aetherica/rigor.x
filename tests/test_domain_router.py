@@ -16,6 +16,7 @@ class DomainRouterTests(unittest.TestCase):
         self.assertEqual(len(self.catalog.domains), 36)
         self.assertEqual(self.catalog.source_status, "HISTORICAL_ASSISTANT_RECORD")
         self.assertEqual(self.catalog.canonical_status, "PENDING_OWNER_RATIFICATION")
+        self.assertEqual(self.catalog.domains[0].canonical_status, "PENDING_OWNER_RATIFICATION")
 
     def test_contextual_activation_only_matches_relevant_domains(self):
         activated = self.router.activate("Assess RMG supply chain, economics, negotiation and finance.")
