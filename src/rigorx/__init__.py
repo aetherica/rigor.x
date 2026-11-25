@@ -11,6 +11,7 @@ from .agent_runtime import (
     ToolDefinition,
     ToolRegistry,
 )
+from .domain_router import DomainActivation, DomainCatalog, DomainRouter
 from .model_backend import OpenAICompatibleBackend
 from .slash_commands import CommandResolution, SlashCommandCatalog
 
@@ -23,6 +24,9 @@ __all__ = [
     "AgentRuntime",
     "AgentStatus",
     "CommandResolution",
+    "DomainActivation",
+    "DomainCatalog",
+    "DomainRouter",
     "OpenAICompatibleBackend",
     "SlashCommandCatalog",
     "TaskIntent",

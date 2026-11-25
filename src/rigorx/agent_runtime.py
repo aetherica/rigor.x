@@ -17,6 +17,7 @@ from hashlib import sha256
 from typing import Any, Protocol
 
 from .adaptive_router import AdaptiveLevel, AdaptiveProfile, AdaptiveRouter
+from .domain_router import DomainActivation, DomainRouter
 from .slash_commands import CommandResolution, SlashCommandCatalog
 
 
@@ -140,6 +141,7 @@ class AgentResult:
     pass_through_commands: tuple[str, ...] = ()
     unknown_commands: tuple[str, ...] = ()
     adaptive_profile: AdaptiveProfile | None = None
+    domain_activations: tuple[DomainActivation, ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -155,6 +157,7 @@ class AgentResult:
             "pass_through_commands": list(self.pass_through_commands),
             "unknown_commands": list(self.unknown_commands),
             "adaptive_profile": self.adaptive_profile.to_dict() if self.adaptive_profile else None,
+            "domain_activations": [domain.to_dict() for domain in self.domain_activations],
         }
 
 
@@ -290,6 +293,7 @@ class AgentRuntime:
         budget: AgentBudget | None = None,
         command_catalog: SlashCommandCatalog | None = None,
         adaptive_router: AdaptiveRouter | None = None,
+        domain_router: DomainRouter | None = None,
     ) -> None:
         self.backend = backend
         self.registry = registry
@@ -298,6 +302,7 @@ class AgentRuntime:
         self.budget = budget or AgentBudget()
         self.command_catalog = command_catalog
         self.adaptive_router = adaptive_router or AdaptiveRouter()
+        self.domain_router = domain_router
 
     def run(
         self,
@@ -319,16 +324,24 @@ class AgentRuntime:
                 raise ValueError("context may only contain user/assistant messages")
             messages.append(_json_safe(dict(message)))
         adaptive_profile = self.adaptive_router.route(prompt, override_level=override_level)
+        domain_activations = self.domain_router.activate(prompt) if self.domain_router else ()
+        domain_header = ""
+        if domain_activations:
+            domain_header = (
+                "Contextually activated knowledge domains (heuristic; source/canonical status is retained): "
+                + "; ".join(f"{domain.domain_id} {domain.name}" for domain in domain_activations)
+                + ".\\n"
+            )
         adaptive_header = (
             "Adaptive route (heuristic, may be refined): "
             f"intent={adaptive_profile.intent.value}; level={adaptive_profile.level.value}; "
             f"methods={', '.join(adaptive_profile.methods)}.\n"
         )
         command_resolution: CommandResolution | None = None
-        effective_prompt = adaptive_header + prompt
+        effective_prompt = adaptive_header + domain_header + prompt
         if self.command_catalog is not None:
             command_resolution = self.command_catalog.resolve_prompt(prompt)
-            effective_prompt = adaptive_header + command_resolution.effective_prompt
+            effective_prompt = adaptive_header + domain_header + command_resolution.effective_prompt
         messages.append({"role": "user", "content": effective_prompt})
         calls = 0
 
@@ -339,6 +352,7 @@ class AgentRuntime:
                 command_resolution.pass_through_commands if command_resolution else (),
                 command_resolution.unknown_commands if command_resolution else (),
                 adaptive_profile,
+                domain_activations,
             )
 
         for turn in range(1, self.budget.max_model_turns + 1):

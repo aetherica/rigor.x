@@ -13,6 +13,7 @@ from uuid import uuid4
 
 from rigorx.adaptive_router import AdaptiveLevel
 from rigorx.agent_runtime import AgentRuntime, ToolRegistry
+from rigorx.domain_router import DomainCatalog, DomainRouter
 from rigorx.model_backend import OpenAICompatibleBackend
 from rigorx.slash_commands import SlashCommandCatalog
 
@@ -26,6 +27,7 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--run-id", default=None)
     parser.add_argument("--level", choices=[level.value for level in AdaptiveLevel], help="Override adaptive intensity.")
     parser.add_argument("--catalog", help="Optional slash-command catalogue JSON file.")
+    parser.add_argument("--domain-catalog", help="Optional 36-domain historical catalogue JSON file.")
     parser.add_argument("--json", action="store_true", dest="json_output", help="Print complete structured run receipt.")
     return parser
 
@@ -42,7 +44,8 @@ def main(argv: list[str] | None = None) -> int:
     try:
         backend = OpenAICompatibleBackend(base_url=args.base_url, model=args.model, api_key_env=args.api_key_env)
         catalog = SlashCommandCatalog.from_file(args.catalog) if args.catalog else None
-        runtime = AgentRuntime(backend, ToolRegistry(), command_catalog=catalog)
+        domains = DomainRouter(DomainCatalog.from_file(args.domain_catalog)) if args.domain_catalog else None
+        runtime = AgentRuntime(backend, ToolRegistry(), command_catalog=catalog, domain_router=domains)
         result = runtime.run(
             prompt,
             run_id=args.run_id or str(uuid4()),
