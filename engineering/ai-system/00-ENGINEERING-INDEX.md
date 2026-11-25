@@ -38,7 +38,7 @@
 - Registry Resolver: exact-ID resolution + census/crosswalk validation implemented; proposed records remain status-preserving.
 - Typed StageArtifact contracts: implemented with JSON-safe metadata and schema.
 - WS15 GitHub Actions: 35 tests passed; Ruff static analysis: PASS.
-- WS16 normalized fingerprint guard: implemented; 9 dedicated tests and full 44-test suite passed; Ruff PASS in GitHub Actions [run #45517446772](https://github.com/aetherica/rigor.x/actions/runs/45517446772).
+- WS16 normalized fingerprint guard: implemented; 9 original dedicated tests and full 44-test suite passed; Ruff PASS (corrective increment adds 2 guard tests; current exact-head CI pending) in GitHub Actions [run #45517446772](https://github.com/aetherica/rigor.x/actions/runs/45517446772).
 - WS18 crosswalk integrity: **4 regression tests passed**, validator passed on GitHub Actions. No runtime command activation.
 - WS19 baseline implementation: experimental controller/selector, lexical signal and fixture benchmark; no pipeline integration.
 - WS19 corrective engineering adds terminal-decision latching, resettable episode state, exact hard-step ceilings, strict profile/limit validation, truthful empty-capability plans and stable prior-step references. Corrective CI is pending.
