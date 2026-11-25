@@ -150,6 +150,36 @@ class PipelineRun:
             details["metadata"] = dict(metadata)
         return self._emit("EVIDENCE_CAPTURED", self.current_stage, details)
 
+    def skip_stage(self, *, reason: str) -> Stage | None:
+        """Skip an active stage with an explicit reason; do not label it completed."""
+        if self.status is not RunStatus.IN_PROGRESS or self.stage_status[self.current_stage] is not StageStatus.IN_PROGRESS:
+            raise InvalidTransition("Only an active stage can be skipped")
+        if not reason.strip():
+            raise ValueError("reason is required")
+        stage = self.current_stage
+        self.stage_status[stage] = StageStatus.SKIPPED_WITH_REASON
+        self._emit("STAGE_SKIPPED", stage, {"reason": reason})
+        index = STAGE_ORDER.index(stage)
+        if index == len(STAGE_ORDER) - 1:
+            self.status = RunStatus.COMPLETED
+            self._emit("RUN_COMPLETED", stage)
+            return None
+        next_stage = STAGE_ORDER[index + 1]
+        self.current_stage = next_stage
+        self.stage_status[next_stage] = StageStatus.READY
+        self.status = RunStatus.IN_PROGRESS
+        return next_stage
+
+    def mark_failed(self, *, reason: str) -> None:
+        """Mark the active stage failed with a safe reason."""
+        if self.status is not RunStatus.IN_PROGRESS or self.stage_status[self.current_stage] is not StageStatus.IN_PROGRESS:
+            raise InvalidTransition("Only an active stage can fail")
+        if not reason.strip():
+            raise ValueError("reason is required")
+        self.stage_status[self.current_stage] = StageStatus.FAILED
+        self.status = RunStatus.FAILED
+        self._emit("STAGE_FAILED", self.current_stage, {"reason": reason})
+
     def complete_stage(
         self,
         *,
