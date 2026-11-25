@@ -14,6 +14,7 @@ test = ["jsonschema>=4.25"]
 
 [project.scripts]
 rigorx-version = "rigorx.version_cli:main"
+rigorx-agent = "rigorx.cli:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
