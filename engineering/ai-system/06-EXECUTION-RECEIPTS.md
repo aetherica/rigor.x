@@ -32,6 +32,23 @@
 - The first CI run exposed Ruff UP035 (legacy `typing.Iterable` import); corrected to `collections.abc.Iterable`, then CI rerun passed.
 - Status: merged directly on canonical `main`; no branch created. Verified commit SHA: `ad4a5ec47db59606c3a3442ceb6a0c844a3c1b2c`.
 
+## WS17 — World-Class Engineering Preparation
+- Plan: [12-WORLD-CLASS-ENGINEERING-EXECUTION-PLAN.md](12-WORLD-CLASS-ENGINEERING-EXECUTION-PLAN.md)
+- Master index updated; file re-fetched and checked.
+- Status: documentation complete; no code execution claimed.
+
+## WS18 — Functional Group Registry Crosswalk
+- Canonical FG inventory: [functional-groups.json](functional-groups.json)
+- Candidate-library category mapping: [functional-group-crosswalk.json](../../library/slash-commands/functional-group-crosswalk.json)
+- Validator: [validate_functional_group_crosswalk.py](../../library/slash-commands/scripts/validate_functional_group_crosswalk.py)
+- Tests: [test_registry_crosswalk.py](../../tests/test_registry_crosswalk.py)
+- CI workflow: [functional-group-crosswalk.yml](../../.github/workflows/functional-group-crosswalk.yml)
+- Exact commit tested: `608e249eb4044aa369d8db58fea10256d6ef944f`
+- GitHub Actions: [Run #45518939024 — SUCCESS](https://github.com/aetherica/rigor.x/actions/runs/45518939024)
+- Outcome: validator passed; **4 regression tests passed**.
+- Verified: canonical IDs FG-01..FG-18, unique names, 18 candidate category groups, complete one-to-one category coverage and valid many-to-many FG references.
+- Explicit limit: mapping is exploratory category-level alignment; it does not prove entry-level ownership, implement handlers or activate commands.
+
 ## Static analysis and repository hygiene
 - Ruff static-analysis gate: **PASS** in run #45517446772.
 - Dependency update automation: Dependabot weekly configured.
