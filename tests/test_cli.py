@@ -21,6 +21,14 @@ class AgentCliTests(unittest.TestCase):
         self.assertEqual(code, 2)
         self.assertIn("RIGORX_MODEL_BASE_URL", out.getvalue())
 
+    def test_invalid_database_path_returns_safe_error(self):
+        with patch.dict("os.environ", {"RIGORX_MODEL_BASE_URL": "https://example.test/v1", "RIGORX_MODEL_NAME": "unit"}, clear=True):
+            out = io.StringIO()
+            with redirect_stderr(out):
+                code = main(["--database", "/dev/null/child.sqlite", "question"])
+        self.assertEqual(code, 2)
+        self.assertIn("Configuration error", out.getvalue())
+
     def test_cli_runs_pipeline_and_persists(self):
         with tempfile.TemporaryDirectory() as tmp, patch.dict("os.environ", {"RIGORX_MODEL_BASE_URL": "https://example.test/v1", "RIGORX_MODEL_NAME": "unit"}, clear=True), patch("rigorx.model_backend.OpenAICompatibleBackend.generate", return_value=ModelTurn(text="Test answer")):
             database = str(Path(tmp) / "runs.sqlite")
