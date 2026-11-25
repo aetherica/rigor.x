@@ -58,11 +58,11 @@ class AdaptiveRouter:
     """Select a method profile using deterministic, inspectable text signals."""
 
     _patterns: tuple[tuple[TaskIntent, tuple[str, ...]], ...] = (
-        (TaskIntent.RESEARCH, (r"research", r"investigat", r"latest", r"source", r"citation", r"verify", r"fact.?check", r"look up")),
-        (TaskIntent.ANALYSIS, (r"analy[sz]", r"diagnos", r"root cause", r"audit", r"why", r"evaluate", r"assess")),
+        (TaskIntent.RESEARCH, (r"research", r"investigat", r"latest", r"sources?", r"citation", r"verif(?:y|ies|ied|ying)\b", r"fact.?check", r"look up")),
+        (TaskIntent.ANALYSIS, (r"analy[sz]", r"diagnos", r"root cause", r"audit", r"why\b", r"evaluate", r"assess")),
         (TaskIntent.DECISION, (r"recommend", r"should i", r"which .*best", r"choose", r"decision", r"trade.?off", r"pros.?cons")),
-        (TaskIntent.EXECUTION, (r"execute", r"perform", r"do this", r"send", r"book", r"create", r"update", r"delete", r"schedule", r"submit", r"run this")),
-        (TaskIntent.TECHNICAL, (r"code", r"debug", r"program", r"api", r"database", r"deploy", r"architecture", r"software", r"script")),
+        (TaskIntent.EXECUTION, (r"execute", r"perform", r"do this", r"send(?:s|ing)?\b", r"book(?:s|ed|ing)?\b", r"creat(?:e|es|ed|ing)\b", r"updat(?:e|es|ed|ing)\b", r"delet(?:e|es|ed|ing)\b", r"schedule", r"submit", r"run this")),
+        (TaskIntent.TECHNICAL, (r"cod(?:e|es|ing)\b", r"debug", r"program", r"apis?\b", r"database", r"deploy", r"architecture", r"software", r"scripts?\b")),
         (TaskIntent.CREATIVE, (r"write", r"draft", r"story", r"brainstorm", r"creative", r"design")),
         (TaskIntent.COMMUNICATION, (r"email", r"message", r"translate", r"rewrite", r"polish", r"respond to")),
     )
@@ -82,7 +82,7 @@ class AdaptiveRouter:
     )
     _risk_patterns = (
         r"medical", r"health", r"diagnos", r"medication", r"legal", r"lawyer", r"financial",
-        r"investment", r"bank", r"security", r"credential", r"password", r"privacy",
+        r"investment", r"banks?\b", r"security", r"credential", r"password", r"privacy",
         r"safety", r"emergency", r"irreversible", r"delete permanently", r"production system",
     )
     _hyper_patterns = (r"hyper.?rigorous", r"l06", r"adversarial", r"red.?team", r"failure analysis", r"stress test", r"full audit", r"forensic")
@@ -95,7 +95,7 @@ class AdaptiveRouter:
         scores: dict[TaskIntent, int] = {intent: 0 for intent in TaskIntent}
         for intent, patterns in self._patterns:
             for pattern in patterns:
-                if re.search(pattern, text):
+                if re.search(rf"\b(?:{pattern})", text):
                     scores[intent] += 1
                     signals.append(f"{intent.value}:{pattern}")
         if re.search(r"\b(question|what is|who is|when|where|explain|define)\b", text):
@@ -115,7 +115,7 @@ class AdaptiveRouter:
         if scores[intent] == 0:
             intent = TaskIntent.INFORMATION
 
-        modes = [mode for mode, patterns in self._mode_patterns if any(re.search(pattern, text) for pattern in patterns)]
+        modes = [mode for mode, patterns in self._mode_patterns if any(re.search(rf"\b(?:{pattern})", text) for pattern in patterns)]
         if not modes:
             modes = {
                 TaskIntent.INFORMATION: ["DESCRIPTIVE"],
@@ -130,7 +130,7 @@ class AdaptiveRouter:
             }[intent]
         signals.extend(f"MODE:{mode}" for mode in modes)
 
-        risk_hits = [pattern for pattern in self._risk_patterns if re.search(pattern, text)]
+        risk_hits = [pattern for pattern in self._risk_patterns if re.search(rf"\b(?:{pattern})", text)]
         risk_score = min(5, len(risk_hits))
         if risk_hits:
             signals.extend(f"RISK:{pattern}" for pattern in risk_hits)
@@ -154,7 +154,7 @@ class AdaptiveRouter:
             (AdaptiveLevel.L01_BASIC, (r"/l01\b", r"/basic\b")),
         )
         token_override = next(
-            (level for level, patterns in level_tokens if any(re.search(pattern, text) for pattern in patterns)),
+            (level for level, patterns in level_tokens if any(re.search(rf"(?<!\S){pattern}", text) for pattern in patterns)),
             None,
         )
         if token_override is not None:

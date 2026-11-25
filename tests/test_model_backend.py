@@ -67,6 +67,45 @@ class ModelBackendTests(unittest.TestCase):
         with self.assertRaises(BackendConfigurationError):
             OpenAICompatibleBackend(base_url="http://remote.example", model="x")
 
+    def test_redirects_are_not_followed_and_key_is_not_forwarded(self):
+        import threading
+        from http.server import BaseHTTPRequestHandler, HTTPServer
+
+        seen: list[str | None] = []
+
+        class Target(BaseHTTPRequestHandler):
+            def do_POST(self):
+                seen.append(self.headers.get("Authorization"))
+                self.send_response(200)
+                self.end_headers()
+                self.wfile.write(b"{}")
+
+            do_GET = do_POST
+
+            def log_message(self, *args):
+                pass
+
+        target = HTTPServer(("127.0.0.1", 0), Target)
+
+        class Redirector(BaseHTTPRequestHandler):
+            def do_POST(self):
+                self.send_response(302)
+                self.send_header("Location", f"http://127.0.0.1:{target.server_port}/x")
+                self.end_headers()
+
+            def log_message(self, *args):
+                pass
+
+        redirector = HTTPServer(("127.0.0.1", 0), Redirector)
+        for server in (target, redirector):
+            threading.Thread(target=server.serve_forever, daemon=True).start()
+        self.addCleanup(lambda: [s.shutdown() or s.server_close() for s in (target, redirector)])
+        backend = OpenAICompatibleBackend(base_url=f"http://127.0.0.1:{redirector.server_port}/v1", model="m", api_key="SECRET")
+        with self.assertRaises(BackendConfigurationError) as raised:
+            backend.generate([{"role": "user", "content": "hi"}], [], timeout_seconds=5)
+        self.assertIn("302", str(raised.exception))
+        self.assertEqual(seen, [])
+
     def test_http_error_details_are_redacted(self):
         backend = OpenAICompatibleBackend(base_url="https://example.org", model="x", api_key="secret")
         error = HTTPError("https://example.org", 401, "Unauthorized secret", {}, None)

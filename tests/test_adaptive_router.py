@@ -53,6 +53,20 @@ class AdaptiveRouterTests(unittest.TestCase):
         self.assertIn("authorization", profile.methods)
         self.assertEqual(profile.level, AdaptiveLevel.L05_CRITICAL)
 
+    def test_substrings_inside_other_words_do_not_set_intent(self):
+        self.assertNotEqual(self.router.route("Explain the bookmark feature").intent, TaskIntent.EXECUTION)
+        self.assertNotEqual(self.router.route("List the open resources").intent, TaskIntent.RESEARCH)
+        self.assertNotEqual(self.router.route("What is the capital of France?").intent, TaskIntent.TECHNICAL)
+        self.assertEqual(self.router.route("Describe an embankment").risk_score, 0)
+
+    def test_whole_word_intents_still_detected(self):
+        self.assertEqual(self.router.route("Please update my notes").intent, TaskIntent.EXECUTION)
+        self.assertEqual(self.router.route("Debug this code").intent, TaskIntent.TECHNICAL)
+
+    def test_slash_level_token_ignored_inside_url_path(self):
+        profile = self.router.route("What is at example.com/critical?")
+        self.assertNotIn("SLASH_OVERRIDE:L05_CRITICAL", profile.signals)
+
     def test_empty_prompt_rejected(self):
         with self.assertRaises(ValueError):
             self.router.route("")

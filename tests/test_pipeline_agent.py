@@ -67,6 +67,10 @@ class AgentPipelineTests(unittest.TestCase):
         self.assertTrue(any("source-acquisition" in reason for reason in outcome.verification_reasons))
         store.close()
 
+    def test_research_tool_names_match_whole_tokens_only(self):
+        found = AgentPipeline._research_tools(("delete_resource", "webhook_send", "web_search", "fetchUrl", "list_files"))
+        self.assertEqual(found, ("web_search", "fetchUrl"))
+
     def test_snapshot_does_not_store_raw_tool_output(self):
         tool = ToolDefinition("lookup", "Lookup", {"type": "object"}, lambda _args: {"private": "sensitive-data"})
         backend = ScriptedBackend([ModelTurn(tool_calls=(ToolCall("c1", "lookup", {}),)), ModelTurn(text="Found it.")])
