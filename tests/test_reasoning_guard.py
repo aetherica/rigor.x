@@ -25,9 +25,10 @@ class ReasoningGuardTests(unittest.TestCase):
 
     def test_hard_budget(self):
         guard = ReasoningGuard(max_steps=2, repeat_limit=9)
-        guard.observe("one")
-        guard.observe("two")
-        self.assertEqual(guard.observe("three").action, GuardAction.STOP_BUDGET)
+        self.assertEqual(guard.observe("one").action, GuardAction.CONTINUE)
+        stopped = guard.observe("two")
+        self.assertEqual(stopped.action, GuardAction.STOP_BUDGET)
+        self.assertIs(guard.observe("three"), stopped)
 
     def test_stall_requires_full_window(self):
         guard = ReasoningGuard(stall_window=3, max_steps=10)
@@ -59,11 +60,10 @@ class ReasoningGuardTests(unittest.TestCase):
     def test_terminal_stop_is_latched_until_reset(self):
         guard = ReasoningGuard(max_steps=2, repeat_limit=9)
         guard.observe("one")
-        guard.observe("two")
-        stopped = guard.observe("three")
+        stopped = guard.observe("two")
         self.assertEqual(stopped.action, GuardAction.STOP_BUDGET)
-        self.assertIs(guard.observe("four"), stopped)
-        self.assertEqual(stopped.step_count, 3)
+        self.assertIs(guard.observe("three"), stopped)
+        self.assertEqual(stopped.step_count, 2)
         guard.reset_episode()
         self.assertEqual(guard.observe("fresh").step_count, 1)
 
@@ -71,6 +71,9 @@ class ReasoningGuardTests(unittest.TestCase):
         for value in (True, "0.1"):
             with self.subTest(value=value), self.assertRaises(ValueError):
                 ReasoningGuard(min_progress_delta=value)
+        for value in (True, 1.5):
+            with self.subTest(value=value), self.assertRaises(TypeError):
+                ReasoningGuard(max_steps=value)
 
     def test_distinct_count(self):
         self.assertEqual(distinct_fingerprints(["A", " a ", "B"]), 2)
