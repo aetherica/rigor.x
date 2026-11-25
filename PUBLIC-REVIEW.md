@@ -11,6 +11,7 @@ This document is a review guide, not a security attestation. At the time of this
 
 - The repository is still private; the owner has not yet changed visibility.
 - A full-clone, full-history secret and sensitive-data scan has **not** been completed.
+- GitHub Actions run history, logs, and artifacts have **not** been fully audited for sensitive output; GitHub warns these may become visible when a private repository is made public.
 - CI status for the exact publication candidate has **not** been verified by the available repository checks.
 - The owner must confirm that all source, documentation, datasets, examples, and historical commits are authorized for public disclosure.
 
