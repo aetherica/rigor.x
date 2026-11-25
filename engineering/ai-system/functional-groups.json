@@ -1,0 +1,78 @@
+{
+  "schema_version": "1.0.0",
+  "status": "owner-ratified-design-baseline_pending_repository-acceptance",
+  "functional_groups": [
+    {
+      "id": "FG-01",
+      "name": "Input & Interaction Intelligence"
+    },
+    {
+      "id": "FG-02",
+      "name": "Intent, Need & Demand Intelligence"
+    },
+    {
+      "id": "FG-03",
+      "name": "Context & Memory Intelligence"
+    },
+    {
+      "id": "FG-04",
+      "name": "Task Decomposition & Planning Intelligence"
+    },
+    {
+      "id": "FG-05",
+      "name": "Reasoning & Problem-Solving Intelligence"
+    },
+    {
+      "id": "FG-06",
+      "name": "Thinking & Metacognitive Intelligence"
+    },
+    {
+      "id": "FG-07",
+      "name": "Research & Discovery Intelligence"
+    },
+    {
+      "id": "FG-08",
+      "name": "Source Acquisition & Retrieval Intelligence"
+    },
+    {
+      "id": "FG-09",
+      "name": "Knowledge Engineering & Intelligence"
+    },
+    {
+      "id": "FG-10",
+      "name": "Analytical & Diagnostic Intelligence"
+    },
+    {
+      "id": "FG-11",
+      "name": "Strategic, Behavioural & Predictive Intelligence"
+    },
+    {
+      "id": "FG-12",
+      "name": "Decision & Optimization Intelligence"
+    },
+    {
+      "id": "FG-13",
+      "name": "Routing & Adaptive Control Intelligence"
+    },
+    {
+      "id": "FG-14",
+      "name": "Agent & Workflow Orchestration Intelligence"
+    },
+    {
+      "id": "FG-15",
+      "name": "Tool, API & Execution Intelligence"
+    },
+    {
+      "id": "FG-16",
+      "name": "Response & Communication Intelligence"
+    },
+    {
+      "id": "FG-17",
+      "name": "Evaluation, Verification & Quality Intelligence"
+    },
+    {
+      "id": "FG-18",
+      "name": "Governance, Security & Observability Intelligence"
+    }
+  ]
+}
