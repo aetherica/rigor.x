@@ -32,7 +32,7 @@ python -m build
 
 ## Pull requests
 
-External contributors should use a fork and submit a pull request to `main`. Describe the problem, solution, tests run, limitations, and any compatibility impact. Maintainers review and merge changes; the canonical repository's `main` branch remains the release source of truth.
+External reviewers may use GitHub's fork and pull-request workflow to demonstrate proposed changes. A pull request is a proposal, not acceptance or authorization to incorporate third-party intellectual property. Before any external code contribution is accepted or merged, the rights holder must confirm the contributor's authority and put any required contribution license or assignment terms in a separate written agreement. Describe the problem, solution, tests run, limitations, and compatibility impact. The canonical repository's `main` branch remains the release source of truth.
 
 ## Coding and validation
 
