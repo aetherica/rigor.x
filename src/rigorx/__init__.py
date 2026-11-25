@@ -11,11 +11,14 @@ from .agent_runtime import (
     ToolRegistry,
 )
 from .model_backend import OpenAICompatibleBackend
+from .slash_commands import CommandResolution, SlashCommandCatalog
 
 __all__ = [
     "AgentBudget",
     "AgentResult",
     "AgentRuntime",
+    "CommandResolution",
+    "SlashCommandCatalog",
     "AgentStatus",
     "OpenAICompatibleBackend",
     "ToolDefinition",
