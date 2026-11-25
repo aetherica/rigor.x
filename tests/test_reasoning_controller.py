@@ -1,7 +1,16 @@
 """WS19 controller and selector tests."""
 import unittest
-from rigorx.reasoning_controller import (ControllerAction,Mechanism,MechanismSelector,
-    ReasoningController,SemanticLoopMonitor,TaskKind,TaskProfile,token_jaccard)
+
+from rigorx.reasoning_controller import (
+    ControllerAction,
+    Mechanism,
+    MechanismSelector,
+    ReasoningController,
+    SemanticLoopMonitor,
+    TaskKind,
+    TaskProfile,
+    token_jaccard,
+)
 
 class SemanticTests(unittest.TestCase):
     def test_jaccard(self):

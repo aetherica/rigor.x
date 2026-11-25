@@ -1,6 +1,9 @@
 """Fixture benchmark metric invariants."""
 import unittest
+
 from semantic_loop_benchmark import run_benchmark
+
+
 class BenchmarkTests(unittest.TestCase):
     def test_metrics(self):
         m=run_benchmark(); self.assertEqual(m["cases"],8)
