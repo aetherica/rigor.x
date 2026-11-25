@@ -97,3 +97,8 @@ Package remains `0.4.0.dev0`. Final `v0.4.0` tag is intentionally withheld. Veri
 ## WS27 — AgentPipeline integration
 
 `AgentPipeline` drives the 11 stages, persists snapshots/events to SQLite after transitions, creates typed stage artifacts, and records evidence hashes without persisting raw prompt/tool output. Research stage is explicitly SKIPPED until a dedicated acquisition planner exists. Deterministic verification fails closed for incomplete execution or research tasks and prevents DECISION. CLI now runs through this pipeline and persists to a configurable SQLite database. Exact-head CI #45577832102: Python 3.13/3.15, Ruff PASS, 135 tests PASS, source/wheel builds and installed-wheel smoke PASS.
+
+
+## WS28 — Adaptive analysis modes
+
+AdaptiveProfile now exposes transparent method modes: EXPLORATORY, DESCRIPTIVE, DIAGNOSTIC, CAUSAL, HISTORICAL, COMPARATIVE, QUANTITATIVE, QUALITATIVE, FORENSIC, SYSTEMS, STRATEGIC and ACTION_RESEARCH. Pattern signals select multiple relevant modes; intent-based defaults apply when no mode signal is present. Profiles are included in AgentRuntime and pipeline artifacts. Exact-head CI #45578259206: 136 tests PASS, Ruff PASS, Python 3.13/3.15, distribution build and installed-wheel smoke PASS.

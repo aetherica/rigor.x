@@ -19,7 +19,7 @@ RIGOR-X is a deterministic control-plane and live model/tool orchestration frame
 - Runnable text-agent CLI `rigorx-agent` for a configured OpenAI-compatible endpoint (no tools unless host callbacks are wired).
 
 ## Owner requirements (scope, not implementation claims)
-18 Functional Groups; six adaptive intensity levels; nine research acquisition channels; 999 slash-command corpus; separate 102 operational/interface registry; 30 formulas; 33 algorithms; 111 topics; 15 operators; 36 knowledge domains; host/GitHub/cloud memory and Web/Android/iOS architecture.
+18 Functional Groups; six adaptive intensity levels and 12 heuristic analysis modes; nine research acquisition channels; 999 slash-command corpus; separate 102 operational/interface registry; 30 formulas; 33 algorithms; 111 topics; 15 operators; 36 knowledge domains; host/GitHub/cloud memory and Web/Android/iOS architecture.
 
 These inventories do not imply live functionality. Missing source material stays missing. No dummy handlers or fake connections.
 

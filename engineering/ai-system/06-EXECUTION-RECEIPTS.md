@@ -151,3 +151,9 @@
 - CLI runs through `AgentPipeline` and persists SQLite ledger.
 - Verification: successful Q&A and action receipt can pass; blocked actions and research tasks without successful source-acquisition receipts stop before DECISION.
 - Exact-head CI [run #45577832102 — SUCCESS](https://github.com/aetherica/rigor.x/actions/runs/45577832102), commit `7abe310a22ed740c96789a0a23678e042a435afb`: **135 tests PASS**, Ruff PASS, Python 3.13/3.15, sdist/wheel build and installed-wheel validation PASS.
+
+
+## WS28 — Adaptive analysis modes
+- AdaptiveProfile carries multiple analysis modes with signal provenance; heuristic and overrideable.
+- Modes: Exploratory, Descriptive, Diagnostic, Causal, Historical, Comparative, Quantitative, Qualitative, Forensic, Systems, Strategic, Action Research.
+- Exact-head CI [run #45578259206 — SUCCESS](https://github.com/aetherica/rigor.x/actions/runs/45578259206), commit `39981054da9053987b1c3be363136046db6c1850`: **136 tests PASS**, Ruff PASS, Python 3.13/3.15, sdist/wheel build and wheel install smoke PASS.

@@ -14,6 +14,7 @@
 - [WS25 Knowledge Domain Activation](19-KNOWLEDGE-DOMAIN-ACTIVATION.md)
 - [WS26 Version 0.4.0 Development Changelog](20-V0.4.0-DEVELOPMENT-CHANGELOG.md)
 - [WS27 Pipeline-Agent Integration](21-PIPELINE-AGENT-INTEGRATION.md)
+- [WS28 Adaptive Analysis Modes](22-ADAPTIVE-ANALYSIS-MODES.md)
 - [Standards applicability](01-REFERENCE-STANDARDS.md)
 - [Architecture](02-SYSTEM-ARCHITECTURE.md)
 - [Threat model](03-THREAT-MODEL.md)
