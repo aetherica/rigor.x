@@ -20,7 +20,7 @@ class SlashCommandCatalogTests(unittest.TestCase):
             "lifecycle_status": "candidate", "runtime_status": "not_implemented_in_rigor_x",
         }], expected_count=1)
         resolved = catalog.resolve_prompt("/brief Explain the result")
-        self.assertEqual(resolved.applied_modifiers, ("/brief: Summarize concisely",))
+        self.assertEqual(resolved.applied_modifiers, ("task modifier /brief: Summarize concisely",))
         self.assertIn("Explain the result", resolved.effective_prompt)
         self.assertIn("User task:", resolved.effective_prompt)
 

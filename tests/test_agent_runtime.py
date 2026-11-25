@@ -132,7 +132,7 @@ class AgentRuntimeTests(unittest.TestCase):
         }], expected_count=1)
         backend = ScriptedBackend([ModelTurn(text="short response")])
         result = AgentRuntime(backend, ToolRegistry(), command_catalog=catalog).run("/short Explain.", run_id="r12")
-        self.assertEqual(result.applied_modifiers, ("/short: Keep it brief",))
+        self.assertEqual(result.applied_modifiers, ("task modifier /short: Keep it brief",))
         self.assertIn("User-requested task modifiers", backend.received[0][0][-1]["content"])
 
     def test_adaptive_profile_attached_to_result(self):
