@@ -67,12 +67,15 @@
 - Code: `src/rigorx/reasoning_controller.py`; tests: `tests/test_reasoning_controller.py` (14 tests).
 - Fixture benchmark: `tests/semantic_loop_benchmark.py` and `tests/test_semantic_loop_benchmark.py` (8 hand-authored pairs).
 - Specification: `engineering/ai-system/13-REASONING-MONITOR-CONTROLLER-WS19.md`.
-- Isolated local tests: **14 controller tests + 1 benchmark test passed**.
+- Baseline isolated test record: 14 controller tests + 1 benchmark test passed before corrective hardening.
 - At lexical Jaccard 0.88: TP=2, FP=0, TN=4, FN=2; precision=1.00, recall=0.50, false-positive rate=0.00. Tiny fixture only; not production evidence.
 - CI: verified.
 - Limits: lexical heuristic; not pipeline-integrated, no model/tool execution or hidden-state control.
 
 - Corrective CI attempt [Run #45565392858](https://github.com/aetherica/rigor.x/actions/runs/45565392858): Ruff PASS; 62/63 tests passed; benchmark fixture expected class totals were incorrect (actual 4 loop-positive/4 negative); corrected in subsequent commit. This run is not a pass.
 
-- Corrected WS19 exact-head CI: [Run #45565480667 — SUCCESS](https://github.com/aetherica/rigor.x/actions/runs/45565480667), tested commit `36c8ca8e7d1b1e29aaccefbb3d3bc9bfe65275ea` (source/controller unchanged on later documentation-only commits). **Ruff PASS; all 63 repository tests PASS.**
+- Corrected WS19 baseline exact-head CI: [Run #45565480667 — SUCCESS](https://github.com/aetherica/rigor.x/actions/runs/45565480667), tested commit `36c8ca8e7d1b1e29aaccefbb3d3bc9bfe65275ea`. **Ruff PASS; 63 repository tests PASS** before corrective hardening.
+- Corrective code commits: terminal/reset guard `7f0ec825`; controller corrections `2b5b6b50`; regression tests `aad252f1` and `8f361d06`.
+- Corrective changes: latch terminal states (polling cannot bypass stop), reset all episode state, enforce max_steps as an exact ceiling, reject bool/non-integer limits and malformed profile flags, expose no primary mechanism when none is available, and report absolute prior-step references.
+- **Corrective CI status: PENDING / NOT YET VERIFIED** at the time this receipt was updated.
 - Final fixture expected counts: TP=2, FP=0, TN=4, FN=2; precision=1.00, recall=0.50, FPR=0.00. Tiny hand-authored fixture only.
