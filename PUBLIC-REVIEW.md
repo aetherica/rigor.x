@@ -9,13 +9,14 @@
 
 This document is a review guide, not a security attestation. At the time of this revision:
 
-- The repository is still private; the owner has not yet changed visibility.
-- A full-clone, full-history secret and sensitive-data scan has **not** been completed.
+- The repository is **public** (observed 2026-11-25: anonymous clone succeeds). It became public before every gate in [PUBLIC-RELEASE-CHECKLIST.md](PUBLIC-RELEASE-CHECKLIST.md) was closed.
+- A full-history scan of `main` was completed on 2026-11-25 with regex-based detectors: no credentials or secrets found. A dedicated scanner run (e.g. gitleaks) is still recommended. See [Execution Receipts](engineering/ai-system/06-EXECUTION-RECEIPTS.md).
+- Superseded proprietary licensing documents were removed from all Git history on 2026-11-25 by owner decision; commit SHAs changed.
 - GitHub Actions run history, logs, and artifacts have **not** been fully audited for sensitive output.
 - CI status for the exact publication candidate has **not** been verified.
 - The owner must confirm that all source, documentation, datasets, examples, and historical commits are authorized for public disclosure and Apache-2.0 licensing.
 
-Complete the full-history scan and rights/provenance review before changing visibility.
+Complete the dedicated scanner run, the Actions log/artifact audit and the rights/provenance review.
 
 ## What this publication is
 
