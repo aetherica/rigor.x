@@ -123,6 +123,36 @@ ${facts.redirectIsLoopback ? '<p class="warn"><strong>This sends access to an ap
 </form></html>`;
 }
 
+const REPO_URL = "https://github.com/aetherica/rigor.x";
+
+/** Public pages linked from the Google OAuth consent screen (Branding). Factual, spike-stage text. */
+export const PRIVACY_PAGE = `<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RIGOR-X privacy</title><style>${PAGE_STYLE}</style>
+<h1>RIGOR-X privacy policy</h1>
+<p>RIGOR-X is an MCP server that AI assistants (such as ChatGPT and Claude) call to structure multi-step work. This page describes what it stores. Status: early development.</p>
+<h2>Sign-in</h2>
+<p>You sign in with Google. RIGOR-X receives your Google account ID and e-mail address. Your runs are stored under your Google account ID; the e-mail address is used only to check an optional allowlist and is not stored with your runs.</p>
+<h2>What is stored</h2>
+<ul>
+<li>Task text and raw tool outputs: stored only as SHA-256 digests and lengths, not as text.</li>
+<li>Stage summaries, evidence references and verification criteria that your assistant submits: stored as text, because they are the record of the run.</li>
+<li>Sign-in records (registered apps, grants, tokens): stored hashed or encrypted.</li>
+</ul>
+<p>Each account's runs live in separate storage on Cloudflare. RIGOR-X does not sell data, show ads or use your data to train models, and does not call any AI model itself.</p>
+<h2>Deleting your data</h2>
+<p>Ask your assistant to use the <code>rigorx_delete_run</code> tool on a run to delete it permanently. For anything else, open an issue at <a href="${REPO_URL}">${REPO_URL}</a>.</p>
+</html>`;
+
+export const TERMS_PAGE = `<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RIGOR-X terms</title><style>${PAGE_STYLE}</style>
+<h1>RIGOR-X terms of service</h1>
+<p>RIGOR-X is an early-stage development service, provided as is, without warranty and without guaranteed availability. It may change or stop at any time, and stored runs may be deleted.</p>
+<p>Verification results are structural checks of what your assistant submitted ("structurally verified"); they do not guarantee that any claim is correct or true.</p>
+<p>Do not use RIGOR-X for unlawful purposes or to attack the service. Source code and license: <a href="${REPO_URL}">${REPO_URL}</a>.</p>
+</html>`;
+
 export function messagePage(title: string, message: string): string {
 	return `<!doctype html>
 <html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">

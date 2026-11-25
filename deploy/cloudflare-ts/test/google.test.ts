@@ -67,3 +67,9 @@ test("consent page escapes client-supplied text and shows the redirect host", ()
 	assert.ok(page.includes("not verified"));
 	assert.ok(consentPage({ clientName: "ChatGPT", clientDomain: "chatgpt.com", redirectHost: "chatgpt.com", redirectIsLoopback: false }, "h").includes("Published by <strong>chatgpt.com</strong>"));
 });
+
+test("privacy and terms pages are static and name the deletion tool", async () => {
+	const { PRIVACY_PAGE, TERMS_PAGE } = await import("../src/google.ts");
+	assert.ok(PRIVACY_PAGE.includes("rigorx_delete_run"));
+	assert.ok(PRIVACY_PAGE.startsWith("<!doctype html>") && TERMS_PAGE.startsWith("<!doctype html>"));
+});

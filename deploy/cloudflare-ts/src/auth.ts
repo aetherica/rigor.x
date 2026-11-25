@@ -23,6 +23,8 @@ import {
 import {
 	GOOGLE_CALLBACK_PATH,
 	GOOGLE_TOKEN_URL,
+	PRIVACY_PAGE,
+	TERMS_PAGE,
 	consentPage,
 	emailAllowed,
 	googleAuthorizeUrl,
@@ -156,6 +158,8 @@ function defaultHandler(origin: string): ExportedHandler<AuthEnv> {
 			const { pathname } = new URL(request.url);
 			try {
 				if (pathname === "/" && request.method === "GET") return new Response(BANNER);
+				if (pathname === "/privacy" && request.method === "GET") return html(PRIVACY_PAGE);
+				if (pathname === "/terms" && request.method === "GET") return html(TERMS_PAGE);
 				if (pathname === "/authorize" && request.method === "GET") return await authorizeGet(request, env);
 				if (pathname === "/authorize" && request.method === "POST") return await authorizePost(request, env, origin);
 				if (pathname === GOOGLE_CALLBACK_PATH && request.method === "GET") return await googleCallback(request, env, origin);
