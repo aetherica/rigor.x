@@ -61,3 +61,8 @@ Implemented source: `src/rigorx/agent_runtime.py` (bounded model-tool loop, regi
 Package version is `0.4.0.dev0`; final tag withheld until release acceptance. CI matrix: Python 3.13 and 3.15.
 
 Limit: synchronous callback cancellation/timeout must be provided by the connector adapter; the core cannot forcibly cancel external side effects. Host/plugin wiring is required and is not simulated. Exact-head CI run #45572558422 passed both matrix jobs, Ruff, 93 tests and CLI smoke for commit `d41c2ba09c8563591882f8c262cb66733ac21739`.
+
+
+## WS22 — Slash-command catalog and modifier integration
+
+Implemented `src/rigorx/slash_commands.py` and integrated into `AgentRuntime`. The 999 corpus is loaded and structurally checked; canonical names resolve, aliases map without overriding canonical command names, macro classifications are transformed into user-level prompt modifiers, unknown tokens are preserved, and native/UI/image entries are passed through with an explicit non-execution notice. No command description is treated as executable code. CI exact-head: run #45573800515, both Python 3.13 and 3.15, Ruff PASS and 106 tests PASS.

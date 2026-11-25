@@ -101,3 +101,10 @@
 - Exact-head CI [run #45572558422 — SUCCESS](https://github.com/aetherica/rigor.x/actions/runs/45572558422), commit `d41c2ba09c8563591882f8c262cb66733ac21739`: Python 3.13 and 3.15, Ruff PASS, 93 tests PASS, CLI smoke PASS.
 - Host-injected backend and real connector callbacks are required. No ChatGPT plugin connection is claimed. Callback timeout/cancellation is delegated to adapter.
 - Corrective CI history: initial commit failed package install due duplicate TOML table; subsequent run failed Ruff, then test setup exposed missing capability grant. All defects corrected; exact-head acceptance passed.
+
+
+## WS22 — Slash Command Resolver
+- `src/rigorx/slash_commands.py`; `AgentRuntime` optional catalog integration; corpus file loaded from `library/slash-commands/commands.json`.
+- Validates 999 records, IDs, names and aliases; canonical names take precedence over overlapping alias tokens.
+- MACRO/MACRO ALIAS descriptions become user-level modifiers; native/UI/image-keyword commands are preserved but not falsely executed.
+- Exact-head CI [run #45573800515 — SUCCESS](https://github.com/aetherica/rigor.x/actions/runs/45573800515), commit `44be55736f8eb7eb70de201c34d2256e1d7da3ba`: Ruff PASS, 106 tests PASS on Python 3.13 and 3.15, CLI smoke PASS.
