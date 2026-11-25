@@ -13,6 +13,8 @@ from rigorx.agent_runtime import (
     ToolStatus,
 )
 
+from rigorx.slash_commands import SlashCommandCatalog
+
 
 class ScriptedBackend:
     def __init__(self, turns):
