@@ -52,9 +52,8 @@ class ModelBackendTests(unittest.TestCase):
     def test_http_error_details_are_redacted(self):
         backend = OpenAICompatibleBackend(base_url="https://example.org", model="x", api_key="secret")
         error = HTTPError("https://example.org", 401, "Unauthorized secret", {}, None)
-        with patch("rigorx.model_backend.urlopen", side_effect=error):
-            with self.assertRaises(BackendConfigurationError) as raised:
-                backend.generate([], [], timeout_seconds=1)
+        with patch("rigorx.model_backend.urlopen", side_effect=error), self.assertRaises(BackendConfigurationError) as raised:
+            backend.generate([], [], timeout_seconds=1)
         self.assertNotIn("secret", str(raised.exception))
         self.assertIn("401", str(raised.exception))
 

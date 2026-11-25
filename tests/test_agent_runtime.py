@@ -12,7 +12,6 @@ from rigorx.agent_runtime import (
     ToolRegistry,
     ToolStatus,
 )
-
 from rigorx.slash_commands import SlashCommandCatalog
 
 
