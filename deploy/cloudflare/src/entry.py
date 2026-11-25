@@ -15,6 +15,7 @@ from __future__ import annotations
 import contextvars
 import hashlib
 import hmac
+import traceback
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -116,5 +117,8 @@ class Default(WorkerEntrypoint):
         token = _current_owner.set(owner)
         try:
             return await asgi.fetch(_app(self.env), request, self.env)
+        except Exception as exc:  # noqa: BLE001 - log the traceback for Workers Logs; return a safe message
+            print("RIGORX_ERROR " + traceback.format_exc())
+            return Response(f"Internal error: {type(exc).__name__}: {exc}"[:300], status=500)
         finally:
             _current_owner.reset(token)
