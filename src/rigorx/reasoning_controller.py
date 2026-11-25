@@ -232,6 +232,8 @@ class ReasoningController:
             raise ValueError("recovery_budget must be an integer >= 0")
         if not isinstance(semantic_enabled, bool):
             raise TypeError("semantic_enabled must be bool")
+        if not isinstance(semantic_signal_action, ControllerAction):
+            raise TypeError("semantic_signal_action must be a ControllerAction")
         if semantic_signal_action not in {ControllerAction.DIVERSIFY, ControllerAction.REPLAN}:
             raise ValueError("semantic action may only DIVERSIFY or REPLAN")
         self.guard = ReasoningGuard(
