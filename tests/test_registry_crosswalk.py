@@ -54,7 +54,8 @@ class CrosswalkTests(unittest.TestCase):
 
     def test_rejects_uncovered_functional_group(self):
         fg, xw, manifest, groups = documents()
-        xw["mappings"][0]["functional_group_ids"] = ["FG-02"]
+        for mapping in xw["mappings"]:
+            mapping["functional_group_ids"] = ["FG-02"]
         with self.assertRaisesRegex(ValueError, "FG coverage mismatch"):
             validator.validate_data(fg, xw, manifest, groups)
 
