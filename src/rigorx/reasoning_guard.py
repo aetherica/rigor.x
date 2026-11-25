@@ -10,8 +10,8 @@ import unicodedata
 from collections import deque
 from collections.abc import Iterable
 from dataclasses import dataclass
-from enum import StrEnum
 from hashlib import sha256
+from enum import StrEnum
 
 
 class GuardAction(StrEnum):
@@ -50,7 +50,11 @@ def fingerprint_state(state: str) -> str:
 
 
 class ReasoningGuard:
-    """Detect normalized repeats, stalls and hard budget exhaustion."""
+    """Detect normalized repeats, stalls and hard budget exhaustion.
+
+    Terminal decisions are latched. Further observations are ignored until reset,
+    preventing a caller from bypassing the step budget by continuing to poll.
+    """
 
     def __init__(
         self,
@@ -62,18 +66,30 @@ class ReasoningGuard:
     ) -> None:
         if max_steps < 1 or repeat_limit < 1 or stall_window < 2:
             raise ValueError("budgets must be positive and stall_window >= 2")
-        if not math.isfinite(min_progress_delta) or min_progress_delta < 0:
+        if (
+            isinstance(min_progress_delta, bool)
+            or not isinstance(min_progress_delta, (int, float))
+            or not math.isfinite(min_progress_delta)
+            or min_progress_delta < 0
+        ):
             raise ValueError("min_progress_delta must be finite and non-negative")
         self.max_steps = max_steps
         self.repeat_limit = repeat_limit
         self.stall_window = stall_window
         self.min_progress_delta = min_progress_delta
+        self.reset_episode()
+
+    def reset_episode(self) -> None:
+        """Reset counters and history for a new, separately scoped episode."""
         self._counts: dict[str, int] = {}
-        self._progress: deque[float] = deque(maxlen=stall_window)
+        self._progress: deque[float] = deque(maxlen=self.stall_window)
         self._steps = 0
         self._best_progress: float | None = None
+        self._terminal: GuardDecision | None = None
 
     def observe(self, state: str, *, progress: float | None = None) -> GuardDecision:
+        if self._terminal is not None:
+            return self._terminal
         if progress is not None:
             if isinstance(progress, bool) or not isinstance(progress, (int, float)):
                 raise TypeError("progress must be a numeric scalar, not bool")
@@ -100,7 +116,7 @@ class ReasoningGuard:
         else:
             action, reason = GuardAction.CONTINUE, "within configured limits"
 
-        return GuardDecision(
+        decision = GuardDecision(
             action=action,
             step_count=self._steps,
             fingerprint=fingerprint,
@@ -108,6 +124,13 @@ class ReasoningGuard:
             best_progress=self._best_progress,
             reason=reason,
         )
+        if action in {
+            GuardAction.STOP_BUDGET,
+            GuardAction.STOP_REPEATED_STATE,
+            GuardAction.STOP_STALLED,
+        }:
+            self._terminal = decision
+        return decision
 
     def _is_stalled(self) -> bool:
         if len(self._progress) < self.stall_window:
