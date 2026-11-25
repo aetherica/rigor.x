@@ -13,6 +13,7 @@ from .agent_runtime import (
 )
 from .domain_router import DomainActivation, DomainCatalog, DomainRouter
 from .model_backend import OpenAICompatibleBackend
+from .pipeline_agent import AgentPipeline, PipelineAgentOutcome
 from .slash_commands import CommandResolution, SlashCommandCatalog
 
 __all__ = [
@@ -20,6 +21,7 @@ __all__ = [
     "AdaptiveProfile",
     "AdaptiveRouter",
     "AgentBudget",
+    "AgentPipeline",
     "AgentResult",
     "AgentRuntime",
     "AgentStatus",
@@ -28,6 +30,7 @@ __all__ = [
     "DomainCatalog",
     "DomainRouter",
     "OpenAICompatibleBackend",
+    "PipelineAgentOutcome",
     "SlashCommandCatalog",
     "TaskIntent",
     "ToolDefinition",
