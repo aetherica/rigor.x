@@ -1,7 +1,7 @@
 # WS31 — Host Plugin Architecture (RIGOR-X as an MCP engine)
 
 **Document ID:** RX-PLUGIN-001
-**Status:** DRAFT — for owner review; nothing in this document is implemented yet
+**Status:** DRAFT — for owner review. Phase P1 implemented (see section 14); everything else is not yet implemented
 **Canonical branch:** `main`
 **Last updated:** 2026-11-25
 
@@ -169,6 +169,14 @@ Rationale:
 3. Whether stage summaries are stored in full or only as hashes (privacy versus usefulness).
 4. Usage limits per user (abuse protection and cost control).
 5. Who operates the service (Aetherica managed hosting, as mentioned in the README).
+
+## 14. Implementation status
+
+**P1 — IMPLEMENTED (2026-11-25), not yet CI-verified.**
+- `src/rigorx/run_store.py`: `RunStore` protocol and `SQLiteRunStore` (owner-scoped; another owner's run is reported as missing; append-only event check; optimistic revisions; file mode 0600).
+- `src/rigorx/host_engine.py`: `HostEngine` with the operations behind every tool in section 5 except `rigorx_profile`, which belongs to the authentication layer (P4). The current stage is always started automatically, so evidence can be recorded at any time during an active stage. Partial and blocked stages resume on the next submission. VERIFICATION, DECISION and FEEDBACK cannot be skipped. Task text, stage summaries, evidence claims and criteria are stored only as SHA-256 digests and character counts.
+- `tests/test_host_engine.py`: 17 tests — unguessable handles, no raw content stored, cross-owner isolation, stage order, full run to COMPLETED, gate failures (uncited, dangling, unmet, missing criteria) and recovery by re-entry, research and execution intent checks, action resolution, partial/blocked resume, unskippable gate stages, bounded re-entry, cancel/delete, size limits, revision conflict and persistence across reopen.
+- Evidence and action IDs (`ev-N`) are the ledger event sequence numbers; evidence from earlier lineages remains valid after re-entry.
 
 ## Sources
 

@@ -12,8 +12,10 @@ from .agent_runtime import (
     ToolRegistry,
 )
 from .domain_router import DomainActivation, DomainCatalog, DomainRouter
+from .host_engine import EngineError, HostEngine
 from .model_backend import OpenAICompatibleBackend
 from .pipeline_agent import AgentPipeline, PipelineAgentOutcome
+from .run_store import RunStore, SQLiteRunStore
 from .slash_commands import CommandResolution, SlashCommandCatalog
 
 __all__ = [
@@ -29,8 +31,12 @@ __all__ = [
     "DomainActivation",
     "DomainCatalog",
     "DomainRouter",
+    "EngineError",
+    "HostEngine",
     "OpenAICompatibleBackend",
     "PipelineAgentOutcome",
+    "RunStore",
+    "SQLiteRunStore",
     "SlashCommandCatalog",
     "TaskIntent",
     "ToolDefinition",
