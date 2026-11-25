@@ -12,6 +12,7 @@ from rigorx.reasoning_controller import (
     token_jaccard,
 )
 
+
 class SemanticTests(unittest.TestCase):
     def test_jaccard(self):
         self.assertEqual(token_jaccard("a b c","a b c"),1.0)

@@ -9,6 +9,7 @@ from enum import StrEnum
 
 from .reasoning_guard import GuardAction, GuardDecision, ReasoningGuard
 
+
 class TaskKind(StrEnum):
     GENERAL="GENERAL"; RESEARCH="RESEARCH"; CAUSAL="CAUSAL"; DECISION="DECISION"
     QUANTITATIVE="QUANTITATIVE"; CREATIVE="CREATIVE"; TECHNICAL="TECHNICAL"; DIAGNOSTIC="DIAGNOSTIC"
