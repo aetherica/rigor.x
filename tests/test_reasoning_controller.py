@@ -47,6 +47,8 @@ class SelectorTests(unittest.TestCase):
     def test_profile_limits(self):
         with self.assertRaises(ValueError): TaskProfile(intensity=7)
         with self.assertRaises(ValueError): TaskProfile(risk=1.5)
+        with self.assertRaises(TypeError): TaskProfile(intensity=True)
+        with self.assertRaises(TypeError): TaskProfile(task_kind="RESEARCH")
 class ControllerTests(unittest.TestCase):
     def test_exact_repeat(self):
         c=ReasoningController(max_steps=8,repeat_limit=2)
