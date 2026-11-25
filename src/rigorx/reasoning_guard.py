@@ -10,8 +10,8 @@ import unicodedata
 from collections import deque
 from collections.abc import Iterable
 from dataclasses import dataclass
-from hashlib import sha256
 from enum import StrEnum
+from hashlib import sha256
 
 
 class GuardAction(StrEnum):
