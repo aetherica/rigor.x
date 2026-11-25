@@ -13,6 +13,7 @@
 - [WS24 Release Build & Runtime Hardening](18-RELEASE-BUILD-AND-TRANSPORT-HARDENING.md)
 - [WS25 Knowledge Domain Activation](19-KNOWLEDGE-DOMAIN-ACTIVATION.md)
 - [WS26 Version 0.4.0 Development Changelog](20-V0.4.0-DEVELOPMENT-CHANGELOG.md)
+- [WS27 Pipeline-Agent Integration](21-PIPELINE-AGENT-INTEGRATION.md)
 - [Standards applicability](01-REFERENCE-STANDARDS.md)
 - [Architecture](02-SYSTEM-ARCHITECTURE.md)
 - [Threat model](03-THREAT-MODEL.md)

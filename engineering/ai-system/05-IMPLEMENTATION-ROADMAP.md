@@ -92,3 +92,8 @@ The 36-domain historical record is loaded and validated with source/canonical st
 ## WS26 — 0.4.0 Development Release Review
 
 Package remains `0.4.0.dev0`. Final `v0.4.0` tag is intentionally withheld. Verified coverage includes live configured text-model transport, bounded callback tool loop, 909/999 prompt modifiers (macro + image keyword classifications), six-level heuristic routing, provisional 36-domain activation, packaging and CI. Remaining release blockers include real provider acceptance, actual host/plugin tool adapters, 90 native/UI command integrations, 999 per-entry operational contracts, recovered/ratified 30/33/111/15 inventories, 18 FG ownership mapping, research/source acquisition, memory integrations, evidence/provenance, full security/quality/performance evaluation, and end-to-end acceptance.
+
+
+## WS27 — AgentPipeline integration
+
+`AgentPipeline` drives the 11 stages, persists snapshots/events to SQLite after transitions, creates typed stage artifacts, and records evidence hashes without persisting raw prompt/tool output. Research stage is explicitly SKIPPED until a dedicated acquisition planner exists. Deterministic verification fails closed for incomplete execution or research tasks and prevents DECISION. CLI now runs through this pipeline and persists to a configurable SQLite database. Exact-head CI #45577832102: Python 3.13/3.15, Ruff PASS, 135 tests PASS, source/wheel builds and installed-wheel smoke PASS.
