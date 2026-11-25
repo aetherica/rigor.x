@@ -1,78 +1,42 @@
 # Aetherica × RIGOR-X
 
-Canonical repository for the Aetherica intelligence platform and its RIGOR-X control protocol.
+**Repository:** `aetherica/rigor.x` · **Canonical branch:** `main` only · **Engineering package:** `0.4.0.dev0` (not a final release)
+
+RIGOR-X is a deterministic control-plane and live model/tool orchestration framework. It provides pipeline state, typed contracts, registry validation, durable storage and a bounded tool-call runtime. It is **not** a hosted model, provider service, or automatically connected ChatGPT plugin runtime.
+
+## Implemented components
+- 11-stage pipeline state machine with explicit transitions, verification gate and bounded re-entry.
+- SQLite persistence with transactional snapshots/events, append-only integrity and optimistic revisions.
+- Registry structural validation/resolution; candidate status remains preserved.
+- Typed stage-artifact contracts.
+- Reasoning guard and adaptive selector; integration/evaluation boundaries are documented.
+- Fail-closed command execution framework.
+- Live model/tool loop using injected backend and registered host callbacks; capability/approval gates, JSON argument validation, receipts and bounded budgets.
+- OpenAI-compatible Chat Completions transport over HTTPS (loopback HTTP allowed), standard-library networking and environment credentials.
+- Package version CLI.
+
+## Owner requirements (scope, not implementation claims)
+18 Functional Groups; six adaptive intensity levels; nine research acquisition channels; 999 slash-command corpus; separate 102 operational/interface registry; 30 formulas; 33 algorithms; 111 topics; 15 operators; 36 knowledge domains; host/GitHub/cloud memory and Web/Android/iOS architecture.
+
+These inventories do not imply live functionality. Missing source material stays missing. No dummy handlers or fake connections.
+
+## Live runtime
+See [WS21 Live Agent Runtime](engineering/ai-system/15-LIVE-AGENT-RUNTIME.md). A real model endpoint and plugin callbacks must be supplied by the integrating host. This repo does not automatically connect to ChatGPT's internal plugin runtime.
+
+## Install and test
+```bash
+python -m pip install -e '.[test]'
+python -m unittest discover -s tests -v
+ruff check src tests
+rigorx-version
+```
+Python support: `>=3.13`; CI tests 3.13 and 3.15.
 
 ## Governance
+- Only canonical branch `main`; no feature branches.
+- No fake providers, dummy handlers or placeholder code presented as functional.
+- Capability states: PLANNED / SPECIFIED / IMPLEMENTED / TESTED / VERIFIED / PARTIAL / BLOCKED / NOT_IMPLEMENTED / NOT_ASSESSED.
+- Release tag `v0.4.0` only after exact-head CI, integration acceptance, security and release gates.
+- Standards are engineering references, not certification claims.
 
-- Canonical branch: `main` only.
-- Repository visibility: private.
-- No secondary branches are permitted.
-- Project-owner specifications are authoritative.
-- Every capability must distinguish `PLANNED`, `IMPLEMENTED`, and `VERIFIED`.
-- No implementation, test, deployment, provider connection, or persistence claim is valid without observable evidence.
-- Engineering workflow: `INSPECT → PLAN → IMPLEMENT → TEST → VERIFY → COMMIT TO MAIN`.
-
-## Canonical requirements
-
-The project requirements include, without reduction:
-
-- Six adaptive intelligence levels: L01 BASIC, L02 STANDARD, L03 DEEP, L04 COMPLEX, L05 CRITICAL, L06 HYPER RIGOROUS.
-- Nine distinct research acquisition channels: DIRECT, SURFACE, DEEP, DARK, LOCAL, SOCIAL MEDIA, ALTERNATE MEDIA, BLOG, MAINSTREAM MEDIA.
-- A canonical registry of 999 unique slash commands across 18 Functional Groups.
-- Six adaptive intensity levels (L01–L06) and dynamic, context-aware, multi-mode selection.
-- Three coordinated memory backends: Host, GitHub, Cloudflare; including durable SQL-backed storage.
-- Unified Web, Android, and iOS product architecture.
-- Canonical knowledge registries: 30 formulas, 33 algorithms, 111 topics, and 15 analytical operators.
-- Evidence, provenance, validation, execution, security, recovery, MCP, provider, and Human Experience systems.
-
-These are requirements, not claims of current implementation. Item-level registry content and runtime implementation must be independently recovered, ratified, tested and verified; fixed cardinalities do not prove that each entry exists.
-
-## AI System Engineering workspace
-
-The dedicated engineering dossier is stored in [`engineering/ai-system/`](engineering/ai-system/00-ENGINEERING-INDEX.md). It contains the standards applicability map, architecture, threat model, quality/testing protocol, implementation roadmap, execution receipts, quickstart and requirements traceability. This is an evolving engineering workspace; it does not claim formal standards certification.
-
-## Primary operational pipeline
-
-The owner-defined 11-stage RIGOR-X pipeline is specified in [Primary Operational Pipeline](docs/architecture/PRIMARY-OPERATIONAL-PIPELINE.md). Its first deterministic state-machine implementation is in `src/rigorx/pipeline.py`; implementation and verification status are tracked in [Pipeline Implementation Ledger](docs/recovery/PIPELINE-IMPLEMENTATION-LEDGER.md).
-
-The state-machine core and contract tests are an initial implementation increment only. Runtime adapters, durable persistence, registry integration and CI verification remain separate acceptance gates.
-
-## Initial repository recovery record
-
-Initial inspection on 2026-11-25 through the connected GitHub integration established:
-
-- Repository: `aetherica/rigor.x`
-- Visibility: private
-- Default branch setting: `main`
-- Repository size reported by GitHub: 0 KB before this bootstrap commit
-- Branch search before this bootstrap commit returned no branch references.
-- Commit listing returned GitHub API `409 Git Repository is empty`.
-- No source tree or existing implementation was available to inspect before initialization.
-
-This file is the initial bootstrap record. It does not establish that the RIGOR-X runtime, tests, integrations, or product platforms are implemented.
-
-## Historical recovery status
-
-The project handoff records historical versions `v0.0.1` through `v0.3.9`, earlier test reports, commits, pull requests, and a separate MCP deployment. Those records remain historical assertions until independently resolved against accessible Git objects, workflow runs, artifacts, or deployment evidence.
-
-The previously referenced repository name `aetherica/aetherica-rigor` was not accessible during initial inspection (GitHub returned 404). The accessible `aetherica/Global-Imagine-Protocol` repository is a separate imaging-protocol project; it is not treated as RIGOR-X source history.
-
-The installed Aetherica reference registry contains 91 command definitions. It is useful reference material, but it does not establish the missing 11 commands. Missing commands must be recovered from historical project records; they must not be invented.
-
-## Status vocabulary
-
-- `COMPLETED`: work performed and acceptance criteria met.
-- `PARTIAL`: some work performed; acceptance criteria remain.
-- `BLOCKED`: a specific external or technical dependency prevents progress.
-- `NOT STARTED`: no execution performed.
-- `NOT VERIFIED`: implementation or claim exists but lacks sufficient verification evidence.
-
-## Immediate engineering sequence
-
-1. Recover accessible historical repositories, tags, commits, pull requests, workflow records, and project specifications.
-2. Reconstruct the canonical 102-command registry and 45-entry feature/system register without inventing missing items.
-3. Specify six-level intensity, nine-channel acquisition, and dynamic mode selection.
-4. Define the shared runtime, evidence/provenance, memory, security, and cross-platform architecture.
-5. Implement in dependency order, with tests and evidence for each increment.
-
-No release or production-readiness claim is made by this bootstrap.
+Progress and receipts: [AI System Engineering Index](engineering/ai-system/00-ENGINEERING-INDEX.md), [Execution Receipts](engineering/ai-system/06-EXECUTION-RECEIPTS.md). Historical v0.3.9 issues are being corrected against available evidence; inaccessible historical artifacts cannot be independently audited.
