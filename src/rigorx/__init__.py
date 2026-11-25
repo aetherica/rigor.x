@@ -2,6 +2,7 @@
 
 __version__ = "0.4.0.dev0"
 
+from .adaptive_router import AdaptiveLevel, AdaptiveProfile, AdaptiveRouter, TaskIntent
 from .agent_runtime import (
     AgentBudget,
     AgentResult,
@@ -14,6 +15,9 @@ from .model_backend import OpenAICompatibleBackend
 from .slash_commands import CommandResolution, SlashCommandCatalog
 
 __all__ = [
+    "AdaptiveLevel",
+    "AdaptiveProfile",
+    "AdaptiveRouter",
     "AgentBudget",
     "AgentResult",
     "AgentRuntime",
@@ -21,6 +25,7 @@ __all__ = [
     "CommandResolution",
     "OpenAICompatibleBackend",
     "SlashCommandCatalog",
+    "TaskIntent",
     "ToolDefinition",
     "ToolRegistry",
     "__version__",

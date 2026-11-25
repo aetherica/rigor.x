@@ -11,6 +11,7 @@ import os
 import sys
 from uuid import uuid4
 
+from rigorx.adaptive_router import AdaptiveLevel
 from rigorx.agent_runtime import AgentRuntime, ToolRegistry
 from rigorx.model_backend import OpenAICompatibleBackend
 from rigorx.slash_commands import SlashCommandCatalog
@@ -23,6 +24,7 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--model", default=os.environ.get("RIGORX_MODEL_NAME"))
     parser.add_argument("--api-key-env", default="RIGORX_API_KEY", help="Environment variable containing API key.")
     parser.add_argument("--run-id", default=None)
+    parser.add_argument("--level", choices=[level.value for level in AdaptiveLevel], help="Override adaptive intensity.")
     parser.add_argument("--catalog", help="Optional slash-command catalogue JSON file.")
     parser.add_argument("--json", action="store_true", dest="json_output", help="Print complete structured run receipt.")
     return parser
@@ -41,7 +43,11 @@ def main(argv: list[str] | None = None) -> int:
         backend = OpenAICompatibleBackend(base_url=args.base_url, model=args.model, api_key_env=args.api_key_env)
         catalog = SlashCommandCatalog.from_file(args.catalog) if args.catalog else None
         runtime = AgentRuntime(backend, ToolRegistry(), command_catalog=catalog)
-        result = runtime.run(prompt, run_id=args.run_id or str(uuid4()))
+        result = runtime.run(
+            prompt,
+            run_id=args.run_id or str(uuid4()),
+            override_level=AdaptiveLevel(args.level) if args.level else None,
+        )
     except (ValueError, OSError) as exc:
         print(f"Configuration error: {type(exc).__name__}", file=sys.stderr)
         return 2
