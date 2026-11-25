@@ -4,7 +4,24 @@
 
 RIGOR-X is a deterministic control-plane and live model/tool orchestration framework. It provides pipeline state, typed contracts, registry validation, durable storage and a bounded tool-call runtime. It is **not** a hosted model, provider service, or automatically connected ChatGPT plugin runtime.
 
-> **License notice:** No open-source license has been selected yet. Public visibility, if enabled, does not itself grant permission to reuse, modify, or redistribute this code.
+## Proprietary licensing status
+
+**RIGOR-X is proprietary, source-available commercial software — NOT Open Source.** Source visibility or repository access does not grant permission to use, copy, modify, redistribute, sublicense, host, or commercially deploy the software.
+
+Commercial deployment, integration into a commercial product or service, hosted provision to third parties, OEM/embedded distribution, and white-label use require contractual authorization under the **RIGOR-X Commercial Subscription License (CSL)** and the applicable executed Order Form and addenda. No fixed public prices are offered; subscription and usage terms are negotiated for the authorized deployment.
+
+Start with:
+- [Repository LICENSE notice](LICENSE)
+- [Commercial Subscription License](COMMERCIAL-LICENSE.md)
+- [Licensing policy, categories and application process](LICENSING.md)
+- [Monthly subscription terms](SUBSCRIPTION-TERMS.md)
+- [Platform Provider Addendum](PLATFORM-PROVIDER-ADDENDUM.md)
+- [OEM / Embedded Addendum](OEM-EMBEDDED-ADDENDUM.md)
+- [Licensing Changelog](LICENSING-CHANGELOG.md)
+
+**Commercial enquiries:** contact the rights holder through the official [Aetherica GitHub channel](https://github.com/aetherica) and request the current licensing application route. An enquiry, unsigned proposal, or repository access does not authorize use. Existing executed agreements are governed by their incorporated versions and amendment/renewal provisions; later public revisions do not automatically rewrite them.
+
+RIGOR-X may include or interoperate with third-party software, models, datasets, and services. Those components remain subject to their own applicable licenses and terms. The proprietary notice does not override third-party rights or mandatory legal exceptions. Review component-specific notices and dependency metadata before deployment.
 
 ## Implemented components
 - 11-stage pipeline state machine with explicit transitions, verification gate and bounded re-entry.
