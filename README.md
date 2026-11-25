@@ -23,6 +23,12 @@ Start with:
 
 RIGOR-X may include or interoperate with third-party software, models, datasets, and services. Those components remain subject to their own applicable licenses and terms. The proprietary notice does not override third-party rights or mandatory legal exceptions. Review component-specific notices and dependency metadata before deployment.
 
+## Public review status
+
+This repository is published for **source review of a development baseline**, not as a stable `0.4.0` release or a production-readiness claim. Review scope, known limitations, feedback channels, and security-reporting instructions are documented in [PUBLIC-REVIEW.md](PUBLIC-REVIEW.md). The package remains `0.4.0.dev0`.
+
+A public GitHub repository is subject to GitHub's [Terms of Service](https://docs.github.com/en/site-policy/github-terms/github-terms-of-service), including other users' rights to view and fork repository content through GitHub. The proprietary CSL is not an Open Source license and does not remove those platform-level rights. Public visibility is not a promise that source copies or forks can be recalled later. Do not publish secrets, personal data, third-party materials without sufficient rights, or confidential information.
+
 ## Implemented components
 - 11-stage pipeline state machine with explicit transitions, verification gate and bounded re-entry.
 - SQLite persistence with transactional snapshots/events, append-only integrity and optimistic revisions.
