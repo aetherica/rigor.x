@@ -10,7 +10,7 @@ requires-python = ">=3.13"
 dependencies = []
 
 [project.optional-dependencies]
-test = []
+test = ["jsonschema>=4.25"]
 
 [project.scripts]
 rigorx-version = "rigorx.version_cli:main"
