@@ -203,11 +203,11 @@ Rationale:
 - The Python engine remains the reference implementation and powers the local stdio server (`rigorx-mcp`) and CLI. Two implementations are kept in step by the parity fixtures.
 - Pending: switching Workers Builds to `deploy/cloudflare-ts` (owner, dashboard), then Workers-runtime CPU figures; `rigorx_resolve_commands` catalogue on the Worker.
 
-**P4 — OAuth with Google (2026-11-25, implemented; Google client and host sign-in not yet verified).**
+**P4 — OAuth with Google (2026-11-25, live; sign-in verified from a Claude custom connector).**
 - One Worker instead of Worker A + Worker B (section 8): the TypeScript Worker is both authorization server and MCP resource, using `@cloudflare/workers-oauth-provider` 1.3 (`deploy/cloudflare-ts/src/auth.ts`). Consent page before the Google redirect (confused-deputy protection, as the library requires for dynamic registration); `state` bound to the browser and single-use. Owner = `google:<sub>`; only the `openid` scope is requested (no e-mail). Any Google account can sign in. KV namespace `OAUTH_KV`.
 - **Deviation from section 7 (lazy authentication):** every `/mcp` request now needs a token, including `rigorx_route`. Reason: hosts discover sign-in from a `401` on their first request; a server that answers `initialize` anonymously is treated as one without authentication, so Claude would never offer sign-in. Lazy authentication (ChatGPT per-tool `securitySchemes` + `mcp/www_authenticate`) can be revisited once sign-in works on both hosts.
 - The spike token stays as an external token (`resolveExternalToken`) for Claude Code and the smoke test.
-- Pending (owner): Google OAuth client and Worker secrets `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`; then sign-in from Claude web, Claude Code and ChatGPT.
+- Verified 2026-11-25: Google sign-in from a Claude custom connector; with that OAuth token `rigorx_profile` returned a Google-derived owner ID (not the spike owner's), and start/get/delete run worked against the owner's Durable Object. Pending: ChatGPT sign-in.
 
 Local use with Claude Desktop (`claude_desktop_config.json`):
 ```json
