@@ -12,7 +12,7 @@ This checklist separates public source review from a stable release. A review pu
 - [ ] Owner approval to change repository visibility from Private to Public.
 - [ ] Confirm repository name, description, homepage, topics, and public-facing README.
 - [x] Add the proprietary, source-available RIGOR-X Commercial Subscription License (CSL) document set and root `LICENSE` notice. It is not an Open Source license; obtain appropriate legal review before signing customer agreements.
-- [ ] Complete a full-clone, full-history scan of the current tree and every reachable commit for secrets, credentials, personal data, private research, internal notes, build artifacts, and sensitive issues/PR content. Rotate any exposed secrets and evaluate history cleanup. Connector search is not a substitute.
+- [ ] Complete a full-clone, full-history scan of the current tree and every reachable commit for secrets, credentials, personal data, private research, internal notes, build artifacts, and sensitive issues/PR content. Separately audit GitHub Actions run history, logs, and artifacts because they may become publicly visible when repository visibility changes. Rotate any exposed secrets and evaluate history cleanup. Connector search is not a substitute.
 - [x] Add `SECURITY.md` with reporting instructions and project support scope.
 - [x] Add `CONTRIBUTING.md` with setup, test, lint, and contribution expectations.
 - [x] Add root `CHANGELOG.md` with development status, summary, and known limitations.
