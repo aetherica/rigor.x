@@ -1,0 +1,31 @@
+{
+	// RIGOR-X MCP server on Cloudflare Workers (TypeScript, no runtime dependencies).
+	// Same Worker name, Durable Object class and storage schema as the Python spike in ../cloudflare,
+	// so existing runs remain readable. The v1 migration is already applied on Cloudflare.
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "rigorx-mcp",
+	"main": "src/index.ts",
+	"compatibility_date": "2026-09-07",
+	"compatibility_flags": ["nodejs_compat"],
+	"workers_dev": true,
+	"preview_urls": false,
+	"durable_objects": {
+		"bindings": [
+			{
+				"name": "OWNER_RUNS",
+				"class_name": "OwnerRuns"
+			}
+		]
+	},
+	"migrations": [
+		{
+			"tag": "v1",
+			"new_sqlite_classes": [
+				"OwnerRuns"
+			]
+		}
+	],
+	"observability": {
+		"enabled": true
+	}
+}

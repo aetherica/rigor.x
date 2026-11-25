@@ -38,7 +38,8 @@ A public GitHub repository is subject to GitHub's [Terms of Service](https://doc
 - OpenAI-compatible Chat Completions transport over HTTPS (loopback HTTP allowed), standard-library networking and environment credentials.
 - Package version CLI.
 - Runnable text-agent CLI `rigorx-agent` for a configured OpenAI-compatible endpoint (no tools unless host callbacks are wired).
-- Host plugin engine and MCP server (`rigorx-mcp`, official MCP SDK, optional extra `[mcp]`): 12 annotated tools, owner-scoped runs, deterministic verification gate. Local single-user mode only; remote sign-in and Cloudflare deployment are not implemented yet.
+- Host plugin engine and MCP server (`rigorx-mcp`, official MCP SDK, optional extra `[mcp]`): 12 annotated tools, owner-scoped runs, deterministic verification gate. Local single-user mode.
+- Cloudflare plugin server (`deploy/cloudflare-ts/`): dependency-free TypeScript Worker with the same tools and engine behaviour (parity-tested against Python, conformance-tested with the official MCP SDK client), per-owner Durable Objects, temporary shared-token access. Google sign-in not implemented yet.
 
 ## Owner requirements (scope, not implementation claims)
 18 Functional Groups; six adaptive intensity levels and 12 heuristic analysis modes; nine research acquisition channels; 999 slash-command corpus; separate 102 operational/interface registry; 30 formulas; 33 algorithms; 111 topics; 15 operators; 36 knowledge domains; host/GitHub/cloud memory and Web/Android/iOS architecture.

@@ -1,7 +1,7 @@
 # WS31 — Host Plugin Architecture (RIGOR-X as an MCP engine)
 
 **Document ID:** RX-PLUGIN-001
-**Status:** DRAFT — for owner review. Phases P1 and P2 implemented; P3 spike code written, not yet deployed (see section 14); everything else is not yet implemented
+**Status:** DRAFT — for owner review. Phases P1 and P2 implemented; P3 deployed on Cloudflare — Python Worker blocked by CPU limits, replaced by a dependency-free TypeScript Worker (see section 14); everything else is not yet implemented
 **Canonical branch:** `main`
 **Last updated:** 2026-11-25
 
@@ -195,6 +195,13 @@ Rationale:
 - Spike authentication: one shared bearer token (Worker secret `RIGORX_SPIKE_TOKEN`) → one development owner; wrong token → `401`; no token → stateless tools only.
 - Verified locally: 9 tests in `tests/test_cloudflare_layers.py` (store over a sqlite3 stand-in for Durable Object SQL, RPC round trip and error codes, MCP server with an async engine, bundle import without `sqlite3`). `entry.py` run under uvicorn with stand-ins for the Workers API, driven by `examples/mcp_smoke.py --url --token`: full run to COMPLETED; `401` for a wrong token; `AUTH_REQUIRED` for run tools without a token.
 - Not verified: the Cloudflare runtime itself. Deployment requires the owner's Cloudflare account (`deploy/cloudflare/README.md`).
+
+**P3 — outcome on Cloudflare (2026-11-25).**
+- The Python Worker deployed through Cloudflare Workers Builds (GitHub `main`, root `deploy/cloudflare`), but every `/mcp` request failed (Error 1101/1102). Workers Logs: `exceededCpu`, then `exception` at ~1.96 s CPU. Cause, measured: importing the MCP SDK costs ~0.7 s CPU on CPython (~95% of startup; RIGOR-X modules 30 ms, 12 tools 18 ms) and ~2 s on the Workers runtime. Limits (Cloudflare docs): 10 ms CPU per request on Workers Free, 1 s startup on all plans. Building the app at import time made the deployment fail (startup limit); building it on first request exceeds the Free per-request limit.
+- Decision: keep the Free plan; serve the plugin from a **TypeScript Worker without runtime dependencies** (`deploy/cloudflare-ts/`). MCP (Streamable HTTP, handshake era `2025-11-25`; modern clients fall back from `server/discover`) is implemented directly. The engine, router, pipeline and store are ported from Python with the same tools, annotations, Durable Object class, schema and snapshots.
+- Verification: 11 Node tests (no npm packages) including **parity with the Python engine** on 20 router prompts and 5 scenarios / 75 steps (`test/fixtures/parity.json`, guarded from the Python side by `tests/test_ts_parity.py`), and **conformance with the official MCP SDK client** (handshake, 12 tools, full run to COMPLETED, 401 on a wrong token) in CI. Local CPU per call: 0.01–0.3 ms.
+- The Python engine remains the reference implementation and powers the local stdio server (`rigorx-mcp`) and CLI. Two implementations are kept in step by the parity fixtures.
+- Pending: switching Workers Builds to `deploy/cloudflare-ts` (owner, dashboard), then Workers-runtime CPU figures; `rigorx_resolve_commands` catalogue on the Worker.
 
 Local use with Claude Desktop (`claude_desktop_config.json`):
 ```json

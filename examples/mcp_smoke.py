@@ -58,8 +58,11 @@ async def main(options: argparse.Namespace) -> None:
             route = show("route", await client.call_tool("rigorx_route", {"task": "What is gravity?"}))
             print(f"    intent={route['profile']['intent']} level={route['profile']['level']}")
             if CATALOG.exists() or options.url:
-                resolved = show("resolve /eli5", await client.call_tool("rigorx_resolve_commands", {"text": "/eli5 explain gravity"}))
-                print(f"    {resolved['applied_modifiers']}")
+                resolved = await client.call_tool("rigorx_resolve_commands", {"text": "/eli5 explain gravity"})
+                if resolved.is_error and "not loaded" in resolved.content[0].text:
+                    print("  - resolve /eli5: catalogue not available on this server (skipped)")
+                else:
+                    print(f"    {show('resolve /eli5', resolved)['applied_modifiers']}")
 
             run = show("start run", await client.call_tool("rigorx_start_run", {"task": "What is gravity?"}))
             run_id = run["run_id"]
