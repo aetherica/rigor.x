@@ -1,0 +1,14 @@
+RIGOR-X — PROPRIETARY COMMERCIAL SOFTWARE
+Copyright (c) 2026 Aetherica and/or the applicable rights holder. All rights reserved.
+
+RIGOR-X is proprietary, source-available software. No open-source license is granted by this notice. Making source code visible, accessible, or downloadable does not place it in the public domain and does not grant permission to use, copy, modify, distribute, sublicense, host, sell, or commercially exploit RIGOR-X.
+
+Commercial deployment, commercial integration, production operation, provision of RIGOR-X-enabled services to third parties, OEM/embedded distribution, and white-label use require a separate written agreement signed by the applicable rights holder. Any evaluation or other limited access must be expressly authorized in writing and is subject to its stated scope.
+
+Ownership of RIGOR-X and all rights not expressly granted in a signed agreement are reserved. No rights arise by implication, estoppel, repository visibility, possession of a copy, or payment except as expressly stated in the governing agreement.
+
+The governing commercial framework is described in [COMMERCIAL-LICENSE.md](COMMERCIAL-LICENSE.md), [LICENSING.md](LICENSING.md), and the applicable addenda and Order Form. Those documents become contractually binding only to the extent accepted through an executed agreement. This notice alone is not an offer of a subscription or a complete commercial agreement.
+
+RIGOR-X may include or interoperate with third-party software, models, datasets, and services. Those components remain subject to their own applicable licenses and terms. See the relevant component notices and dependency metadata. Nothing in this notice purports to override third-party rights or mandatory legal exceptions.
+
+For commercial licensing enquiries, contact the rights holder through the official Aetherica channel at https://github.com/aetherica and request the current licensing application route. Do not assume that an enquiry, repository access, or an unsigned proposal authorizes use.
