@@ -76,6 +76,6 @@
 
 - Corrected WS19 baseline exact-head CI: [Run #45565480667 — SUCCESS](https://github.com/aetherica/rigor.x/actions/runs/45565480667), tested commit `36c8ca8e7d1b1e29aaccefbb3d3bc9bfe65275ea`. **Ruff PASS; 63 repository tests PASS** before corrective hardening.
 - Corrective code commits: terminal/reset guard `7f0ec825`; controller corrections `2b5b6b50`; regression tests `aad252f1` and `8f361d06`.
-- Corrective changes: latch terminal states (polling cannot bypass stop), reset all episode state, enforce max_steps as an exact ceiling, reject bool/non-integer limits and malformed profile flags, expose no primary mechanism when none is available, and report absolute prior-step references.
+- Corrective changes: latch terminal states (polling cannot bypass stop), reset all episode state, enforce max_steps as an exact ceiling, reject bool/non-integer limits and malformed profile flags, expose no primary mechanism when none is available, report absolute prior-step references, and gate semantic signal behind an explicit opt-in (default off).
 - **Corrective CI status: PENDING / NOT YET VERIFIED** at the time this receipt was updated.
 - Final fixture expected counts: TP=2, FP=0, TN=4, FN=2; precision=1.00, recall=0.50, FPR=0.00. Tiny hand-authored fixture only.
