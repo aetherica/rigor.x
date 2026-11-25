@@ -49,7 +49,7 @@
 - Verified: canonical IDs FG-01..FG-18, unique names, 18 candidate category groups, complete one-to-one category coverage and valid many-to-many FG references.
 - Explicit limit: mapping is exploratory category-level alignment; it does not prove entry-level ownership, implement handlers or activate commands.
 
-## Static analysis and repository hygiene
+## WS18 CI correction and exact-HEAD verification\n- The first RIGOR-X pipeline run after adding the tests failed on Ruff import ordering (I001) in the new test file; test execution was skipped.\n- Corrected import ordering in commit `12aa5b4d3896eeae579bcfba47409aaabdbeb68c`.\n- Exact HEAD CI: [Run #45519069836 — SUCCESS](https://github.com/aetherica/rigor.x/actions/runs/45519069836), commit `12aa5b4d3896eeae579bcfba47409aaabdbeb68c`.\n- Outcome: Ruff PASS and **48 tests passed**, including the four new WS18 tests. The crosswalk validator printed PASS.\n\n## Static analysis and repository hygiene
 - Ruff static-analysis gate: **PASS** in run #45517446772.
 - Dependency update automation: Dependabot weekly configured.
 - Workflow concurrency: superseded runs cancelled.
