@@ -43,7 +43,7 @@ Python support: `>=3.13`; CI tests 3.13 and 3.15.
 For text-only live execution, configure `RIGORX_MODEL_BASE_URL`, `RIGORX_MODEL_NAME`, optional `RIGORX_API_KEY`, then run `rigorx-agent "your question"`. Plugin tool execution requires an actual host adapter and registered callbacks.
 
 ## Governance and security
-- Canonical engineering branch is `main`. Do not create project branches for work without explicit owner authorization. Two pre-existing Dependabot branches remain; equivalent workflow updates have been applied to main, and deletion of old refs is blocked by the available GitHub connector.
+- Canonical engineering branch is `main`. Do not create project branches for work without explicit owner authorization. One pre-existing Dependabot branch remains: `dependabot/github_actions/actions/setup-python-7`; equivalent workflow updates have been applied to main, and deletion of this old ref is blocked by the available GitHub connector.
 - Read [SECURITY.md](SECURITY.md) before reporting vulnerabilities and [CONTRIBUTING.md](CONTRIBUTING.md) before proposing changes.
 - Capability states: PLANNED / SPECIFIED / IMPLEMENTED / TESTED / VERIFIED / PARTIAL / BLOCKED / NOT_IMPLEMENTED / NOT_ASSESSED.
 - Release tag `v0.4.0` only after exact-head CI, integration acceptance, security and release gates.
