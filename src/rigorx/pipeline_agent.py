@@ -6,8 +6,8 @@ Raw prompts and tool output bodies are not persisted in snapshots.
 """
 from __future__ import annotations
 
-from hashlib import sha256
 from collections.abc import Mapping
+from hashlib import sha256
 from dataclasses import dataclass
 from typing import Any
 
