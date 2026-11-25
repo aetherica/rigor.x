@@ -1,0 +1,36 @@
+name: Functional Group Crosswalk Validation
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "engineering/ai-system/functional-groups.json"
+      - "library/slash-commands/functional-group-crosswalk.json"
+      - "library/slash-commands/scripts/validate_functional_group_crosswalk.py"
+      - "tests/test_registry_crosswalk.py"
+      - ".github/workflows/functional-group-crosswalk.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "engineering/ai-system/functional-groups.json"
+      - "library/slash-commands/functional-group-crosswalk.json"
+      - "library/slash-commands/scripts/validate_functional_group_crosswalk.py"
+      - "tests/test_registry_crosswalk.py"
+      - ".github/workflows/functional-group-crosswalk.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  crosswalk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.15"
+      - name: Validate crosswalk
+        run: python library/slash-commands/scripts/validate_functional_group_crosswalk.py
+      - name: Run regression tests
+        run: python -m unittest tests/test_registry_crosswalk.py -v
