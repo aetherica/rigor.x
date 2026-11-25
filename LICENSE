@@ -1,7 +1,9 @@
 RIGOR-X — PROPRIETARY COMMERCIAL SOFTWARE
 Copyright (c) 2026 the applicable RIGOR-X rights holder. All rights reserved.
 
-RIGOR-X is proprietary, source-available software. No open-source license is granted by this notice. Making source code visible, accessible, or downloadable does not place it in the public domain and does not grant permission to use, copy, modify, distribute, sublicense, host, sell, or commercially exploit RIGOR-X.
+RIGOR-X is proprietary, source-available software. No open-source license is granted by this notice. Making source code visible, accessible, or downloadable does not place it in the public domain or grant a general software license to use, modify, distribute, sublicense, host, sell, or commercially exploit RIGOR-X.
+
+**GitHub platform terms:** If this repository is made public on GitHub, the applicable GitHub Terms of Service grant GitHub and other GitHub users certain platform-level rights, including viewing and forking/reproducing repository content through GitHub's functionality. This notice does not purport to cancel or override those terms. Those limited platform rights are distinct from a general open-source or commercial software license. Review the current [GitHub Terms of Service](https://docs.github.com/en/site-policy/github-terms/github-terms-of-service) before publication. Public forks and copies may remain available even if this repository later becomes private.
 
 Commercial deployment, commercial integration, production operation, provision of RIGOR-X-enabled services to third parties, OEM/embedded distribution, and white-label use require a separate written agreement signed by the applicable rights holder. Any evaluation or other limited access must be expressly authorized in writing and is subject to its stated scope.
 
