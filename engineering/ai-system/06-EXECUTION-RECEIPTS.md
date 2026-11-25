@@ -64,10 +64,10 @@
 
 
 ## WS19 — Reasoning Monitor, Controller & Adaptive Mechanism Selection
-- Code: `src/rigorx/reasoning_controller.py`; tests: `tests/test_reasoning_controller.py` (14 tests).
+- Code: `src/rigorx/reasoning_controller.py`; tests: `tests/test_reasoning_controller.py` (14 baseline tests; 19 after corrective additions).
 - Fixture benchmark: `tests/semantic_loop_benchmark.py` and `tests/test_semantic_loop_benchmark.py` (8 hand-authored pairs).
 - Specification: `engineering/ai-system/13-REASONING-MONITOR-CONTROLLER-WS19.md`.
-- Baseline isolated test record: 18 controller tests + 1 benchmark test passed before corrective hardening.
+- Baseline isolated test record: 14 controller tests + 1 benchmark test passed before corrective hardening.
 - At lexical Jaccard 0.88: TP=2, FP=0, TN=4, FN=2; precision=1.00, recall=0.50, false-positive rate=0.00. Tiny fixture only; not production evidence.
 - CI: verified.
 - Limits: lexical heuristic; not pipeline-integrated, no model/tool execution or hidden-state control.
@@ -77,6 +77,6 @@
 - Corrected WS19 baseline exact-head CI: [Run #45565480667 — SUCCESS](https://github.com/aetherica/rigor.x/actions/runs/45565480667), tested commit `36c8ca8e7d1b1e29aaccefbb3d3bc9bfe65275ea`. **Ruff PASS; 63 repository tests PASS** before corrective hardening.
 - Corrective code commits: terminal/reset guard `7f0ec825`; controller corrections `2b5b6b50`; regression tests `aad252f1` and `8f361d06`.
 - Corrective changes: latch terminal states (polling cannot bypass stop), reset all episode state, enforce max_steps as an exact ceiling, reject bool/non-integer limits and malformed profile flags, expose no primary mechanism when none is available, report absolute prior-step references, and gate semantic signal behind an explicit opt-in (default off).
-- **Corrective source-head code commit: `a9024fd076b668c5784906c575f2439bbc578fa9` (semantic detector opt-in + tests). Later commits are documentation-only.
-- The GitHub Actions run is expected from the push workflow, but this session's GitHub connector exposes no push-run listing/status API; browser verification was unavailable. **Corrective CI status: PENDING / NOT YET VERIFIED**** at the time this receipt was updated.
+- **Corrective source-head code commit: `14f10ca4fdb1e6670c00ec7becbadb220232c4e9` (semantic opt-in + strict action type + tests). Later commits are documentation-only.
+- The GitHub Actions run is expected from the push workflow, but this session's GitHub connector exposes no push-run listing/status API; browser verification was unavailable. **Corrective CI status: PENDING / NOT YET VERIFIED** at the time this receipt was updated.
 - Final fixture expected counts: TP=2, FP=0, TN=4, FN=2; precision=1.00, recall=0.50, FPR=0.00. Tiny hand-authored fixture only.
