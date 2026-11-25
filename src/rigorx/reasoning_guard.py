@@ -8,10 +8,10 @@ import math
 import re
 import unicodedata
 from collections import deque
+from collections.abc import Iterable
 from dataclasses import dataclass
 from enum import StrEnum
 from hashlib import sha256
-from typing import Iterable
 
 
 class GuardAction(StrEnum):
