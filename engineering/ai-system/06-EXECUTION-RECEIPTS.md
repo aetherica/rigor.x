@@ -143,3 +143,11 @@
 - No live external provider call or real plugin-host callback integration has been acceptance-tested in this session.
 - 90 native/platform adapters, per-command contracts for 999, 30/33/111/15 registries, 18 FG exact ownership mapping, source acquisition, memory, evidence, and production evaluation remain release blockers.
 - Historical 0.3.9 item-by-item audit remains blocked because its source/tag archive is not accessible through this GitHub connector; this branch is a clean consolidated development baseline, not a proven forensic repair of every 0.3.9 artifact.
+
+
+## WS27 — AgentPipeline integration
+- `src/rigorx/pipeline_agent.py`: stage orchestration, typed artifacts, SQLite persistence, evidence references/digests, privacy-minimized snapshots and fail-closed verification.
+- `PipelineRun.skip_stage` and `mark_failed` added for explicit non-implemented/failed stage handling.
+- CLI runs through `AgentPipeline` and persists SQLite ledger.
+- Verification: successful Q&A and action receipt can pass; blocked actions and research tasks without successful source-acquisition receipts stop before DECISION.
+- Exact-head CI [run #45577832102 — SUCCESS](https://github.com/aetherica/rigor.x/actions/runs/45577832102), commit `7abe310a22ed740c96789a0a23678e042a435afb`: **135 tests PASS**, Ruff PASS, Python 3.13/3.15, sdist/wheel build and installed-wheel validation PASS.
