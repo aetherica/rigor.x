@@ -60,7 +60,7 @@ def main(argv: list[str] | None = None) -> int:
                 run_id=args.run_id or str(uuid4()),
                 override_level=AdaptiveLevel(args.level) if args.level else None,
             )
-    except (ValueError, OSError) as exc:
+    except (ValueError, OSError, RuntimeError, sqlite3.Error) as exc:
         print(f"Configuration error: {type(exc).__name__}", file=sys.stderr)
         return 2
     if args.json_output:
