@@ -158,6 +158,7 @@ if __name__ == "__main__":
 class WorkerBundleTests(unittest.TestCase):
     """The Worker bundle must import without sqlite3 and with only the Workers API stubs."""
 
+    @unittest.skipUnless(HAS_MCP, "MCP SDK not installed")
     def test_synced_bundle_imports_without_sqlite3(self):
         import subprocess
         import sys
