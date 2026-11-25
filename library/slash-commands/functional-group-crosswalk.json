@@ -93,6 +93,7 @@
       "library_group_id": "information_extraction_and_knowledge_organization",
       "functional_group_ids": [
         "FG-01",
+        "FG-03",
         "FG-07",
         "FG-08",
         "FG-09",

@@ -405,7 +405,7 @@ class PipelineRun:
             details = item.get("details", {})
             if not isinstance(details, Mapping):
                 raise TypeError("event details must be an object")
-            json.dumps(dict(details))
+            json.dumps(dict(details), allow_nan=False)
             restored_events.append(
                 PipelineEvent(
                     sequence=sequence,
@@ -432,7 +432,7 @@ class PipelineRun:
         details: Mapping[str, Any] | None = None,
     ) -> PipelineEvent:
         event_details = dict(details or {})
-        json.dumps(event_details)  # Reject non-serializable event payloads at capture time.
+        json.dumps(event_details, allow_nan=False)  # Reject non-serializable or non-finite payloads at capture time.
         event = PipelineEvent(
             sequence=len(self.events) + 1,
             event_type=event_type,

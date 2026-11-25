@@ -71,6 +71,17 @@ class AgentPipelineTests(unittest.TestCase):
         found = AgentPipeline._research_tools(("delete_resource", "webhook_send", "web_search", "fetchUrl", "list_files"))
         self.assertEqual(found, ("web_search", "fetchUrl"))
 
+    def test_stage_artifacts_do_not_carry_raw_tool_output(self):
+        tool = ToolDefinition("lookup", "Lookup", {"type": "object"}, lambda _args: {"private": "sensitive-data"})
+        backend = ScriptedBackend([ModelTurn(tool_calls=(ToolCall("c1", "lookup", {}),)), ModelTurn(text="Found it.")])
+        runtime = AgentRuntime(backend, ToolRegistry([tool]), capabilities=frozenset({"tool.execute"}))
+        store = SQLitePipelineStore(":memory:")
+        outcome = AgentPipeline(runtime, store).run("Lookup something", run_id="privacy-2")
+        execution = next(a for a in outcome.artifacts if a.stage.value == "EXECUTION")
+        self.assertNotIn("sensitive-data", str(execution.to_dict()))
+        self.assertIsNotNone(execution.metadata["receipts"][0]["output_digest"])
+        store.close()
+
     def test_snapshot_does_not_store_raw_tool_output(self):
         tool = ToolDefinition("lookup", "Lookup", {"type": "object"}, lambda _args: {"private": "sensitive-data"})
         backend = ScriptedBackend([ModelTurn(tool_calls=(ToolCall("c1", "lookup", {}),)), ModelTurn(text="Found it.")])

@@ -17,7 +17,7 @@ from rigorx.adaptive_router import AdaptiveLevel
 from rigorx.agent_runtime import AgentRuntime, ToolRegistry
 from rigorx.domain_router import DomainCatalog, DomainRouter
 from rigorx.model_backend import OpenAICompatibleBackend
-from rigorx.pipeline_agent import AgentPipeline
+from rigorx.pipeline_agent import AgentPipeline, PipelineAgentError
 from rigorx.slash_commands import SlashCommandCatalog
 from rigorx.storage import SQLitePipelineStore
 
@@ -61,8 +61,12 @@ def main(argv: list[str] | None = None) -> int:
                 run_id=args.run_id or str(uuid4()),
                 override_level=AdaptiveLevel(args.level) if args.level else None,
             )
+    except PipelineAgentError as exc:
+        print(f"Pipeline error: {exc}", file=sys.stderr)
+        return 1
     except (ValueError, OSError, RuntimeError, sqlite3.Error) as exc:
-        print(f"Configuration error: {type(exc).__name__}", file=sys.stderr)
+        detail = str(exc).strip()
+        print(f"Configuration error: {type(exc).__name__}" + (f": {detail}" if detail else ""), file=sys.stderr)
         return 2
     if args.json_output:
         print(json.dumps(outcome.to_dict(), ensure_ascii=False, indent=2))

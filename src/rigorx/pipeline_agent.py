@@ -71,6 +71,14 @@ class AgentPipeline:
 
         return tuple(name for name in names if tokens(name) & markers)
 
+    @classmethod
+    def _redacted_receipt(cls, receipt: Any) -> dict[str, Any]:
+        """Receipt for the stage artifact: output body replaced by its digest."""
+        data = receipt.to_dict()
+        output = data.pop("output")
+        data["output_digest"] = cls._digest(str(output)) if output is not None else None
+        return data
+
     def _verify(self, result: AgentResult) -> tuple[bool, tuple[str, ...]]:
         reasons: list[str] = []
         if result.status is not AgentStatus.COMPLETED:
@@ -173,7 +181,7 @@ class AgentPipeline:
         # 7 — reconcile receipts; never replay actions.
         begin()
         counts = {status.value: sum(receipt.status is status for receipt in result.receipts) for status in ToolStatus}
-        item = create_artifact(Stage.EXECUTION, {"receipts": [receipt.to_dict() for receipt in result.receipts], "receipt_counts": counts, "actions_replayed": False})
+        item = create_artifact(Stage.EXECUTION, {"receipts": [self._redacted_receipt(receipt) for receipt in result.receipts], "receipt_counts": counts, "actions_replayed": False})
         finish(item)
 
         # 8 — evidence ledger references and digests, no raw output.

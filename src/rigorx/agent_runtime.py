@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import math
 import re
+import threading
 import time
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
@@ -183,8 +184,30 @@ def _digest(value: Any) -> str:
     return sha256(payload.encode("utf-8")).hexdigest()
 
 
+_UNSUPPORTED_SCHEMA_KEYWORDS = frozenset({"$ref", "$defs", "definitions", "not", "if", "then", "else", "patternProperties", "dependentSchemas", "dependentRequired", "propertyNames", "uniqueItems", "multipleOf", "exclusiveMinimum", "exclusiveMaximum", "contains", "prefixItems"})
+
+
 def _schema_error(schema: Mapping[str, Any], value: Any, path: str = "$") -> str | None:
-    """Small, fail-closed validator for common JSON Schema object contracts."""
+    """Small, fail-closed validator for common JSON Schema object contracts.
+
+    Keywords this validator cannot enforce are rejected rather than ignored.
+    """
+    unsupported = _UNSUPPORTED_SCHEMA_KEYWORDS.intersection(schema)
+    if unsupported:
+        return f"{path}: unsupported schema keyword {min(unsupported)}"
+    for combinator in ("anyOf", "oneOf", "allOf"):
+        branches = schema.get(combinator)
+        if branches is None:
+            continue
+        if not isinstance(branches, list) or not branches or any(not isinstance(b, dict) for b in branches):
+            return f"{path}: malformed {combinator}"
+        passed = sum(_schema_error(branch, value, path) is None for branch in branches)
+        if combinator == "anyOf" and passed < 1:
+            return f"{path}: does not match anyOf"
+        if combinator == "oneOf" and passed != 1:
+            return f"{path}: must match exactly one oneOf branch"
+        if combinator == "allOf" and passed != len(branches):
+            return f"{path}: does not match allOf"
     kind = schema.get("type")
     valid = {
         "object": lambda x: isinstance(x, dict),
@@ -195,11 +218,29 @@ def _schema_error(schema: Mapping[str, Any], value: Any, path: str = "$") -> str
         "boolean": lambda x: isinstance(x, bool),
         "null": lambda x: x is None,
     }
-    if kind in valid and not valid[kind](value):
-        return f"{path}: expected {kind}"
+    if isinstance(kind, list):
+        if not kind or any(not isinstance(k, str) or k not in valid for k in kind):
+            return f"{path}: unsupported type list"
+        if not any(valid[k](value) for k in kind):
+            return f"{path}: expected one of {kind}"
+    elif isinstance(kind, str):
+        if kind not in valid:
+            return f"{path}: unsupported type {kind}"
+        if not valid[kind](value):
+            return f"{path}: expected {kind}"
+    elif kind is not None:
+        return f"{path}: malformed type"
     if "enum" in schema and value not in schema["enum"]:
         return f"{path}: value is outside enum"
+    if "const" in schema and value != schema["const"]:
+        return f"{path}: value differs from const"
     if isinstance(value, str):
+        if "pattern" in schema:
+            try:
+                if not re.search(schema["pattern"], value):
+                    return f"{path}: does not match pattern"
+            except (re.error, TypeError):
+                return f"{path}: invalid pattern"
         if "minLength" in schema and len(value) < schema["minLength"]:
             return f"{path}: shorter than minLength"
         if "maxLength" in schema and len(value) > schema["maxLength"]:
@@ -236,6 +277,38 @@ def _schema_error(schema: Mapping[str, Any], value: Any, path: str = "$") -> str
                 if error:
                     return error
     return None
+
+
+def _safe_schema_error(schema: Mapping[str, Any], value: Any) -> str | None:
+    """Validate arguments; an unexpected validator failure blocks the call instead of crashing the run."""
+    try:
+        return _schema_error(schema, value)
+    except Exception as exc:  # noqa: BLE001 - fail closed on any validator fault
+        return f"schema validation failed: {type(exc).__name__}"
+
+
+def _call_with_deadline(handler: Callable[[Mapping[str, Any]], Any], arguments: Mapping[str, Any], seconds: float) -> Any:
+    """Run a host handler with a wall-clock deadline.
+
+    Python cannot cancel a running thread: on timeout the call is abandoned (its
+    result is discarded) and TimeoutError is raised so the run can proceed.
+    """
+    outcome: dict[str, Any] = {}
+
+    def target() -> None:
+        try:
+            outcome["value"] = handler(arguments)
+        except BaseException as exc:  # noqa: BLE001 - re-raised in the caller thread
+            outcome["error"] = exc
+
+    worker = threading.Thread(target=target, name="rigorx-tool-handler", daemon=True)
+    worker.start()
+    worker.join(seconds)
+    if worker.is_alive():
+        raise TimeoutError("tool handler exceeded the remaining time budget")
+    if "error" in outcome:
+        raise outcome["error"]
+    return outcome["value"]
 
 
 def _tool_schema(tool: ToolDefinition) -> dict[str, Any]:
@@ -395,24 +468,29 @@ class AgentRuntime:
                 receipt_id = sha256(receipt_seed.encode()).hexdigest()
                 if not safe_call_id.strip() or not safe_tool_name.strip() or not valid_args:
                     receipt = ToolReceipt(receipt_id, safe_tool_name, ToolStatus.INVALID_ARGUMENTS, digest, call_start, 0.0, error_code="INVALID_TOOL_CALL", safe_reason="Malformed model tool-call contract.")
+                elif "_malformed_arguments" in tc.arguments or "_invalid_arguments_type" in tc.arguments:
+                    receipt = ToolReceipt(receipt_id, safe_tool_name, ToolStatus.INVALID_ARGUMENTS, digest, call_start, 0.0, error_code="MALFORMED_ARGUMENTS", safe_reason="Model supplied arguments that are not a valid JSON object.")
                 elif tool is None or not tool.enabled:
                     receipt = ToolReceipt(receipt_id, safe_tool_name, ToolStatus.BLOCKED, digest, call_start, 0.0, error_code="TOOL_UNAVAILABLE", safe_reason="Tool is not registered or disabled.")
                 elif tool.capability not in self.capabilities:
                     receipt = ToolReceipt(receipt_id, safe_tool_name, ToolStatus.BLOCKED, digest, call_start, 0.0, error_code="CAPABILITY_DENIED", safe_reason="Required capability is not granted.")
                 elif tool.approval_required and tc.name not in self.approved_tools:
                     receipt = ToolReceipt(receipt_id, safe_tool_name, ToolStatus.BLOCKED, digest, call_start, 0.0, error_code="APPROVAL_REQUIRED", safe_reason="Explicit approval is required.")
-                elif (schema_error := _schema_error(tool.parameters, dict(tc.arguments))) is not None:
+                elif (schema_error := _safe_schema_error(tool.parameters, dict(tc.arguments))) is not None:
                     receipt = ToolReceipt(receipt_id, safe_tool_name, ToolStatus.INVALID_ARGUMENTS, digest, call_start, 0.0, error_code="SCHEMA_VALIDATION", safe_reason=schema_error)
                 elif time.monotonic() - start >= self.budget.max_elapsed_seconds:
                     receipt = ToolReceipt(receipt_id, safe_tool_name, ToolStatus.BLOCKED, digest, call_start, 0.0, error_code="TIME_BUDGET", safe_reason="Overall execution time budget exhausted.")
                 else:
                     try:
-                        result = tool.handler(_json_safe(dict(tc.arguments)))
+                        remaining = self.budget.max_elapsed_seconds - (time.monotonic() - start)
+                        result = _call_with_deadline(tool.handler, _json_safe(dict(tc.arguments)), remaining)
                         output = _json_safe(result)
                         encoded = json.dumps(output, ensure_ascii=False)
                         if len(encoded) > self.budget.max_tool_output_chars:
                             output = {"truncated": True, "original_chars": len(encoded), "preview": encoded[:self.budget.max_tool_output_chars]}
                         receipt = ToolReceipt(receipt_id, safe_tool_name, ToolStatus.EXECUTED, digest, call_start, time.monotonic() - call_start, output=output)
+                    except TimeoutError:
+                        receipt = ToolReceipt(receipt_id, safe_tool_name, ToolStatus.FAILED, digest, call_start, time.monotonic() - call_start, error_code="TOOL_TIMEOUT", safe_reason="Tool handler exceeded the remaining time budget; its result was discarded.")
                     except Exception as exc:  # noqa: BLE001 - isolate connector boundary and redact exception details
                         receipt = ToolReceipt(receipt_id, safe_tool_name, ToolStatus.FAILED, digest, call_start, time.monotonic() - call_start, error_code="TOOL_HANDLER_ERROR", safe_reason=type(exc).__name__)
                 receipts.append(receipt)

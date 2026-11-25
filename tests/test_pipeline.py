@@ -180,6 +180,15 @@ class PipelineRunTests(unittest.TestCase):
         run.begin_stage()
         validator.validate(run.snapshot())
 
+    def test_non_finite_event_metadata_is_rejected_at_capture(self) -> None:
+        run = PipelineRun("run-nan")
+        run.begin_stage()
+        events_before = len(run.events)
+        with self.assertRaises(ValueError):
+            run.record_evidence(evidence_type="metric", source_ref="s", metadata={"v": float("nan")})
+        self.assertEqual(len(run.events), events_before)
+        json.dumps(run.snapshot(), allow_nan=False)
+
     def test_snapshot_is_json_serializable(self) -> None:
         run = PipelineRun("run-007")
         run.begin_stage()
