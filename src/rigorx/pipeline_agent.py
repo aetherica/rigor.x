@@ -7,8 +7,8 @@ Raw prompts and tool output bodies are not persisted in snapshots.
 from __future__ import annotations
 
 from collections.abc import Mapping
-from hashlib import sha256
 from dataclasses import dataclass
+from hashlib import sha256
 from typing import Any
 
 from .agent_runtime import AgentResult, AgentRuntime, AgentStatus, ToolStatus
@@ -156,7 +156,7 @@ class AgentPipeline:
         begin()
         try:
             result = self.runtime.run(prompt, run_id=run_id, override_level=override_level)
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 - pipeline boundary captures safe failure class
             run.mark_failed(reason=f"Agent runtime boundary: {type(exc).__name__}")
             persist()
             raise PipelineAgentError(f"Runtime failed; pipeline run recorded as {run.status.value}") from None
