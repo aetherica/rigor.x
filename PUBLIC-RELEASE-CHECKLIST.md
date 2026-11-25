@@ -11,7 +11,7 @@ This checklist separates public source visibility from a stable release. Publish
 
 - [ ] Owner approval to change repository visibility from Private to Public.
 - [ ] Confirm repository name, description, homepage, topics, and public-facing README.
-- [ ] Choose and add a license. No `LICENSE` file exists; public visibility without a license does not grant reuse rights.
+- [x] Add the proprietary, source-available RIGOR-X Commercial Subscription License (CSL) document set and root `LICENSE` notice. It is not an Open Source license; obtain appropriate legal review before signing customer agreements.
 - [ ] Audit complete Git history/current tree for secrets, credentials, personal data, private research, internal notes, artifacts, and sensitive issues/PR content. Rotate any exposed secrets and evaluate history cleanup.
 - [x] Add `SECURITY.md` with reporting instructions and project support scope.
 - [x] Add `CONTRIBUTING.md` with setup, test, lint, and contribution expectations.
@@ -46,7 +46,7 @@ This checklist separates public source visibility from a stable release. Publish
 - One non-main branch remains: `dependabot/github_actions/actions/setup-python-7`. The equivalent setup-python workflow update is applied on main; Dependabot update automation is disabled. Branch deletion is not available through the connected GitHub action.
 - No open PRs were found in the last audit.
 - `SECURITY.md`, `CONTRIBUTING.md`, `CHANGELOG.md`, issue templates, and package metadata have been added/updated on main.
-- License remains undecided; no `LICENSE` file.
+- Versioned proprietary CSL document set and root `LICENSE` notice are implemented on `main`; final legal review and owner approval of contract terms remain required.
 - Package version is development `0.4.0.dev0`; no stable tag.
 - Current exact-head CI is still unverified; the connector returns no CI status records and cannot dispatch workflows.
 - Visibility and branch deletion require owner/admin action outside currently available connector tools.
@@ -54,7 +54,7 @@ This checklist separates public source visibility from a stable release. Publish
 
 ## Recommended publication sequence
 
-1. Owner selects license and approves public exposure.
+1. Owner reviews/approves the proprietary CSL (including legal review) and separately approves any public exposure.
 2. Complete full-history secret/privacy audit and remediate any findings.
 3. Configure branch protection and public CI behavior.
 4. Delete the stale branch ref; verify `main` is the only branch.
