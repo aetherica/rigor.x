@@ -55,6 +55,10 @@ class ControllerTests(unittest.TestCase):
         self.assertEqual(c.observe("repeat").action,ControllerAction.CONTINUE)
         self.assertEqual(c.observe("repeat").action,ControllerAction.DIVERSIFY)
         self.assertEqual(c.observe("repeat").action,ControllerAction.STOP_LOOP_SIGNAL)
+    def test_rejects_non_enum_semantic_action(self):
+        with self.assertRaises(TypeError):
+            ReasoningController(semantic_signal_action="DIVERSIFY")
+
     def test_semantic_detector_disabled_by_default(self):
         c=ReasoningController(max_steps=8,repeat_limit=8)
         c.observe("alpha beta gamma delta epsilon zeta")
