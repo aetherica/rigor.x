@@ -8,7 +8,7 @@ import { route } from "./router.ts";
 import { RunNotFound, type RunStore } from "./store.ts";
 
 export const ENGINE_PROTOCOL_VERSION = "1.0.0";
-export const GATE_VERSION = "1.0.0";
+export const GATE_VERSION = "1.1.0";
 const ACTION_EVIDENCE_TYPE = "HOST_REPORTED_ACTION";
 
 export const STAGE_GUIDANCE: Record<Stage, string> = {

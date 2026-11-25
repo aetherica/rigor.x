@@ -31,7 +31,7 @@ from .run_store import RunNotFound, RunStore
 from .slash_commands import SlashCommandCatalog
 
 ENGINE_PROTOCOL_VERSION = "1.0.0"
-GATE_VERSION = "1.0.0"
+GATE_VERSION = "1.1.0"
 ACTION_EVIDENCE_TYPE = "HOST_REPORTED_ACTION"
 
 STAGE_GUIDANCE: Mapping[Stage, str] = {
