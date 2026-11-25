@@ -6,6 +6,7 @@ Raw prompts and tool output bodies are not persisted in snapshots.
 """
 from __future__ import annotations
 
+import re
 from collections.abc import Mapping
 from dataclasses import dataclass
 from hashlib import sha256
@@ -61,8 +62,14 @@ class AgentPipeline:
 
     @staticmethod
     def _research_tools(names: tuple[str, ...]) -> tuple[str, ...]:
-        markers = ("search", "web", "browser", "research", "fetch", "source", "crawl")
-        return tuple(name for name in names if any(marker in name.casefold() for marker in markers))
+        markers = {"search", "web", "browser", "research", "fetch", "source", "crawl"}
+
+        def tokens(name: str) -> set[str]:
+            spaced = re.sub(r"([a-z0-9])([A-Z])", r"\1 \2", name)
+            parts = {part.casefold() for part in re.split(r"[^A-Za-z0-9]+", spaced) if part}
+            return parts | {part.removesuffix("s") for part in parts}
+
+        return tuple(name for name in names if tokens(name) & markers)
 
     def _verify(self, result: AgentResult) -> tuple[bool, tuple[str, ...]]:
         reasons: list[str] = []

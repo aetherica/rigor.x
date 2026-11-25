@@ -12,13 +12,27 @@ from collections.abc import Mapping, Sequence
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
-from urllib.request import Request, urlopen
+from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 from .agent_runtime import ModelTurn, ToolCall
 
 
 class BackendConfigurationError(ValueError):
     """Backend configuration or transport failure, with secrets redacted."""
+
+
+class _NoRedirect(HTTPRedirectHandler):
+    """Refuse redirects so the API key is only ever sent to the configured endpoint."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+_OPENER = build_opener(_NoRedirect)
+
+
+def urlopen(request: Request, *, timeout: float):
+    return _OPENER.open(request, timeout=timeout)
 
 
 class OpenAICompatibleBackend:
