@@ -14,6 +14,13 @@ class AdaptiveRouterTests(unittest.TestCase):
         self.assertEqual(profile.intent, TaskIntent.INFORMATION)
         self.assertEqual(profile.level, AdaptiveLevel.L01_BASIC)
 
+    def test_dynamic_analysis_modes(self):
+        profile = self.router.route("Compare the historical causes and quantitative impact of the policy.")
+        self.assertIn("COMPARATIVE", profile.modes)
+        self.assertIn("HISTORICAL", profile.modes)
+        self.assertIn("CAUSAL", profile.modes)
+        self.assertIn("QUANTITATIVE", profile.modes)
+
     def test_research_routes_deep(self):
         profile = self.router.route("Research the latest policy and verify sources.")
         self.assertEqual(profile.intent, TaskIntent.RESEARCH)

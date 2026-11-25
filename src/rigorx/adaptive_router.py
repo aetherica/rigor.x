@@ -35,6 +35,7 @@ class AdaptiveLevel(StrEnum):
 @dataclass(frozen=True, slots=True)
 class AdaptiveProfile:
     intent: TaskIntent
+    modes: tuple[str, ...]
     level: AdaptiveLevel
     methods: tuple[str, ...]
     signals: tuple[str, ...]
@@ -44,6 +45,7 @@ class AdaptiveProfile:
     def to_dict(self) -> dict[str, object]:
         return {
             "intent": self.intent.value,
+            "modes": list(self.modes),
             "level": self.level.value,
             "methods": list(self.methods),
             "signals": list(self.signals),
@@ -63,6 +65,20 @@ class AdaptiveRouter:
         (TaskIntent.TECHNICAL, (r"code", r"debug", r"program", r"api", r"database", r"deploy", r"architecture", r"software", r"script")),
         (TaskIntent.CREATIVE, (r"write", r"draft", r"story", r"brainstorm", r"creative", r"design")),
         (TaskIntent.COMMUNICATION, (r"email", r"message", r"translate", r"rewrite", r"polish", r"respond to")),
+    )
+    _mode_patterns: tuple[tuple[str, tuple[str, ...]], ...] = (
+        ("EXPLORATORY", (r"explor", r"discover", r"brainstorm", r"research", r"investigat")),
+        ("DESCRIPTIVE", (r"describe", r"summarize", r"overview", r"explain", r"what is")),
+        ("DIAGNOSTIC", (r"diagnos", r"troubleshoot", r"root cause", r"problem analysis")),
+        ("CAUSAL", (r"caus", r"impact", r"effect", r"why did", r"why does")),
+        ("HISTORICAL", (r"histor", r"timeline", r"over time", r"origin", r"evolution")),
+        ("COMPARATIVE", (r"compar", r"versus", r"vs\b", r"trade.?off", r"pros.?cons")),
+        ("QUANTITATIVE", (r"quantit", r"statistic", r"calculate", r"numeric", r"data analysis", r"measure")),
+        ("QUALITATIVE", (r"qualit", r"interview", r"narrative", r"theme analysis", r"perception")),
+        ("FORENSIC", (r"forensic", r"full audit", r"evidence trail", r"trace", r"investigation")),
+        ("SYSTEMS", (r"system", r"ecosystem", r"interdepend", r"feedback loop", r"network")),
+        ("STRATEGIC", (r"strateg", r"competitive", r"positioning", r"geopolit", r"long.?term")),
+        ("ACTION_RESEARCH", (r"implement", r"intervention", r"field test", r"action plan", r"deploy")),
     )
     _risk_patterns = (
         r"medical", r"health", r"diagnos", r"medication", r"legal", r"lawyer", r"financial",
@@ -98,6 +114,21 @@ class AdaptiveRouter:
         intent = max(scores, key=lambda candidate: (scores[candidate], priority[candidate]))
         if scores[intent] == 0:
             intent = TaskIntent.INFORMATION
+
+        modes = [mode for mode, patterns in self._mode_patterns if any(re.search(pattern, text) for pattern in patterns)]
+        if not modes:
+            modes = {
+                TaskIntent.INFORMATION: ["DESCRIPTIVE"],
+                TaskIntent.RESEARCH: ["EXPLORATORY"],
+                TaskIntent.ANALYSIS: ["DIAGNOSTIC"],
+                TaskIntent.DECISION: ["STRATEGIC"],
+                TaskIntent.EXECUTION: ["ACTION_RESEARCH"],
+                TaskIntent.TECHNICAL: ["SYSTEMS"],
+                TaskIntent.CREATIVE: ["EXPLORATORY"],
+                TaskIntent.COMMUNICATION: ["QUALITATIVE"],
+                TaskIntent.UNKNOWN: ["EXPLORATORY"],
+            }[intent]
+        signals.extend(f"MODE:{mode}" for mode in modes)
 
         risk_hits = [pattern for pattern in self._risk_patterns if re.search(pattern, text)]
         risk_score = min(5, len(risk_hits))
@@ -168,4 +199,4 @@ class AdaptiveRouter:
             methods = (*methods, "uncertainty-disclosure", "independent-verification", "failure-mode-review")
         if level is AdaptiveLevel.L06_HYPER_RIGOROUS:
             methods = (*methods, "adversarial-review", "provenance-audit", "stop-condition-check")
-        return AdaptiveProfile(intent, level, tuple(dict.fromkeys(methods)), tuple(signals), risk_score, explicit)
+        return AdaptiveProfile(intent, tuple(dict.fromkeys(modes)), level, tuple(dict.fromkeys(methods)), tuple(signals), risk_score, explicit)

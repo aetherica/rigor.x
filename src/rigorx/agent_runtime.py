@@ -334,7 +334,7 @@ class AgentRuntime:
             )
         adaptive_header = (
             "Adaptive route (heuristic, may be refined): "
-            f"intent={adaptive_profile.intent.value}; level={adaptive_profile.level.value}; "
+            f"intent={adaptive_profile.intent.value}; modes={', '.join(adaptive_profile.modes)}; level={adaptive_profile.level.value}; "
             f"methods={', '.join(adaptive_profile.methods)}.\n"
         )
         command_resolution: CommandResolution | None = None
