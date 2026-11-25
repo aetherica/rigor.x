@@ -80,3 +80,13 @@
 - **Corrective source-head code commit: `14f10ca4fdb1e6670c00ec7becbadb220232c4e9` (semantic opt-in + strict action type + tests). Later commits are documentation-only.
 - The GitHub Actions run is expected from the push workflow, but this session's GitHub connector exposes no push-run listing/status API; browser verification was unavailable. **Corrective CI status: PENDING / NOT YET VERIFIED** at the time this receipt was updated.
 - Final fixture expected counts: TP=2, FP=0, TN=4, FN=2; precision=1.00, recall=0.50, FPR=0.00. Tiny hand-authored fixture only.
+
+## WS19 corrective exact-head CI — verified
+- GitHub Actions [run #45568949396 — SUCCESS](https://github.com/aetherica/rigor.x/actions/runs/45568949396)
+- Exact tested commit: `14f10ca4fdb1e6670c00ec7becbadb220232c4e9`.
+- Result: corrective changes passed the configured workflow; the earlier pending receipt is superseded.
+
+## WS20 — Operational Command Execution Framework (initial increment)
+- `src/rigorx/command_runtime.py`: typed definitions, registry collision rejection, fail-closed dispatch, capability/approval checks, input validation, safe execution receipts and exception redaction.
+- `tests/test_command_runtime.py`: 8 unittest cases.
+- Status: source committed; CI pending exact-head result. This does not implement or verify 999 individual handlers.
