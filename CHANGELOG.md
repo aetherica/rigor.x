@@ -11,16 +11,16 @@ This project is in pre-release development. Entries summarize notable changes; t
 - OpenAI-compatible HTTPS transport, CLI entry points, slash-command catalogue integration, and optional heuristic domain routing.
 - Crosswalk validator for the canonical 18 Functional Groups and candidate command-library categories.
 - CI matrix for Python 3.13/3.15, lint, tests, source/wheel build and installed-wheel smoke checks.
-- Versioned proprietary RIGOR-X Commercial Subscription License (CSL), extensible category framework, subscription terms, platform-provider and OEM/embedded addenda.
+- Apache License 2.0 adoption for the RIGOR-X core repository, with NOTICE, trademark policy, open-source contribution terms, and optional service monetization boundaries.
 
 ### Changed
 - Release maturity and capability claims distinguish implemented, tested, verified, partial, planned and host-integration-dependent functionality.
-- CI workflows now pin checkout/setup actions by immutable commit SHA, use read-only repository permissions, deterministic validation dependencies and concurrency cancellation.
-- Pipeline CI path filters include workflow and release-governance files so engineering changes trigger validation.
-- Root README, contributor guidance and repository licensing notice now consistently identify RIGOR-X as proprietary, source-available software and direct commercial users to the CSL documents.
+- CI workflows pin checkout/setup actions by immutable commit SHA and use read-only repository permissions.
+- Root README, contributor guidance, and repository licensing policy consistently identify RIGOR-X as Apache-2.0 open-source software; paid services are optional and do not restrict open-source rights.
+- Removed the superseded proprietary subscription license and deployment addenda from the active repository document set.
 
 ### Known limitations
 - No stable release/tag yet; package version remains `0.4.0.dev0`.
 - External model/provider and host-plugin integrations require an integrating host and have not been acceptance-tested end-to-end in this repository.
 - No claim of production autonomous-agent readiness, certification, or implementation of every catalogued command.
-- Commercial prices and customer-specific rights are negotiated through executed Order Forms; no fixed price is published.
+- Full-history rights/provenance audit and third-party license compatibility review remain separate release gates.
