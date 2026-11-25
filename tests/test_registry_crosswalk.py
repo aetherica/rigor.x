@@ -46,6 +46,18 @@ class CrosswalkTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "unique and non-empty"):
             validator.validate_data(fg, xw, manifest, groups)
 
+    def test_rejects_case_insensitive_duplicate_group_names(self):
+        fg, xw, manifest, groups = documents()
+        fg["functional_groups"][1]["name"] = fg["functional_groups"][0]["name"].upper()
+        with self.assertRaisesRegex(ValueError, "case-insensitive"):
+            validator.validate_data(fg, xw, manifest, groups)
+
+    def test_rejects_uncovered_functional_group(self):
+        fg, xw, manifest, groups = documents()
+        xw["mappings"][0]["functional_group_ids"] = ["FG-02"]
+        with self.assertRaisesRegex(ValueError, "FG coverage mismatch"):
+            validator.validate_data(fg, xw, manifest, groups)
+
     def test_rejects_crosswalk_targets_not_array(self):
         fg, xw, manifest, groups = documents()
         xw["mappings"][0]["functional_group_ids"] = "FG-01"
