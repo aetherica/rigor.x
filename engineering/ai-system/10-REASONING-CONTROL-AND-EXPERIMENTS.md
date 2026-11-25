@@ -47,12 +47,12 @@ Typed, scope-bound memory (decision, preference, fact/source, task state, hypoth
 Freeze baseline and adversarial tests. Measure detection precision/recall, false-stop rate, latency/cost, recovery success. Test Unicode, paraphrases, repetition, misleading progress, budget exhaustion. Record code version, configuration, dataset hash and receipt. Promote only after repeatable results.
 
 ## Status
-- Deterministic loop/progress guard: implemented; CI pending.
+- Deterministic loop/progress guard: implemented; baseline CI verified, WS19 hardening CI pending.
 - Pipeline integration: not implemented.
-- Semantic loop detection: not implemented.
+- Lexical-overlap loop signal: implemented experimentally in WS19, opt-in only; it is not semantic equivalence detection.
 - Evidence gate: specified, not implemented.
 - Typed memory conflict system: specified, not implemented.
-- Reasoning mechanism controller: specified, not implemented.
+- Mechanism selector/controller: implemented experimentally in WS19; plans only, not integrated or executed.
 - Neural capability interface: capability boundary specified; model internals not presumed.
 
 ## Standards applicability (reference, not certification)
