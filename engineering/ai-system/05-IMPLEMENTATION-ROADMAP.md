@@ -20,7 +20,7 @@
 | WS-16 | Reasoning-control guard (first increment) | Control-plane contracts | bounded repeats/stall/budget, validation, tests + CI | VERIFIED (not pipeline-integrated) |
 | WS-17 | World-class standards and execution plan | Repository baseline | standards applicability, risk and execution gates documented | DOCUMENTED |
 | WS-18 | Canonical FG inventory + candidate taxonomy crosswalk | 18 FG design + 18 candidate library groups | IDs/counts/coverage/refs validated; regression tests + CI | VERIFIED (category-level; not command activation) |
-| WS-19 | Reasoning monitor/controller + adaptive mechanism selector | WS16 guard + reasoning-control specification | Bounded controller, typed profiles/receipts, advisory lexical signal, tests + benchmark + CI | VERIFIED (experimental; not pipeline-integrated) |
+| WS-19 | Reasoning monitor/controller + adaptive mechanism selector | WS16 guard + reasoning-control specification | Bounded controller, typed profiles/receipts, advisory lexical signal, tests + benchmark + CI | CORRECTIVE IMPLEMENTATION COMPLETE; CI PENDING |
 
 ## Dependency order
 
@@ -43,7 +43,7 @@ World-class engineering standards and execution plan are saved in `engineering/a
 
 ## WS19 implementation status
 
-Implemented `src/rigorx/reasoning_controller.py`: mechanism candidate selection, typed profiles, capability-gap reporting, bounded lexical-overlap signal, composition with WS16 repeat/progress/budget guard, recovery limit and structured receipts. Added 14 tests plus fixture benchmark. Tiny fixture shows paraphrase misses; pipeline integration remains gated on stronger empirical evaluation.
+Implemented and corrective-hardened `src/rigorx/reasoning_controller.py`: candidate selection, strict typed profiles, capability-gap reporting without false fallback, lexical-overlap advisory, WS16 guard composition, bounded recovery, terminal decision latching and full episode reset. Semantic monitor reports absolute prior-step references. Tests now cover terminal latching, reset lifecycle, capability absence, input validation and exact step-budget ceiling. Corrective CI is pending. Tiny hand-authored fixture remains non-production evidence; pipeline integration is gated on larger empirical evaluation.
 
 ## WS18 acceptance status
 Canonical FG IDs/names were saved separately from the candidate slash-library taxonomy. A many-to-many category crosswalk was added with explicit non-activation status. Validator and four regression tests passed in [GitHub Actions run #45518939024](https://github.com/aetherica/rigor.x/actions/runs/45518939024), commit `608e249eb4044aa369d8db58fea10256d6ef944f`. Per-entry mapping and command activation remain out of scope.
