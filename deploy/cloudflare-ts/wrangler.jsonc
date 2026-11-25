@@ -1,12 +1,13 @@
 {
-	// RIGOR-X MCP server on Cloudflare Workers (TypeScript, no runtime dependencies).
+	// RIGOR-X MCP server on Cloudflare Workers (TypeScript; one runtime dependency, Cloudflare's OAuth provider).
 	// Same Worker name, Durable Object class and storage schema as the Python spike in ../cloudflare,
 	// so existing runs remain readable. The v1 migration is already applied on Cloudflare.
 	"$schema": "node_modules/wrangler/config-schema.json",
 	"name": "rigorx-mcp",
 	"main": "src/index.ts",
 	"compatibility_date": "2026-09-07",
-	"compatibility_flags": ["nodejs_compat"],
+	// global_fetch_strictly_public: required by the OAuth provider to fetch Client ID Metadata Documents.
+	"compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
 	"workers_dev": true,
 	"preview_urls": false,
 	"durable_objects": {
@@ -17,6 +18,13 @@
 			}
 		]
 	},
+	// Clients, grants and tokens of the OAuth provider (auth.ts). Tokens are stored only as hashes.
+	"kv_namespaces": [
+		{
+			"binding": "OAUTH_KV",
+			"id": "2c84dcf183d041bbb7dd8f98a4f4b1ad"
+		}
+	],
 	"migrations": [
 		{
 			"tag": "v1",

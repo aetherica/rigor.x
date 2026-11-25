@@ -1,25 +1,26 @@
-// RIGOR-X MCP server on Cloudflare Workers (TypeScript, no runtime dependencies).
+// RIGOR-X MCP server on Cloudflare Workers (TypeScript; one runtime dependency, Cloudflare's OAuth provider).
 //
 // - The Worker serves MCP over Streamable HTTP at /mcp (see mcp.ts).
 // - Each owner's runs live in that owner's Durable Object (OwnerRuns), which runs
 //   the engine on Durable Object SQLite. Stateless tools run in the Worker.
-// - Spike authentication: one shared bearer token (Worker secret RIGORX_SPIKE_TOKEN)
-//   maps to one development owner. No token: stateless tools only. Wrong token: 401.
-//   Phase P4 replaces this with OAuth sign-in (Google) in this same Worker.
+// - Authentication (WS31 phase P4): this Worker is also the OAuth authorization server
+//   (@cloudflare/workers-oauth-provider: PKCE, Client ID Metadata Documents, dynamic client
+//   registration, tokens bound to this /mcp resource). Users sign in with Google; the owner is
+//   "google:<sub>". Every /mcp request needs a token: without one the answer is 401 with a
+//   resource_metadata pointer, which is how MCP hosts discover sign-in. See auth.ts.
+// - The spike bearer token (Worker secret RIGORX_SPIKE_TOKEN) still works, for Claude Code and
+//   the smoke test; it maps to one development owner.
 
 import { DurableObject } from "cloudflare:workers";
-import { timingSafeEqual } from "node:crypto";
 import { DurableObjectRunStore } from "./store.ts";
 import { EngineError, HostEngine, dispatch } from "./engine.ts";
 import { handleHttp, type EngineBackend } from "./mcp.ts";
+import { buildProvider, type AuthEnv } from "./auth.ts";
 import type { JsonObject } from "./pipeline.ts";
 
-export interface Env {
+export interface Env extends AuthEnv {
 	OWNER_RUNS: DurableObjectNamespace<OwnerRuns>;
-	RIGORX_SPIKE_TOKEN?: string;
 }
-
-const SPIKE_OWNER = "spike:dev";
 
 export class OwnerRuns extends DurableObject<Env> {
 	private readonly engine: HostEngine;
@@ -61,38 +62,17 @@ function backend(env: Env): EngineBackend {
 	};
 }
 
-function tokenMatches(given: string, expected: string): boolean {
-	const a = new TextEncoder().encode(given);
-	const b = new TextEncoder().encode(expected);
-	return a.length === b.length && timingSafeEqual(a, b);
-}
-
-/** Returns the owner (or null for anonymous), or a Response to send instead. */
-function authenticate(request: Request, env: Env): string | null | Response {
-	const header = request.headers.get("Authorization");
-	if (!header) return null;
-	if (!env.RIGORX_SPIKE_TOKEN) return new Response("Server token is not configured", { status: 503 });
-	const [scheme, token = ""] = header.split(" ", 2);
-	if (scheme?.toLowerCase() !== "bearer" || !tokenMatches(token, env.RIGORX_SPIKE_TOKEN)) {
-		return new Response("Invalid token", { status: 401, headers: { "WWW-Authenticate": "Bearer" } });
+async function serveMcp(request: Request, env: Env, owner: string): Promise<Response> {
+	try {
+		return await handleHttp(request, backend(env), owner);
+	} catch (e) {
+		console.error("RIGORX_ERROR", e instanceof Error ? e.stack ?? e.message : String(e));
+		return Response.json({ jsonrpc: "2.0", id: null, error: { code: -32603, message: "Internal error" } }, { status: 500 });
 	}
-	return SPIKE_OWNER;
 }
 
 export default {
-	async fetch(request: Request, env: Env): Promise<Response> {
-		const { pathname } = new URL(request.url);
-		if (pathname === "/" && request.method === "GET") {
-			return new Response("RIGOR-X MCP server (spike). MCP endpoint: POST /mcp");
-		}
-		if (pathname !== "/mcp") return new Response("Not found", { status: 404 });
-		const owner = authenticate(request, env);
-		if (owner instanceof Response) return owner;
-		try {
-			return await handleHttp(request, backend(env), owner);
-		} catch (e) {
-			console.error("RIGORX_ERROR", e instanceof Error ? e.stack ?? e.message : String(e));
-			return Response.json({ jsonrpc: "2.0", id: null, error: { code: -32603, message: "Internal error" } }, { status: 500 });
-		}
+	fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+		return buildProvider<Env>(new URL(request.url).origin, serveMcp).fetch(request, env, ctx);
 	},
 } satisfies ExportedHandler<Env>;

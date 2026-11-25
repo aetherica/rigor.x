@@ -158,7 +158,7 @@ Rationale:
 | P1 | `RunStore` interface + `host_engine.py` (all tools in section 5, owner checks, gate in section 6) | No | Unit tests incl. cross-owner access, stage-order violations, gate failures |
 | P2 | MCP adapter on the official SDK; stdio and Streamable HTTP | No | MCP Inspector and Claude Desktop/Claude Code (stdio) run every tool |
 | P3 | Cloudflare spike: Python Worker + Durable Object store, no auth | Cloudflare | Risks in section 8 retired or documented |
-| P4 | Worker A: OAuth provider + Google sign-in | Cloudflare, Google Cloud | Sign-in works from Claude (web and Claude Code) and ChatGPT |
+| P4 | OAuth provider + Google sign-in (one Worker; see section 14) | Cloudflare, Google Cloud | Sign-in works from Claude (web and Claude Code) and ChatGPT |
 | P5 | Public documentation, privacy policy, support contact | Owner | Pages published |
 | P6 | Directory submissions | Owner | Claude portal; ChatGPT per its current process |
 
@@ -202,6 +202,12 @@ Rationale:
 - Verification: 11 Node tests (no npm packages) including **parity with the Python engine** on 20 router prompts and 5 scenarios / 75 steps (`test/fixtures/parity.json`, guarded from the Python side by `tests/test_ts_parity.py`), and **conformance with the official MCP SDK client** (handshake, 12 tools, full run to COMPLETED, 401 on a wrong token) in CI. Local CPU per call: 0.01–0.3 ms.
 - The Python engine remains the reference implementation and powers the local stdio server (`rigorx-mcp`) and CLI. Two implementations are kept in step by the parity fixtures.
 - Pending: switching Workers Builds to `deploy/cloudflare-ts` (owner, dashboard), then Workers-runtime CPU figures; `rigorx_resolve_commands` catalogue on the Worker.
+
+**P4 — OAuth with Google (2026-11-25, implemented; Google client and host sign-in not yet verified).**
+- One Worker instead of Worker A + Worker B (section 8): the TypeScript Worker is both authorization server and MCP resource, using `@cloudflare/workers-oauth-provider` 1.3 (`deploy/cloudflare-ts/src/auth.ts`). Consent page before the Google redirect (confused-deputy protection, as the library requires for dynamic registration); `state` bound to the browser and single-use. Owner = `google:<sub>`. Optional `ALLOWED_EMAILS` allowlist. KV namespace `OAUTH_KV`.
+- **Deviation from section 7 (lazy authentication):** every `/mcp` request now needs a token, including `rigorx_route`. Reason: hosts discover sign-in from a `401` on their first request; a server that answers `initialize` anonymously is treated as one without authentication, so Claude would never offer sign-in. Lazy authentication (ChatGPT per-tool `securitySchemes` + `mcp/www_authenticate`) can be revisited once sign-in works on both hosts.
+- The spike token stays as an external token (`resolveExternalToken`) for Claude Code and the smoke test.
+- Pending (owner): Google OAuth client and Worker secrets `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`; then sign-in from Claude web, Claude Code and ChatGPT.
 
 Local use with Claude Desktop (`claude_desktop_config.json`):
 ```json
