@@ -1,32 +1,64 @@
-"""Tests for deterministic loop/progress safeguards."""
+"""Unit and adversarial normalization tests for reasoning safeguards."""
 import unittest
-from rigorx.reasoning_guard import GuardAction, ReasoningGuard, distinct_fingerprints, fingerprint_state
+
+from rigorx.reasoning_guard import (
+    GuardAction,
+    ReasoningGuard,
+    distinct_fingerprints,
+    fingerprint_state,
+    normalize_state,
+)
+
 
 class ReasoningGuardTests(unittest.TestCase):
-    def test_normalization_case_and_whitespace(self):
+    def test_normalization_case_whitespace_punctuation_and_unicode(self):
         self.assertEqual(fingerprint_state("  Need   evidence "), fingerprint_state("need evidence"))
+        self.assertEqual(fingerprint_state("Need-evidence!"), fingerprint_state("NEED evidence"))
+        self.assertEqual(fingerprint_state("ＣＡＳＥ"), fingerprint_state("case"))
+        self.assertEqual(normalize_state("A__B"), "a b")
+
     def test_repeat_warning_then_stop(self):
-        g = ReasoningGuard(max_steps=10, repeat_limit=2)
-        self.assertEqual(g.observe("search source A").action, GuardAction.CONTINUE)
-        self.assertEqual(g.observe("search source A").action, GuardAction.DIVERSIFY)
-        self.assertEqual(g.observe("search source A").action, GuardAction.STOP_REPEATED_STATE)
+        guard = ReasoningGuard(max_steps=10, repeat_limit=2)
+        self.assertEqual(guard.observe("search source A").action, GuardAction.CONTINUE)
+        self.assertEqual(guard.observe("search source A").action, GuardAction.DIVERSIFY)
+        self.assertEqual(guard.observe("search source A").action, GuardAction.STOP_REPEATED_STATE)
+
     def test_hard_budget(self):
-        g = ReasoningGuard(max_steps=2, repeat_limit=9)
-        g.observe("one"); g.observe("two")
-        self.assertEqual(g.observe("three").action, GuardAction.STOP_BUDGET)
+        guard = ReasoningGuard(max_steps=2, repeat_limit=9)
+        guard.observe("one")
+        guard.observe("two")
+        self.assertEqual(guard.observe("three").action, GuardAction.STOP_BUDGET)
+
     def test_stall_requires_full_window(self):
-        g = ReasoningGuard(stall_window=3, max_steps=10)
-        self.assertEqual(g.observe("a", progress=.2).action, GuardAction.CONTINUE)
-        self.assertEqual(g.observe("b", progress=.2).action, GuardAction.CONTINUE)
-        self.assertEqual(g.observe("c", progress=.2).action, GuardAction.STOP_STALLED)
-    def test_progress_improvement(self):
-        g = ReasoningGuard(stall_window=3, max_steps=10)
-        g.observe("a", progress=.1); g.observe("b", progress=.1)
-        self.assertEqual(g.observe("c", progress=.3).action, GuardAction.CONTINUE)
-    def test_reject_nan(self):
-        with self.assertRaises(ValueError): ReasoningGuard().observe("x", progress=float("nan"))
+        guard = ReasoningGuard(stall_window=3, max_steps=10)
+        self.assertEqual(guard.observe("a", progress=0.2).action, GuardAction.CONTINUE)
+        self.assertEqual(guard.observe("b", progress=0.2).action, GuardAction.CONTINUE)
+        self.assertEqual(guard.observe("c", progress=0.2).action, GuardAction.STOP_STALLED)
+
+    def test_progress_improvement_prevents_stall(self):
+        guard = ReasoningGuard(stall_window=3, max_steps=10)
+        guard.observe("a", progress=0.1)
+        guard.observe("b", progress=0.1)
+        self.assertEqual(guard.observe("c", progress=0.3).action, GuardAction.CONTINUE)
+
+    def test_reject_nan_and_infinity(self):
+        for bad in (float("nan"), float("inf"), float("-inf")):
+            with self.subTest(bad=bad), self.assertRaises(ValueError):
+                ReasoningGuard().observe("x", progress=bad)
+
+    def test_reject_bool_progress(self):
+        with self.assertRaises(TypeError):
+            ReasoningGuard().observe("x", progress=True)
+
+    def test_reject_empty_and_non_string_states(self):
+        with self.assertRaises(ValueError):
+            fingerprint_state("  !!! ")
+        with self.assertRaises(TypeError):
+            normalize_state(123)  # type: ignore[arg-type]
+
     def test_distinct_count(self):
         self.assertEqual(distinct_fingerprints(["A", " a ", "B"]), 2)
+
 
 if __name__ == "__main__":
     unittest.main()
