@@ -225,10 +225,13 @@ class ReasoningController:
         semantic_window: int = 6,
         semantic_threshold: float = 0.88,
         recovery_budget: int = 2,
+        semantic_enabled: bool = False,
         semantic_signal_action: ControllerAction = ControllerAction.DIVERSIFY,
     ):
         if isinstance(recovery_budget, bool) or not isinstance(recovery_budget, int) or recovery_budget < 0:
             raise ValueError("recovery_budget must be an integer >= 0")
+        if not isinstance(semantic_enabled, bool):
+            raise TypeError("semantic_enabled must be bool")
         if semantic_signal_action not in {ControllerAction.DIVERSIFY, ControllerAction.REPLAN}:
             raise ValueError("semantic action may only DIVERSIFY or REPLAN")
         self.guard = ReasoningGuard(
@@ -236,6 +239,7 @@ class ReasoningController:
         )
         self.semantic = SemanticLoopMonitor(window=semantic_window, threshold=semantic_threshold)
         self.recovery_budget = recovery_budget
+        self.semantic_enabled = semantic_enabled
         self.semantic_signal_action = semantic_signal_action
         self._recovery_attempts = 0
         self._terminal_receipt: ControllerReceipt | None = None
@@ -244,7 +248,7 @@ class ReasoningController:
         if self._terminal_receipt is not None:
             return self._terminal_receipt
         guard = self.guard.observe(state, progress=progress)
-        signal = self.semantic.observe(state)
+        signal = self.semantic.observe(state) if self.semantic_enabled else None
         if guard.action is GuardAction.STOP_BUDGET:
             action, reason = ControllerAction.STOP_BUDGET, guard.reason
         elif guard.action is GuardAction.STOP_REPEATED_STATE:
