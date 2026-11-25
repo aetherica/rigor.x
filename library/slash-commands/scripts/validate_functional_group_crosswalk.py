@@ -38,8 +38,9 @@ def validate_data(fg_doc: Any, xw: Any, manifest: Any, library_groups: Any) -> N
     if ids != expected_ids:
         raise ValueError("Functional Group IDs must be unique, contiguous, and ordered FG-01..FG-18")
     names = [item.get("name") for item in fgs]
-    if any(not isinstance(name, str) or not name.strip() for name in names) or len(set(names)) != EXPECTED_FG_COUNT:
-        raise ValueError("Functional Group names must be unique and non-empty")
+    normalized_names = [name.strip().casefold() for name in names if isinstance(name, str)]
+    if any(not isinstance(name, str) or not name.strip() for name in names) or len(set(normalized_names)) != EXPECTED_FG_COUNT:
+        raise ValueError("Functional Group names must be unique and non-empty (case-insensitive)")
 
     if manifest.get("group_count") != EXPECTED_LIBRARY_GROUPS or len(library_groups) != EXPECTED_LIBRARY_GROUPS:
         raise ValueError("candidate library group count mismatch")
@@ -66,6 +67,7 @@ def validate_data(fg_doc: Any, xw: Any, manifest: Any, library_groups: Any) -> N
         extra = sorted(set(map_ids) - set(group_ids))
         raise ValueError(f"crosswalk coverage mismatch: missing={missing}, extra={extra}")
 
+    covered_targets: set[str] = set()
     for mapping in mappings:
         targets = mapping.get("functional_group_ids")
         group = mapping.get("library_group_id")
@@ -75,6 +77,11 @@ def validate_data(fg_doc: Any, xw: Any, manifest: Any, library_groups: Any) -> N
             raise ValueError(f"invalid FG targets for {group}: IDs must be strings")
         if len(targets) != len(set(targets)) or set(targets) - set(expected_ids):
             raise ValueError(f"invalid FG targets for {group}")
+        covered_targets.update(targets)
+
+    if covered_targets != set(expected_ids):
+        missing_targets = sorted(set(expected_ids) - covered_targets)
+        raise ValueError(f"crosswalk FG coverage mismatch: missing={missing_targets}")
 
     if not isinstance(xw.get("mapping_policy"), str) or not xw["mapping_policy"].strip() or xw.get("status") != "proposed_taxonomy_alignment_not_command_activation":
         raise ValueError("crosswalk must be documented and explicitly non-activating")
