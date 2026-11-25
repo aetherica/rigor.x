@@ -3,9 +3,11 @@
 - The Worker serves MCP over stateless Streamable HTTP at ``/mcp``.
 - Each owner's runs live in that owner's Durable Object (``OwnerRuns``), which
   runs the unchanged synchronous ``HostEngine`` on Durable Object SQL storage.
-- CPU budget: the MCP app is built once per isolate, only when ``/mcp`` is first
-  called, and the slash-command catalogue is loaded only when first used. Other
-  paths answer without touching the MCP stack.
+- CPU budget: the MCP app is built at import time, so Python Workers capture it
+  in the deploy-time memory snapshot instead of rebuilding it per isolate. It
+  does not touch bindings; the request's ``env`` reaches the RPC transport
+  through a context variable. A build error therefore shows in the deploy log.
+  The slash-command catalogue loads on first use.
 - Spike authentication: a single shared bearer token (Worker secret
   ``RIGORX_SPIKE_TOKEN``) maps to one development owner. Phase P4 replaces this
   with OAuth sign-in (Google) in front of this Worker.
@@ -29,6 +31,7 @@ from rigorx.slash_commands import SlashCommandCatalog
 CATALOG_PATH = Path(__file__).parent / "data" / "commands.json"
 SPIKE_OWNER = "spike:dev"
 _current_owner: contextvars.ContextVar[str | None] = contextvars.ContextVar("rigorx_owner", default=None)
+_current_env: contextvars.ContextVar = contextvars.ContextVar("rigorx_env")
 
 
 class OwnerRuns(DurableObject):
@@ -66,10 +69,11 @@ class _LazyCatalogEngine(HostEngine):
         return super().resolve_commands(text)
 
 
-def build_app(env):
+def build_app():
     from rigorx.mcp_server import build_server
 
     async def transport(owner_id, operation, payload_json):
+        env = _current_env.get()
         name = hashlib.sha256(owner_id.encode("utf-8")).hexdigest()
         stub = env.OWNER_RUNS.get(env.OWNER_RUNS.idFromName(name))
         return str(await stub.call(owner_id, operation, payload_json))
@@ -79,15 +83,7 @@ def build_app(env):
     return server.streamable_http_app(streamable_http_path="/mcp", stateless_http=True)
 
 
-_APP = None
-
-
-def _app(env):
-    """Build the MCP app once per isolate (Durable Object bindings are stable within it)."""
-    global _APP
-    if _APP is None:
-        _APP = build_app(env)
-    return _APP
+APP = build_app()
 
 
 def _owner_from(request, env):
@@ -115,10 +111,12 @@ class Default(WorkerEntrypoint):
         if error is not None:
             return error
         token = _current_owner.set(owner)
+        env_token = _current_env.set(self.env)
         try:
-            return await asgi.fetch(_app(self.env), request, self.env)
+            return await asgi.fetch(APP, request, self.env)
         except Exception as exc:  # noqa: BLE001 - log the traceback for Workers Logs; return a safe message
             print("RIGORX_ERROR " + traceback.format_exc())
             return Response(f"Internal error: {type(exc).__name__}: {exc}"[:300], status=500)
         finally:
+            _current_env.reset(env_token)
             _current_owner.reset(token)
