@@ -12,6 +12,7 @@ RIGOR-X is a deterministic control-plane and live model/tool orchestration frame
 - Reasoning guard and adaptive selector; integration/evaluation boundaries are documented.
 - Fail-closed command execution framework.
 - Live model/tool loop using injected backend and registered host callbacks; capability/approval gates, JSON argument validation, receipts and bounded budgets.
+- Slash-command catalog integration: macro modifiers functional; native/UI/image entries remain host integration dependent.
 - OpenAI-compatible Chat Completions transport over HTTPS (loopback HTTP allowed), standard-library networking and environment credentials.
 - Package version CLI.
 
