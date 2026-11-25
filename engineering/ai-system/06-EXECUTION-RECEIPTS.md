@@ -89,4 +89,6 @@
 ## WS20 — Operational Command Execution Framework (initial increment)
 - `src/rigorx/command_runtime.py`: typed definitions, registry collision rejection, fail-closed dispatch, capability/approval checks, input validation, safe execution receipts and exception redaction.
 - `tests/test_command_runtime.py`: 8 unittest cases.
-- Status: source committed; CI pending exact-head result. This does not implement or verify 999 individual handlers.
+- Initial CI [run #45570737833 — FAILURE](https://github.com/aetherica/rigor.x/actions/runs/45570737833): Ruff flagged broad exception handling at the handler boundary; tests were skipped. Corrected with an explicit boundary annotation and committed `35edcf7c2405c4e6e02fc6935846d648126d24eb`.
+- Corrective exact-head CI [run #45570818762 — SUCCESS](https://github.com/aetherica/rigor.x/actions/runs/45570818762), commit `35edcf7c2405c4e6e02fc6935846d648126d24eb`: Ruff PASS; **78 tests passed**; functional-group crosswalk validator PASS.
+- Acceptance: initial framework VERIFIED. It does not implement or verify 999 individual handlers.

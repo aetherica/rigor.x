@@ -47,7 +47,7 @@
 
 ## Still incomplete
 - WS19 corrective exact-head CI is now verified SUCCESS for commit `14f10ca4fdb1e6670c00ec7becbadb220232c4e9` (run #45568949396); pipeline integration remains gated.
-- WS20 command framework CI and per-command integration remain pending.
+- WS20 command framework exact-head CI verified; per-command handler integration remains pending.
 - Broader false-stop benchmark/ablation and semantic-loop evaluation remain pending.
 - WS18 per-command verified mapping to capability contracts and the canonical FG architecture.
 - Claim-evidence gate and typed memory conflict handling.

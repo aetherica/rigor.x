@@ -21,7 +21,7 @@
 | WS-17 | World-class standards and execution plan | Repository baseline | standards applicability, risk and execution gates documented | DOCUMENTED |
 | WS-18 | Canonical FG inventory + candidate taxonomy crosswalk | 18 FG design + 18 candidate library groups | IDs/counts/coverage/refs validated; regression tests + CI | VERIFIED (category-level; not command activation) |
 | WS-19 | Reasoning monitor/controller + adaptive mechanism selector | WS16 guard + reasoning-control specification | Bounded controller, typed profiles/receipts, advisory lexical signal, tests + benchmark + CI | VERIFIED (exact-head CI) |
-| WS-20 | Operational command execution framework | Command contract + permission/capability model | Typed registry, fail-closed dispatcher, approval/capability checks, redacted receipts, tests + CI | IMPLEMENTED; CI PENDING |
+| WS-20 | Operational command execution framework | Command contract + permission/capability model | Typed registry, fail-closed dispatcher, approval/capability checks, redacted receipts, tests + CI | VERIFIED (exact-head CI) |
 
 ## Dependency order
 
