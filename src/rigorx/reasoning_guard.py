@@ -64,8 +64,15 @@ class ReasoningGuard:
         stall_window: int = 5,
         min_progress_delta: float = 1e-6,
     ) -> None:
-        if max_steps < 1 or repeat_limit < 1 or stall_window < 2:
-            raise ValueError("budgets must be positive and stall_window >= 2")
+        for name, value, minimum in (
+            ("max_steps", max_steps, 1),
+            ("repeat_limit", repeat_limit, 1),
+            ("stall_window", stall_window, 2),
+        ):
+            if isinstance(value, bool) or not isinstance(value, int):
+                raise TypeError(f"{name} must be an integer")
+            if value < minimum:
+                raise ValueError(f"{name} must be >= {minimum}")
         if (
             isinstance(min_progress_delta, bool)
             or not isinstance(min_progress_delta, (int, float))
@@ -105,8 +112,8 @@ class ReasoningGuard:
             if self._best_progress is None or value > self._best_progress:
                 self._best_progress = value
 
-        if self._steps > self.max_steps:
-            action, reason = GuardAction.STOP_BUDGET, "hard step budget exceeded"
+        if self._steps >= self.max_steps:
+            action, reason = GuardAction.STOP_BUDGET, "hard step budget reached"
         elif repeats > self.repeat_limit:
             action, reason = GuardAction.STOP_REPEATED_STATE, "state repeated beyond configured limit"
         elif self._is_stalled():
