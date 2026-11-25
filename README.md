@@ -39,7 +39,7 @@ Python support: `>=3.13`; CI tests 3.13 and 3.15.
 For text-only live execution, configure `RIGORX_MODEL_BASE_URL`, `RIGORX_MODEL_NAME`, optional `RIGORX_API_KEY`, then run `rigorx-agent "your question"`. Plugin tool execution requires an actual host adapter and registered callbacks.
 
 ## Governance
-- Only canonical branch `main`; no feature branches.
+- Canonical work branch is `main`; this run created no feature branches. Two pre-existing Dependabot branches remain; scheduled version updates are disabled, but branch deletion is blocked by the available connector.
 - No fake providers, dummy handlers or placeholder code presented as functional.
 - Capability states: PLANNED / SPECIFIED / IMPLEMENTED / TESTED / VERIFIED / PARTIAL / BLOCKED / NOT_IMPLEMENTED / NOT_ASSESSED.
 - Release tag `v0.4.0` only after exact-head CI, integration acceptance, security and release gates.
