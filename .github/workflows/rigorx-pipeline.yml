@@ -8,10 +8,16 @@ on:
       - "tests/**"
       - "pyproject.toml"
       - "schemas/**"
-      - ".github/workflows/rigorx-pipeline.yml"
+      - ".github/workflows/**"
+      - ".github/dependabot.yml"
       - "README.md"
+      - "CHANGELOG.md"
+      - "SECURITY.md"
+      - "CONTRIBUTING.md"
+      - "PUBLIC-RELEASE-CHECKLIST.md"
       - "docs/**"
       - "engineering/ai-system/**"
+      - "library/slash-commands/**"
   pull_request:
     branches: [main]
     paths:
@@ -19,10 +25,16 @@ on:
       - "tests/**"
       - "pyproject.toml"
       - "schemas/**"
-      - ".github/workflows/rigorx-pipeline.yml"
+      - ".github/workflows/**"
+      - ".github/dependabot.yml"
       - "README.md"
+      - "CHANGELOG.md"
+      - "SECURITY.md"
+      - "CONTRIBUTING.md"
+      - "PUBLIC-RELEASE-CHECKLIST.md"
       - "docs/**"
       - "engineering/ai-system/**"
+      - "library/slash-commands/**"
   workflow_dispatch:
 
 concurrency:
