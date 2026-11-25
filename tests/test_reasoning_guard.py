@@ -56,6 +56,22 @@ class ReasoningGuardTests(unittest.TestCase):
         with self.assertRaises(TypeError):
             normalize_state(123)  # type: ignore[arg-type]
 
+    def test_terminal_stop_is_latched_until_reset(self):
+        guard = ReasoningGuard(max_steps=2, repeat_limit=9)
+        guard.observe("one")
+        guard.observe("two")
+        stopped = guard.observe("three")
+        self.assertEqual(stopped.action, GuardAction.STOP_BUDGET)
+        self.assertIs(guard.observe("four"), stopped)
+        self.assertEqual(stopped.step_count, 3)
+        guard.reset_episode()
+        self.assertEqual(guard.observe("fresh").step_count, 1)
+
+    def test_invalid_progress_threshold_types(self):
+        for value in (True, "0.1"):
+            with self.subTest(value=value), self.assertRaises(ValueError):
+                ReasoningGuard(min_progress_delta=value)
+
     def test_distinct_count(self):
         self.assertEqual(distinct_fingerprints(["A", " a ", "B"]), 2)
 
