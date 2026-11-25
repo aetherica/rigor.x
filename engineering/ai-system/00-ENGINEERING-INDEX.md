@@ -17,6 +17,7 @@
 - [WS15 Registry Resolver & Typed Stage Contracts](09-REGISTRY-RESOLVER-AND-STAGE-CONTRACTS.md)
 - [WS16 Reasoning Control & Experiments](10-REASONING-CONTROL-AND-EXPERIMENTS.md)
 - [WS16 Experiment Test Plan](11-REASONING-EXPERIMENT-TEST-PLAN.md)
+- [WS17 World-Class Engineering Execution Plan](12-WORLD-CLASS-ENGINEERING-EXECUTION-PLAN.md)
 
 ## Verified baseline
 - 11-stage primary pipeline: specification and deterministic controller implemented.
