@@ -11,17 +11,15 @@ This document is a review guide, not a security attestation. At the time of this
 
 - The repository is still private; the owner has not yet changed visibility.
 - A full-clone, full-history secret and sensitive-data scan has **not** been completed.
-- GitHub Actions run history, logs, and artifacts have **not** been fully audited for sensitive output; GitHub warns these may become visible when a private repository is made public.
-- CI status for the exact publication candidate has **not** been verified by the available repository checks.
-- The owner must confirm that all source, documentation, datasets, examples, and historical commits are authorized for public disclosure.
+- GitHub Actions run history, logs, and artifacts have **not** been fully audited for sensitive output.
+- CI status for the exact publication candidate has **not** been verified.
+- The owner must confirm that all source, documentation, datasets, examples, and historical commits are authorized for public disclosure and Apache-2.0 licensing.
 
-Do not treat the presence of this guide, a clean code-search spot check, or an earlier successful CI run as evidence that these gates have passed. Complete the full-history scan before changing visibility.
+Complete the full-history scan and rights/provenance review before changing visibility.
 
 ## What this publication is
 
-This repository is being made available for independent review of its architecture, implementation, tests, documentation, security posture, and engineering maturity. It is not a declaration that RIGOR-X is a stable release, production-ready autonomous AI system, certified product, or complete implementation of every catalogued requirement.
-
-The current package is `0.4.0.dev0`. Stable release gates remain separately tracked in [PUBLIC-RELEASE-CHECKLIST.md](PUBLIC-RELEASE-CHECKLIST.md).
+This repository is made available for independent review of architecture, implementation, tests, documentation, security posture, and engineering maturity. It is not a declaration that RIGOR-X is stable, production-ready, certified, or complete. The current package is `0.4.0.dev0`; stable release gates remain in [PUBLIC-RELEASE-CHECKLIST.md](PUBLIC-RELEASE-CHECKLIST.md).
 
 ## Suggested review areas
 
@@ -30,28 +28,20 @@ The current package is `0.4.0.dev0`. Stable release gates remain separately trac
 - Model/provider integration boundaries and host callback assumptions.
 - Test quality, coverage gaps, deterministic behavior, and Python compatibility.
 - Dependency and supply-chain risks, workflow permissions, and CI reproducibility.
-- Documentation accuracy, traceability, and separation of implemented, tested, verified, partial, and planned capabilities.
-- Proprietary licensing clarity and third-party component notices.
+- Documentation accuracy and separation of implemented, tested, verified, partial, and planned capabilities.
+- Open-source license clarity, trademark boundaries, and third-party component notices.
 
-Please distinguish reproducible defects from design preferences, hypotheses, and unverified concerns. Include the affected commit, file/path, environment, reproduction steps, expected behavior, observed behavior, and impact where possible.
+Please distinguish reproducible defects from design preferences, hypotheses, and unverified concerns. Include affected commit, path, environment, reproduction steps, expected and observed behavior, and impact.
 
-## Feedback channels
+## Feedback and security
 
-- Use the repository's issue forms for ordinary bugs, documentation problems, and review findings.
-- Use pull requests to demonstrate proposed changes. A pull request is not automatically accepted or merged. External code contributions require confirmation of contributor authority and any necessary separate written contribution terms before acceptance.
-- **Do not publish credentials, personal data, private research, exploit details, or other sensitive material in issues or pull requests.**
-
-## Security reports
-
-Do not open a public issue for a suspected vulnerability. Use GitHub's [private vulnerability reporting](https://github.com/aetherica/rigor.x/security/advisories/new) if enabled. If unavailable, contact the repository owner through a verified private channel. Follow [SECURITY.md](SECURITY.md).
+Use repository issue forms for ordinary bugs and documentation issues. Pull requests are proposals and are governed by [CONTRIBUTING.md](CONTRIBUTING.md) and Apache-2.0. Do not publish credentials, personal data, private research, or exploit details. For suspected vulnerabilities, use [private vulnerability reporting](https://github.com/aetherica/rigor.x/security/advisories/new) if enabled; otherwise contact the owner through a verified private channel. Follow [SECURITY.md](SECURITY.md).
 
 ## Licensing and GitHub platform terms
 
-RIGOR-X is proprietary, source-available software and is **not Open Source**. The root [LICENSE](LICENSE) and [CSL documents](LICENSING.md) describe the intended commercial licensing framework. They do not grant a general commercial-use license merely because the repository is visible.
+RIGOR-X is licensed under the **Apache License, Version 2.0 (SPDX: `Apache-2.0`)**. The root [LICENSE](LICENSE) contains the complete text; [LICENSING.md](LICENSING.md) explains scope and policy; [NOTICE](NOTICE) and [TRADEMARKS.md](TRADEMARKS.md) cover attribution and project identity. The license permits commercial use, modification, and redistribution subject to its conditions. Aetherica's optional paid services are independent of the open-source grant. Third-party components remain governed by their own licenses and terms.
 
-A public GitHub repository is also subject to GitHub's [Terms of Service](https://docs.github.com/en/site-policy/github-terms/github-terms-of-service). Those terms grant platform-level rights to view and fork/reproduce public repository content through GitHub functionality. They also grant GitHub and its affiliates rights to use public content to develop, train, and improve AI/ML models and technologies. The proprietary notice does not cancel those rights. Public forks and copies may persist even if the upstream repository later becomes private. Reviewers should not interpret GitHub access or a fork as a broader license to deploy, sell, sublicense, or commercially exploit RIGOR-X outside the rights provided by applicable terms and law.
-
-Only publish material that the rights holder is authorized to make public. Third-party components remain governed by their own licenses and terms.
+A public GitHub repository is also subject to GitHub's [Terms of Service](https://docs.github.com/en/site-policy/github-terms/github-terms-of-service). Public forks and copies may persist if the upstream repository later becomes private. Only publish material the rights holder is authorized to disclose and license.
 
 ## Known maturity boundaries
 
@@ -59,9 +49,5 @@ Only publish material that the rights holder is authorized to make public. Third
 - A configured external model endpoint is required for live model use.
 - Tool execution requires a real integrating host and registered callbacks; this repository does not automatically connect to ChatGPT's internal plugin runtime.
 - Catalogued commands, domains, formulas, algorithms, topics, and operators are not all implemented as executable handlers.
-- CI status for the exact publication candidate must be checked independently; historical successful runs do not prove that a later commit passed.
+- Exact-head CI, full-history rights/provenance review, third-party license audit, and secret scanning remain separate gates.
 - Production deployment, security certification, service levels, and autonomous-agent readiness are not claimed.
-
-## Review etiquette
-
-Be specific, respectful, evidence-led, and mindful that this is an actively developed system. Avoid posting secrets or sensitive exploit details. The maintainers may close duplicate, out-of-scope, or non-actionable reports with an explanation.
