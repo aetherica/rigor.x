@@ -24,7 +24,7 @@ This checklist separates public source review from a stable release. A review pu
 - [x] Workflow permissions are read-only; third-party actions in active workflows are pinned by immutable commit SHA; CI triggers cover workflow/docs/registry changes.
 - [ ] Configure main branch protection: required CI checks, review policy, prevent force-push/deletion, restrict bypasses.
 - [ ] Confirm public issue/discussion policy and repository settings.
-- [ ] Complete actual secret/history scan using a full clone and appropriate scanners; connector-only review is insufficient.
+- [ ] Record the full-history scan tool, date, scanned refs, and result in the release receipts; connector-only review is insufficient.
 
 ## B. Stable `0.4.0` release gates
 
@@ -54,11 +54,11 @@ This checklist separates public source review from a stable release. A review pu
 
 ## Recommended publication sequence
 
-1. Owner reviews/approves the proprietary CSL (including legal review) and separately approves any public exposure.
+1. Rights holder confirms authority to publish every file and reachable commit, and explicitly accepts GitHub's public-repository terms, including viewing/forking and GitHub/affiliate AI/ML-use rights.
 2. Complete full-history secret/privacy audit and remediate any findings.
-3. Configure branch protection and public CI behavior.
-4. Delete the stale branch ref; verify `main` is the only branch.
+3. Configure branch protection and public issue/security settings.
+4. Review or remove the stale Dependabot ref after scanning all refs; it is not a substitute for history cleanup.
 5. Make repository public through GitHub settings.
-6. Run exact-head CI, then publish the source baseline as a clearly labeled development pre-release—or continue stable release gates and publish `v0.4.0` separately.
+6. Run exact-head CI and publish the source baseline as a clearly labeled development pre-release. Stable `v0.4.0` remains a separate release decision.
 
 **Do not represent this repository as a stable, production-ready autonomous AI system.** It is a development control-plane/runtime increment with host-integration and registry gaps.
