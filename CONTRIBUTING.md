@@ -4,7 +4,7 @@ Thank you for helping improve RIGOR-X.
 
 ## Before contributing
 
-- Read the README and public-release checklist.
+- Read the README, licensing policy, and security guidance.
 - Check existing issues and discussions to avoid duplicate work.
 - For security vulnerabilities, follow [SECURITY.md](SECURITY.md); do not disclose them in public issues.
 - Keep changes evidence-based. Do not represent planned, heuristic, partial, or host-dependent behavior as verified functionality.
@@ -30,9 +30,17 @@ python -m build
 - Do not introduce fake providers, placeholder handlers, or unsupported integration claims.
 - Do not add branches, workflow permissions, secrets, release credentials, or deployment actions without explicit project-owner authorization.
 
-## Pull requests
+## Pull requests and contributions
 
-External reviewers may use GitHub's fork and pull-request workflow to demonstrate proposed changes. A pull request is a proposal, not acceptance or authorization to incorporate third-party intellectual property. Before any external code contribution is accepted or merged, the rights holder must confirm the contributor's authority and put any required contribution license or assignment terms in a separate written agreement. Describe the problem, solution, tests run, limitations, and compatibility impact. The canonical repository's `main` branch remains the release source of truth.
+- Contributions are accepted under the Apache License 2.0, subject to Section 5 of that license.
+- By intentionally submitting a contribution for inclusion, you agree that the contribution is offered under Apache-2.0 unless you clearly state otherwise in writing or a separate signed agreement applies.
+- You retain copyright ownership of your contributions; no copyright assignment is implied.
+- You must have the rights necessary to submit the contribution and must identify third-party code, data, or other material and its applicable license.
+- Do not submit material under terms that conflict with Apache-2.0 unless maintainers have approved the arrangement in writing before submission.
+- A pull request is a proposal and may be reviewed, revised, or declined. Acceptance does not imply employment, agency, endorsement, or a promise of support.
+- A separate Contributor License Agreement is not currently required. Any future contribution-policy change will be announced prospectively.
+
+Describe the problem, solution, tests run, limitations, and compatibility impact.
 
 ## Coding and validation
 
@@ -42,8 +50,6 @@ External reviewers may use GitHub's fork and pull-request workflow to demonstrat
 - Keep workflow permissions minimal and pin third-party GitHub Actions to immutable commit SHAs.
 - Explain test gaps or environment-specific failures honestly.
 
-## License and contributions
+## License
 
-RIGOR-X is proprietary, source-available commercial software and is not offered under an open-source license. The repository [LICENSE](LICENSE) notice and [commercial licensing documents](LICENSING.md) describe the rights framework. Repository visibility does not grant permission to reuse or commercially deploy the software.
-
-Submitting a contribution does not automatically transfer ownership or grant commercial rights. Contribution ownership, licensing, and any assignment or contributor agreement must be addressed in a separate written agreement with the rights holder before a contribution is accepted where such an agreement is required. Contributors must have the rights necessary to submit their contributions and must not include third-party material without compatible permissions.
+RIGOR-X is licensed under the Apache License, Version 2.0. See [LICENSE](LICENSE), [LICENSING.md](LICENSING.md), and [NOTICE](NOTICE). Project names and marks are addressed separately in [TRADEMARKS.md](TRADEMARKS.md).
