@@ -1,6 +1,6 @@
 # WS19 — Reasoning Monitor, Controller & Adaptive Mechanism Selection
 
-**Status:** Experimental implementation; CI verification pending. **Branch:** main, no branch created.
+**Status:** Experimental implementation; CI verified. **Branch:** main, no branch created.
 
 ## Pre-algorithm review
 Reviewed the WS16 guard, WS17 engineering standards, WS18 taxonomy, cognitive architecture, reasoning-control specification, and experiment plan. The current normalized-repeat guard is reused, not reimplemented. WS19 does not claim model-hidden-state access or pipeline integration.
