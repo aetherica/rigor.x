@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import io
 import json
+import tempfile
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
+from pathlib import Path
 from unittest.mock import patch
 
 from rigorx.agent_runtime import ModelTurn
@@ -19,30 +21,28 @@ class AgentCliTests(unittest.TestCase):
         self.assertEqual(code, 2)
         self.assertIn("RIGORX_MODEL_BASE_URL", out.getvalue())
 
-    def test_cli_calls_backend_and_prints_response(self):
-        with (
-            patch.dict("os.environ", {"RIGORX_MODEL_BASE_URL": "https://example.test/v1", "RIGORX_MODEL_NAME": "unit"}, clear=True),
-            patch("rigorx.model_backend.OpenAICompatibleBackend.generate", return_value=ModelTurn(text="Test answer")),
-        ):
+    def test_cli_runs_pipeline_and_persists(self):
+        with tempfile.TemporaryDirectory() as tmp, patch.dict("os.environ", {"RIGORX_MODEL_BASE_URL": "https://example.test/v1", "RIGORX_MODEL_NAME": "unit"}, clear=True), patch("rigorx.model_backend.OpenAICompatibleBackend.generate", return_value=ModelTurn(text="Test answer")):
+            database = str(Path(tmp) / "runs.sqlite")
             out = io.StringIO()
             with redirect_stdout(out):
-                code = main(["question"])
+                code = main(["--database", database, "--run-id", "cli-run", "question"])
         self.assertEqual(code, 0)
         self.assertIn("Test answer", out.getvalue())
-        self.assertIn("COMPLETED", out.getvalue())
+        self.assertIn("verified=True", out.getvalue())
+        self.assertTrue(Path(database).exists())
 
-    def test_json_mode_returns_receipt_structure(self):
-        with (
-            patch.dict("os.environ", {"RIGORX_MODEL_BASE_URL": "https://example.test/v1", "RIGORX_MODEL_NAME": "unit"}, clear=True),
-            patch("rigorx.model_backend.OpenAICompatibleBackend.generate", return_value=ModelTurn(text="Answer")),
-        ):
+    def test_json_mode_returns_pipeline_and_agent_receipt(self):
+        with tempfile.TemporaryDirectory() as tmp, patch.dict("os.environ", {"RIGORX_MODEL_BASE_URL": "https://example.test/v1", "RIGORX_MODEL_NAME": "unit"}, clear=True), patch("rigorx.model_backend.OpenAICompatibleBackend.generate", return_value=ModelTurn(text="Answer")):
             out = io.StringIO()
             with redirect_stdout(out):
-                code = main(["--json", "question"])
+                code = main(["--json", "--database", str(Path(tmp) / "db.sqlite"), "question"])
         payload = json.loads(out.getvalue())
         self.assertEqual(code, 0)
-        self.assertEqual(payload["status"], "COMPLETED")
-        self.assertEqual(payload["response"], "Answer")
+        self.assertTrue(payload["verified"])
+        self.assertEqual(payload["pipeline_status"], "COMPLETED")
+        self.assertEqual(payload["agent_result"]["response"], "Answer")
+        self.assertEqual(len(payload["artifacts"]), 11)
 
 
 if __name__ == "__main__":
