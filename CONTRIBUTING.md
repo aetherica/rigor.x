@@ -42,6 +42,8 @@ External contributors should use a fork and submit a pull request to `main`. Des
 - Keep workflow permissions minimal and pin third-party GitHub Actions to immutable commit SHAs.
 - Explain test gaps or environment-specific failures honestly.
 
-## License
+## License and contributions
 
-No open-source license has yet been selected. Until a LICENSE file is added, contributions and reuse are subject to applicable copyright law; publication alone does not grant permission to reuse the code.
+RIGOR-X is proprietary, source-available commercial software and is not offered under an open-source license. The repository [LICENSE](LICENSE) notice and [commercial licensing documents](LICENSING.md) describe the rights framework. Repository visibility does not grant permission to reuse or commercially deploy the software.
+
+Submitting a contribution does not automatically transfer ownership or grant commercial rights. Contribution ownership, licensing, and any assignment or contributor agreement must be addressed in a separate written agreement with the rights holder before a contribution is accepted where such an agreement is required. Contributors must have the rights necessary to submit their contributions and must not include third-party material without compatible permissions.
