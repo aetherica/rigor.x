@@ -5,10 +5,12 @@ then plays the role of a host AI: lists tools, runs one task through every
 stage, records evidence, passes the verification gate and completes the run.
 
 Usage (from the repository root, after `pip install -e '.[mcp]'`):
-    python examples/mcp_smoke.py
+    python examples/mcp_smoke.py                                  # local stdio server
+    python examples/mcp_smoke.py --url https://<worker>/mcp --token <token>   # deployed server
 """
 from __future__ import annotations
 
+import argparse
 import asyncio
 import os
 import sys
@@ -32,20 +34,30 @@ def show(label: str, result) -> dict:
     return data
 
 
-async def main() -> None:
+def _target(options: argparse.Namespace, tmp: str):
+    if options.url:
+        import httpx2
+        from mcp.client.streamable_http import streamable_http_client
+
+        headers = {"Authorization": f"Bearer {options.token}"} if options.token else {}
+        return streamable_http_client(options.url, http_client=httpx2.AsyncClient(headers=headers, timeout=60))
+    args = ["-m", "rigorx.mcp_server", "--database", str(Path(tmp) / "smoke.sqlite")]
+    if CATALOG.exists():
+        args += ["--catalog", str(CATALOG)]
+    # Make `rigorx` importable in the subprocess even without `pip install -e`.
+    env = {**os.environ, "PYTHONPATH": os.pathsep.join(filter(None, [str(ROOT / "src"), os.environ.get("PYTHONPATH")]))}
+    return StdioServerParameters(command=sys.executable, args=args, env=env)
+
+
+async def main(options: argparse.Namespace) -> None:
     with tempfile.TemporaryDirectory() as tmp:
-        args = ["-m", "rigorx.mcp_server", "--database", str(Path(tmp) / "smoke.sqlite")]
-        if CATALOG.exists():
-            args += ["--catalog", str(CATALOG)]
-        # Make `rigorx` importable in the subprocess even without `pip install -e`.
-        env = {**os.environ, "PYTHONPATH": os.pathsep.join(filter(None, [str(ROOT / "src"), os.environ.get("PYTHONPATH")]))}
-        async with Client(StdioServerParameters(command=sys.executable, args=args, env=env)) as client:
+        async with Client(_target(options, tmp)) as client:
             tools = (await client.list_tools()).tools
             print(f"Server tools ({len(tools)}): {', '.join(t.name for t in tools)}\n")
 
             route = show("route", await client.call_tool("rigorx_route", {"task": "What is gravity?"}))
             print(f"    intent={route['profile']['intent']} level={route['profile']['level']}")
-            if CATALOG.exists():
+            if CATALOG.exists() or options.url:
                 resolved = show("resolve /eli5", await client.call_tool("rigorx_resolve_commands", {"text": "/eli5 explain gravity"}))
                 print(f"    {resolved['applied_modifiers']}")
 
@@ -71,4 +83,7 @@ async def main() -> None:
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("--url", help="Streamable HTTP endpoint of a running server (default: start a local stdio server)")
+    parser.add_argument("--token", help="Bearer token for the server, if it requires one")
+    asyncio.run(main(parser.parse_args()))

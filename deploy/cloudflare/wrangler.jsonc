@@ -1,0 +1,31 @@
+{
+	// RIGOR-X MCP server on Cloudflare (WS31 phase P3 spike).
+	// Run `python3 sync_engine.py` before `pywrangler dev` / `pywrangler deploy` (the npm scripts do this).
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "rigorx-mcp",
+	"main": "src/entry.py",
+	"compatibility_date": "2026-09-07",
+	"compatibility_flags": [
+		"python_workers",
+		"python_workers_314"
+	],
+	"durable_objects": {
+		"bindings": [
+			{
+				"name": "OWNER_RUNS",
+				"class_name": "OwnerRuns"
+			}
+		]
+	},
+	"migrations": [
+		{
+			"tag": "v1",
+			"new_sqlite_classes": [
+				"OwnerRuns"
+			]
+		}
+	],
+	"observability": {
+		"enabled": true
+	}
+}

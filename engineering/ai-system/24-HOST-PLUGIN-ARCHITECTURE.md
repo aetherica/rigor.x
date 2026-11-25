@@ -1,7 +1,7 @@
 # WS31 — Host Plugin Architecture (RIGOR-X as an MCP engine)
 
 **Document ID:** RX-PLUGIN-001
-**Status:** DRAFT — for owner review. Phases P1 and P2 implemented (see section 14); everything else is not yet implemented
+**Status:** DRAFT — for owner review. Phases P1 and P2 implemented; P3 spike code written, not yet deployed (see section 14); everything else is not yet implemented
 **Canonical branch:** `main`
 **Last updated:** 2026-11-25
 
@@ -122,8 +122,8 @@ Rationale:
 
 | Risk | Why it matters | How to retire it |
 |---|---|---|
-| Official MCP SDK v2 inside Python Workers | Python Workers became generally available recently (reported September 2026); compatibility with SDK v2 is not yet confirmed by us | Deploy a one-tool server and connect it from Claude and MCP Inspector |
-| Durable Object SQL storage from Python | `SQLitePipelineStore` uses the standard `sqlite3` module, which is not the Durable Object storage API | Implement the `RunStore` adapter against the Durable Object API in the spike |
+| Official MCP SDK v2 inside Python Workers | Cloudflare's own example (`cloudflare/python-workers-examples/mcp-server`, checked 2026-11-25) runs `mcp==2.2.0` on Python Workers with stateless `2026-07-28` and the `python_workers_314` flag. Python Workers status: a news report says generally available (September 2026); the examples README still says open beta. Not yet confirmed by us on Cloudflare | Deploy a one-tool server and connect it from Claude and MCP Inspector |
+| Durable Object SQL storage from Python | `SQLitePipelineStore` uses the standard `sqlite3` module, which is not the Durable Object storage API | `DurableObjectRunStore` implemented against `ctx.storage.sql.exec` (P3); cursor conversion on the real runtime still to be confirmed |
 | Owner ID across the service binding | Worker B must trust only Worker A | Service binding only; Worker B has no public route; reject requests without the internal marker |
 | Endpoint latency | Claude allows 10 s for discovery, registration and token endpoints | Measure cold starts in the spike |
 
@@ -186,6 +186,15 @@ Rationale:
 - Tests: `tests/test_mcp_server.py` (7, skipped when the SDK is absent) via the SDK's in-process client. Manual smoke tests on 2026-11-25 against SDK v2.3.0 source on Python 3.13: a real stdio subprocess (12 tools, run start, slash-command resolution with the 999-entry catalogue) and Streamable HTTP on 127.0.0.1.
 - CI runs the suite on Python 3.13 and 3.15 twice: without the SDK (core) and with `[mcp]` installed.
 - Not done yet: ChatGPT per-tool `securitySchemes`, the `401` + `resource_metadata` challenge for lazy sign-in (both P4).
+
+**P3 — SPIKE CODE WRITTEN (2026-11-25), not yet deployed.**
+- Design change from section 8: Worker A (OAuth, TypeScript) is still planned for P4, but in P3 the Python Worker serves MCP directly. The engine runs **inside each owner's Durable Object**, where SQL calls are synchronous, so `HostEngine` is unchanged. The Worker forwards run operations to the owner's Durable Object; stateless tools run in the Worker.
+- `src/rigorx/do_store.py`: `DurableObjectRunStore` (same guarantees as `SQLiteRunStore`). `src/rigorx/engine_rpc.py`: `dispatch` (Durable Object side, allow-listed operations, JSON envelopes with stable error codes) and `RemoteEngine` (Worker side). MCP tools are now `async` and accept a synchronous or asynchronous engine.
+- `run_store.py` imports `sqlite3` lazily so the bundle loads on runtimes without it.
+- `deploy/cloudflare/`: `wrangler.jsonc` (Durable Object `OwnerRuns`, SQLite migration, `python_workers` + `python_workers_314`), `pyproject.toml` (`mcp==2.3.0`), `sync_engine.py` (copies only the plugin-path modules and the catalogue into the bundle), `src/entry.py`, deploy README.
+- Spike authentication: one shared bearer token (Worker secret `RIGORX_SPIKE_TOKEN`) → one development owner; wrong token → `401`; no token → stateless tools only.
+- Verified locally: 9 tests in `tests/test_cloudflare_layers.py` (store over a sqlite3 stand-in for Durable Object SQL, RPC round trip and error codes, MCP server with an async engine, bundle import without `sqlite3`). `entry.py` run under uvicorn with stand-ins for the Workers API, driven by `examples/mcp_smoke.py --url --token`: full run to COMPLETED; `401` for a wrong token; `AUTH_REQUIRED` for run tools without a token.
+- Not verified: the Cloudflare runtime itself. Deployment requires the owner's Cloudflare account (`deploy/cloudflare/README.md`).
 
 Local use with Claude Desktop (`claude_desktop_config.json`):
 ```json

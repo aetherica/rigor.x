@@ -1,0 +1,16 @@
+[project]
+name = "rigorx-mcp-worker"
+version = "0.0.0"
+description = "RIGOR-X MCP server on Cloudflare Python Workers (WS31 phase P3 spike)"
+requires-python = ">=3.14"
+dependencies = [
+    # Same release the repository's MCP adapter is tested against.
+    # Cloudflare's own Python MCP example pins 2.2.0; fall back to it if 2.3.0 does not bundle.
+    "mcp==2.3.0",
+]
+
+[dependency-groups]
+dev = [
+    "workers-py",
+    "workers-runtime-sdk",
+]

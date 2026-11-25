@@ -13,10 +13,11 @@ from __future__ import annotations
 
 import argparse
 import getpass
+import inspect
 import ipaddress
 import os
 import sys
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from hashlib import sha256
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -51,12 +52,16 @@ def token_owner() -> str | None:
 
 
 def build_server(
-    engine: HostEngine,
+    engine: HostEngine | Any,
     *,
     owner_resolver: OwnerResolver | None = None,
     local_owner: str | None = None,
 ) -> MCPServer:
-    """Create the MCP server. Tools are registered in a fixed order."""
+    """Create the MCP server. Tools are registered in a fixed order.
+
+    ``engine`` is a ``HostEngine`` or any object with the same methods, which may
+    be coroutines (for example ``engine_rpc.RemoteEngine`` on Cloudflare).
+    """
     from mcp.server import MCPServer
     from mcp.server.mcpserver.exceptions import ToolError
     from mcp_types import ToolAnnotations
@@ -85,71 +90,74 @@ def build_server(
             raise ToolError("AUTH_REQUIRED: sign in to use this tool")
         return value
 
-    def call(operation: Callable[[], dict[str, Any]]) -> dict[str, Any]:
+    async def call(operation: Callable[[], dict[str, Any] | Awaitable[dict[str, Any]]]) -> dict[str, Any]:
         try:
-            return operation()
+            result = operation()
+            if inspect.isawaitable(result):
+                result = await result
+            return result
         except EngineError as exc:
             raise ToolError(f"{exc.code}: {exc}") from None
 
     @server.tool(name="rigorx_route", title="Suggest analysis route", annotations=read_only)
-    def rigorx_route(task: str) -> dict[str, Any]:
+    async def rigorx_route(task: str) -> dict[str, Any]:
         """Suggest intent, intensity level (L01-L06), analysis modes and methods for a task. Heuristic; stores nothing."""
-        return call(lambda: engine.route(task))
+        return await call(lambda: engine.route(task))
 
     @server.tool(name="rigorx_resolve_commands", title="Resolve slash commands", annotations=read_only)
-    def rigorx_resolve_commands(text: str) -> dict[str, Any]:
+    async def rigorx_resolve_commands(text: str) -> dict[str, Any]:
         """Resolve leading slash commands in text against the RIGOR-X catalogue. Stores nothing."""
-        return call(lambda: engine.resolve_commands(text))
+        return await call(lambda: engine.resolve_commands(text))
 
     @server.tool(name="rigorx_start_run", title="Start a RIGOR-X run", annotations=additive)
-    def rigorx_start_run(task: str) -> dict[str, Any]:
+    async def rigorx_start_run(task: str) -> dict[str, Any]:
         """Start a run for a task. Returns run_id, the first stage and what it requires. The task text is stored only as a digest."""
-        return call(lambda: engine.start_run(owner(), task))
+        return await call(lambda: engine.start_run(owner(), task))
 
     @server.tool(name="rigorx_get_run", title="Get run state", annotations=read_only)
-    def rigorx_get_run(run_id: str) -> dict[str, Any]:
+    async def rigorx_get_run(run_id: str) -> dict[str, Any]:
         """Current stage, stage statuses, guidance, evidence count, reported actions and re-entry budget."""
-        return call(lambda: engine.get_run(owner(), run_id))
+        return await call(lambda: engine.get_run(owner(), run_id))
 
     @server.tool(name="rigorx_submit_stage", title="Submit stage result", annotations=additive)
-    def rigorx_submit_stage(run_id: str, stage: str, outcome: str, summary: str, reason: str | None = None) -> dict[str, Any]:
+    async def rigorx_submit_stage(run_id: str, stage: str, outcome: str, summary: str, reason: str | None = None) -> dict[str, Any]:
         """Submit the result of the current stage. outcome: completed, partial, blocked or skipped (partial, blocked and skipped need a reason). VERIFICATION is passed only with rigorx_verify."""
-        return call(lambda: engine.submit_stage(owner(), run_id, stage=stage, outcome=outcome, summary=summary, reason=reason))
+        return await call(lambda: engine.submit_stage(owner(), run_id, stage=stage, outcome=outcome, summary=summary, reason=reason))
 
     @server.tool(name="rigorx_record_evidence", title="Record evidence", annotations=additive)
-    def rigorx_record_evidence(run_id: str, source_ref: str, claim: str, evidence_type: str = "SOURCE") -> dict[str, Any]:
+    async def rigorx_record_evidence(run_id: str, source_ref: str, claim: str, evidence_type: str = "SOURCE") -> dict[str, Any]:
         """Record a source (URL, document ID, receipt) and the claim it supports. Returns an evidence_id (ev-N) to cite in rigorx_verify."""
-        return call(lambda: engine.record_evidence(owner(), run_id, source_ref=source_ref, claim=claim, evidence_type=evidence_type))
+        return await call(lambda: engine.record_evidence(owner(), run_id, source_ref=source_ref, claim=claim, evidence_type=evidence_type))
 
     @server.tool(name="rigorx_report_action", title="Report a host action", annotations=additive)
-    def rigorx_report_action(
+    async def rigorx_report_action(
         run_id: str, tool_name: str, status: str, receipt_ref: str | None = None, resolves: str | None = None
     ) -> dict[str, Any]:
         """Report an action you performed with another tool. status: EXECUTED, FAILED or BLOCKED. Use resolves=<ev-N> when a later action fixes an earlier failure. Recorded as host-reported, not verified."""
-        return call(lambda: engine.report_action(owner(), run_id, tool_name=tool_name, status=status, receipt_ref=receipt_ref, resolves=resolves))
+        return await call(lambda: engine.report_action(owner(), run_id, tool_name=tool_name, status=status, receipt_ref=receipt_ref, resolves=resolves))
 
     @server.tool(name="rigorx_verify", title="Run verification gate", annotations=additive)
-    def rigorx_verify(run_id: str, criteria: list[dict[str, Any]]) -> dict[str, Any]:
+    async def rigorx_verify(run_id: str, criteria: list[dict[str, Any]]) -> dict[str, Any]:
         """Run the deterministic gate. criteria: list of {criterion, passed, evidence_ids}; every passed criterion must cite evidence IDs. Result is 'structurally verified' at most, never a truth guarantee."""
-        return call(lambda: engine.verify(owner(), run_id, criteria=criteria))
+        return await call(lambda: engine.verify(owner(), run_id, criteria=criteria))
 
     @server.tool(name="rigorx_reenter", title="Return to an earlier stage", annotations=additive)
-    def rigorx_reenter(run_id: str, target_stage: str, trigger: str, reason: str) -> dict[str, Any]:
+    async def rigorx_reenter(run_id: str, target_stage: str, trigger: str, reason: str) -> dict[str, Any]:
         """Return to the current or an earlier stage within the re-entry budget, for example after a failed verification."""
-        return call(lambda: engine.reenter(owner(), run_id, target_stage=target_stage, trigger=trigger, reason=reason))
+        return await call(lambda: engine.reenter(owner(), run_id, target_stage=target_stage, trigger=trigger, reason=reason))
 
     @server.tool(name="rigorx_cancel_run", title="Cancel run", annotations=destructive)
-    def rigorx_cancel_run(run_id: str, reason: str) -> dict[str, Any]:
+    async def rigorx_cancel_run(run_id: str, reason: str) -> dict[str, Any]:
         """Cancel one of your runs. A cancelled run cannot be resumed."""
-        return call(lambda: engine.cancel_run(owner(), run_id, reason=reason))
+        return await call(lambda: engine.cancel_run(owner(), run_id, reason=reason))
 
     @server.tool(name="rigorx_delete_run", title="Delete run data", annotations=destructive)
-    def rigorx_delete_run(run_id: str) -> dict[str, Any]:
+    async def rigorx_delete_run(run_id: str) -> dict[str, Any]:
         """Permanently delete one of your runs and its ledger."""
-        return call(lambda: engine.delete_run(owner(), run_id))
+        return await call(lambda: engine.delete_run(owner(), run_id))
 
     @server.tool(name="rigorx_profile", title="Account profile", annotations=read_only, meta={"openai/profile": True})
-    def rigorx_profile() -> dict[str, Any]:
+    async def rigorx_profile() -> dict[str, Any]:
         """Stable, opaque identifier of the signed-in account."""
         return {"id": sha256(owner().encode("utf-8")).hexdigest()[:32]}
 

@@ -14,7 +14,6 @@ from __future__ import annotations
 
 import json
 import os
-import sqlite3
 import threading
 from collections.abc import Iterator, Mapping
 from contextlib import contextmanager
@@ -80,6 +79,8 @@ class SQLiteRunStore:
             Path(self.database_path).expanduser().resolve().parent.mkdir(parents=True, exist_ok=True)
         # One connection shared across threads (MCP SDK runs sync handlers on worker
         # threads); every use is serialized by ``self._lock``.
+        import sqlite3  # imported here so the module also loads where sqlite3 is absent
+
         self._lock = threading.RLock()
         self._db = sqlite3.connect(
             self.database_path, timeout=busy_timeout_ms / 1000, isolation_level=None, check_same_thread=False

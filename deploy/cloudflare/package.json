@@ -1,0 +1,13 @@
+{
+	"name": "rigorx-mcp-worker",
+	"version": "0.0.0",
+	"private": true,
+	"scripts": {
+		"sync": "python3 sync_engine.py",
+		"dev": "python3 sync_engine.py && uv run pywrangler dev",
+		"deploy": "python3 sync_engine.py && uv run pywrangler deploy"
+	},
+	"devDependencies": {
+		"wrangler": "^4.114.0"
+	}
+}
