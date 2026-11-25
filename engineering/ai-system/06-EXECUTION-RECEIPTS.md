@@ -108,3 +108,10 @@
 - Validates 999 records, IDs, names and aliases; canonical names take precedence over overlapping alias tokens.
 - MACRO/MACRO ALIAS descriptions become user-level modifiers; native/UI/image-keyword commands are preserved but not falsely executed.
 - Exact-head CI [run #45573800515 — SUCCESS](https://github.com/aetherica/rigor.x/actions/runs/45573800515), commit `44be55736f8eb7eb70de201c34d2256e1d7da3ba`: Ruff PASS, 106 tests PASS on Python 3.13 and 3.15, CLI smoke PASS.
+
+
+## WS23 — Adaptive Intent/Intensity Router
+- `src/rigorx/adaptive_router.py`: intent, methods, risk/complexity signals and six adaptive levels; transparent profile receipt and explicit override.
+- Integrated into AgentRuntime and CLI `--level`.
+- Exact-head CI [run #45574552128 — SUCCESS](https://github.com/aetherica/rigor.x/actions/runs/45574552128), commit `3103d1fe656fa5eb2e26b098217b3e85da1e5542`: Ruff PASS; **117 tests PASS** on Python 3.13 and 3.15; package CLI smoke PASS.
+- Limit: deterministic signal-based heuristic; not validated as a semantic model router. 36-domain activation is not yet integrated.

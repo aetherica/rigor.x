@@ -9,6 +9,7 @@
 - [Canonical Engineering Baseline](14-CANONICAL-ENGINEERING-BASELINE.md)
 - [WS21 Live Agent Runtime](15-LIVE-AGENT-RUNTIME.md)
 - [WS22 Slash Command Resolver](16-SLASH-COMMAND-RESOLVER.md)
+- [WS23 Adaptive Router](17-ADAPTIVE-ROUTING.md)
 - [Standards applicability](01-REFERENCE-STANDARDS.md)
 - [Architecture](02-SYSTEM-ARCHITECTURE.md)
 - [Threat model](03-THREAT-MODEL.md)

@@ -66,3 +66,10 @@ Limit: synchronous callback cancellation/timeout must be provided by the connect
 ## WS22 — Slash-command catalog and modifier integration
 
 Implemented `src/rigorx/slash_commands.py` and integrated into `AgentRuntime`. The 999 corpus is loaded and structurally checked; canonical names resolve, aliases map without overriding canonical command names, macro classifications are transformed into user-level prompt modifiers, unknown tokens are preserved, and native/UI/image entries are passed through with an explicit non-execution notice. No command description is treated as executable code. CI exact-head: run #45573800515, both Python 3.13 and 3.15, Ruff PASS and 106 tests PASS.
+
+
+## WS23 — Adaptive Intent/Intensity Router
+
+`src/rigorx/adaptive_router.py` selects intent and methods using deterministic text signals and risk/complexity cues. It supports L01 BASIC through L06 HYPER RIGOROUS, explicit user overrides, transparent signal records and a serialized AdaptiveProfile. AgentRuntime injects this profile into the request as a heuristic route, not an immutable truth. CLI supports `--level`. Exact-head CI run #45574552128: Python 3.13/3.15, Ruff PASS, 117 tests PASS, package CLI smoke PASS.
+
+Known limit: this is a deterministic heuristic baseline, not a semantic classifier or all-36-domain activation system. Domain registry activation and evaluation against real task datasets remain future work.
