@@ -20,7 +20,8 @@
 | WS-16 | Reasoning-control guard (first increment) | Control-plane contracts | bounded repeats/stall/budget, validation, tests + CI | VERIFIED (not pipeline-integrated) |
 | WS-17 | World-class standards and execution plan | Repository baseline | standards applicability, risk and execution gates documented | DOCUMENTED |
 | WS-18 | Canonical FG inventory + candidate taxonomy crosswalk | 18 FG design + 18 candidate library groups | IDs/counts/coverage/refs validated; regression tests + CI | VERIFIED (category-level; not command activation) |
-| WS-19 | Reasoning monitor/controller + adaptive mechanism selector | WS16 guard + reasoning-control specification | Bounded controller, typed profiles/receipts, advisory lexical signal, tests + benchmark + CI | CORRECTIVE IMPLEMENTATION COMPLETE; CI PENDING |
+| WS-19 | Reasoning monitor/controller + adaptive mechanism selector | WS16 guard + reasoning-control specification | Bounded controller, typed profiles/receipts, advisory lexical signal, tests + benchmark + CI | VERIFIED (exact-head CI) |
+| WS-20 | Operational command execution framework | Command contract + permission/capability model | Typed registry, fail-closed dispatcher, approval/capability checks, redacted receipts, tests + CI | IMPLEMENTED; CI PENDING |
 
 ## Dependency order
 
@@ -47,3 +48,7 @@ Implemented and corrective-hardened `src/rigorx/reasoning_controller.py`: candid
 
 ## WS18 acceptance status
 Canonical FG IDs/names were saved separately from the candidate slash-library taxonomy. A many-to-many category crosswalk was added with explicit non-activation status. Validator and four regression tests passed in [GitHub Actions run #45518939024](https://github.com/aetherica/rigor.x/actions/runs/45518939024), commit `608e249eb4044aa369d8db58fea10256d6ef944f`. Per-entry mapping and command activation remain out of scope.
+
+## WS20 implementation status
+
+Implemented in `src/rigorx/command_runtime.py`: typed command definition/registry, duplicate rejection, ID/name resolution, execution state guard, capability gating, explicit approval gating, optional input contract, JSON-safe input/output checks, and redacted failure receipts. Eight unit tests added. This is a framework increment, not activation or handler implementation for the 999 entries. Exact-head CI is pending.
