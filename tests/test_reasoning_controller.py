@@ -55,13 +55,20 @@ class ControllerTests(unittest.TestCase):
         self.assertEqual(c.observe("repeat").action,ControllerAction.CONTINUE)
         self.assertEqual(c.observe("repeat").action,ControllerAction.DIVERSIFY)
         self.assertEqual(c.observe("repeat").action,ControllerAction.STOP_LOOP_SIGNAL)
+    def test_semantic_detector_disabled_by_default(self):
+        c=ReasoningController(max_steps=8,repeat_limit=8)
+        c.observe("alpha beta gamma delta epsilon zeta")
+        receipt=c.observe("alpha beta gamma delta epsilon zeta modified")
+        self.assertEqual(receipt.action,ControllerAction.CONTINUE)
+        self.assertIsNone(receipt.semantic_signal)
+
     def test_first_semantic_signal_diversifies(self):
-        c=ReasoningController(max_steps=20,repeat_limit=5,semantic_threshold=.8,recovery_budget=1)
+        c=ReasoningController(max_steps=20,repeat_limit=5,semantic_threshold=.8,recovery_budget=1,semantic_enabled=True)
         c.observe("reasoning state contains enough tokens for comparison")
         r=c.observe("reasoning state contains enough tokens for comparison changed")
         self.assertEqual(r.action,ControllerAction.DIVERSIFY); self.assertEqual(r.recovery_attempts,1)
     def test_recovery_budget_exhaustion(self):
-        c=ReasoningController(max_steps=20,repeat_limit=5,semantic_threshold=.65,recovery_budget=1)
+        c=ReasoningController(max_steps=20,repeat_limit=5,semantic_threshold=.65,recovery_budget=1,semantic_enabled=True)
         c.observe("alpha beta gamma delta epsilon zeta eta theta")
         self.assertEqual(c.observe("alpha beta gamma delta epsilon zeta eta theta changed").action,ControllerAction.DIVERSIFY)
         self.assertEqual(c.observe("alpha beta gamma delta epsilon zeta eta theta changed again").action,ControllerAction.STOP_LOOP_SIGNAL)
@@ -78,7 +85,7 @@ class ControllerTests(unittest.TestCase):
         self.assertEqual(stopped.step,1)
 
     def test_reset_episode_clears_monitor_and_budget(self):
-        c=ReasoningController(max_steps=20,repeat_limit=5,semantic_threshold=.6,recovery_budget=1)
+        c=ReasoningController(max_steps=20,repeat_limit=5,semantic_threshold=.6,recovery_budget=1,semantic_enabled=True)
         c.observe("a b c d e f g h")
         triggered=c.observe("a b c d e f g h modified")
         self.assertEqual(triggered.recovery_attempts,1)
