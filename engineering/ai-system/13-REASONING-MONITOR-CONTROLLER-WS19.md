@@ -32,6 +32,7 @@ A controller stop is a control-plane receipt, not proof of model-level terminati
 - `reset_episode()` resets exact-repeat, progress, semantic-history and recovery-budget state together; the previous budget-only reset API was removed.
 - Input validation rejects bool/non-integer limits, invalid profile types and malformed capability sets.
 - Semantic monitor uses an absolute 1-based prior-step reference rather than a sliding-window array index.
+- Semantic signal generation is off by default; experimental tests opt in explicitly.
 - Capability absence cannot silently produce an unconfirmed fallback plan.
 
 ## Test/benchmark result (baseline fixture; corrective CI pending)
