@@ -1,5 +1,7 @@
 """Tiny fixture benchmark for lexical overlap; not generalization evidence."""
 from rigorx.reasoning_controller import SemanticLoopMonitor
+
+
 CASES=(
 ("loop","We need more evidence from the primary source before the claim is accepted.","We need more evidence from the primary source before the claim is accepted today."),
 ("loop","Repeat the same source check and confirm the date again.","Repeat the same source check and confirm the date again now."),

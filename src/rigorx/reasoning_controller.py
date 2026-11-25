@@ -1,10 +1,12 @@
 """Experimental bounded reasoning controller and mechanism selector (control-plane only)."""
 from __future__ import annotations
+
 import math
 import re
 from collections import deque
 from dataclasses import dataclass
 from enum import StrEnum
+
 from .reasoning_guard import GuardAction, GuardDecision, ReasoningGuard
 
 class TaskKind(StrEnum):
