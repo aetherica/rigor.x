@@ -41,10 +41,11 @@ class CommandResolution:
 
 class SlashCommandCatalog:
     def __init__(self, entries: list[Mapping[str, Any]], *, expected_count: int = 999) -> None:
+        if isinstance(expected_count, bool) or not isinstance(expected_count, int) or expected_count < 1:
+            raise SlashCatalogError("expected_count must be a positive integer")
         if len(entries) != expected_count:
             raise SlashCatalogError(f"Expected {expected_count} command records, received {len(entries)}")
         records: dict[str, SlashCommand] = {}
-        alias_map: dict[str, str] = {}
         ids: set[str] = set()
         for row in entries:
             try:
@@ -68,15 +69,21 @@ class SlashCommandCatalog:
                 raise SlashCatalogError(f"Missing description/group: {command.command_id}")
             if command.command_id in ids:
                 raise SlashCatalogError(f"Duplicate command ID: {command.command_id}")
+            if command.name in records:
+                raise SlashCatalogError(f"Duplicate slash command: {command.name}")
             ids.add(command.command_id)
-            if command.name in records or command.name in alias_map:
-                raise SlashCatalogError(f"Duplicate slash command or alias: {command.name}")
             records[command.name] = command
+
+        alias_map: dict[str, str] = {}
+        for command in records.values():
             for alias in command.aliases:
                 if not re.fullmatch(r"/?[a-z0-9][a-z0-9_.;:-]*", alias):
                     raise SlashCatalogError(f"Invalid alias {alias!r} for {command.name}")
                 normalized = alias if alias.startswith("/") else f"/{alias}"
-                if normalized in records or normalized in alias_map:
+                # Canonical commands take precedence over overlapping aliases.
+                if normalized in records:
+                    continue
+                if normalized in alias_map and alias_map[normalized] != command.name:
                     raise SlashCatalogError(f"Alias collision: {normalized}")
                 alias_map[normalized] = command.name
         self._records = records
