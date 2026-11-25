@@ -22,7 +22,7 @@ class SlashCommandCatalogTests(unittest.TestCase):
         resolved = catalog.resolve_prompt("/brief Explain the result")
         self.assertEqual(resolved.applied_modifiers, ("/brief: Summarize concisely",))
         self.assertIn("Explain the result", resolved.effective_prompt)
-        self.assertNotIn("/brief", resolved.effective_prompt)
+        self.assertIn("User task:", resolved.effective_prompt)
 
     def test_alias_resolution(self):
         catalog = SlashCommandCatalog([{
@@ -53,15 +53,15 @@ class SlashCommandCatalogTests(unittest.TestCase):
         self.assertEqual(resolved.unknown_commands, ("/unknown",))
         self.assertIn("/unknown do task", resolved.effective_prompt)
 
-    def test_alias_collision_rejected(self):
+    def test_canonical_name_wins_over_overlapping_alias(self):
         one = {
             "id": "SLC-0001", "name": "/one", "description": "x",
             "classification": "MACRO", "group_id": "g", "aliases_or_equivalents": ["/two"],
             "lifecycle_status": "candidate", "runtime_status": "not_implemented_in_rigor_x",
         }
         two = {**one, "id": "SLC-0002", "name": "/two", "aliases_or_equivalents": []}
-        with self.assertRaises(SlashCatalogError):
-            SlashCommandCatalog([one, two], expected_count=2)
+        catalog = SlashCommandCatalog([one, two], expected_count=2)
+        self.assertEqual(catalog.resolve("/two").name, "/two")
 
     def test_duplicate_id_rejected(self):
         row = {

@@ -64,7 +64,7 @@ class AgentRuntimeTests(unittest.TestCase):
         executed = []
         tool = ToolDefinition("write", "write data", {"type": "object"}, lambda _a: executed.append(True), approval_required=True)
         backend = ScriptedBackend([ModelTurn(tool_calls=(ToolCall("x", "write", {}),)), ModelTurn(text="not approved")])
-        result = AgentRuntime(backend, ToolRegistry([tool])).run("task", run_id="r4")
+        result = AgentRuntime(backend, ToolRegistry([tool]), capabilities=frozenset({"tool.execute"})).run("task", run_id="r4")
         self.assertEqual(result.receipts[0].error_code, "APPROVAL_REQUIRED")
         self.assertFalse(executed)
 
