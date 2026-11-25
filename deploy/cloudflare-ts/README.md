@@ -44,3 +44,7 @@ python examples/mcp_smoke.py --url https://rigorx-mcp.<subdomain>.workers.dev/mc
 ```
 
 ends with `Run status: COMPLETED`.
+
+### If the Workers Build fails with `root directory not found` or `can't cd to deploy/cloudflare-ts`
+
+The build is running on a commit older than the TypeScript Worker (`deploy/cloudflare-ts` first appears in `0fdec7e`). **Retry** rebuilds the same old commit with the new settings, so it keeps failing. Check **Settings → Build → Build watch paths** (include `*`), then start a build from a new commit on `main` instead of retrying. Prefixing the deploy command with `git log -1 --oneline &&` prints the commit being built.
