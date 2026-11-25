@@ -30,6 +30,11 @@ class AdaptiveRouterTests(unittest.TestCase):
         self.assertEqual(profile.level, AdaptiveLevel.L06_HYPER_RIGOROUS)
         self.assertIn("adversarial-review", profile.methods)
 
+    def test_slash_intensity_token_overrides_heuristic(self):
+        profile = self.router.route("/l06 answer a simple question")
+        self.assertEqual(profile.level, AdaptiveLevel.L06_HYPER_RIGOROUS)
+        self.assertIn("SLASH_OVERRIDE:L06_HYPER_RIGOROUS", profile.signals)
+
     def test_user_override(self):
         profile = self.router.route("What is this?", override_level=AdaptiveLevel.L04_COMPLEX)
         self.assertEqual(profile.level, AdaptiveLevel.L04_COMPLEX)

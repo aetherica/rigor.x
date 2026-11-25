@@ -114,10 +114,26 @@ class AdaptiveRouter:
         if re.search(r"\b(root cause|systemic|multi.?dimensional|comprehensive|end.?to.?end)\b", text):
             complex_hits += 1
             signals.append("COMPLEX:deep-analysis")
+        level_tokens = (
+            (AdaptiveLevel.L06_HYPER_RIGOROUS, (r"/l06\b", r"/ultrathink\b", r"/beastmode\b", r"/hyper.?rigorous\b")),
+            (AdaptiveLevel.L05_CRITICAL, (r"/l05\b", r"/critical\b")),
+            (AdaptiveLevel.L04_COMPLEX, (r"/l04\b", r"/complex\b")),
+            (AdaptiveLevel.L03_DEEP, (r"/l03\b", r"/deepthink\b", r"/deep\b")),
+            (AdaptiveLevel.L02_STANDARD, (r"/l02\b", r"/standard\b")),
+            (AdaptiveLevel.L01_BASIC, (r"/l01\b", r"/basic\b")),
+        )
+        token_override = next(
+            (level for level, patterns in level_tokens if any(re.search(pattern, text) for pattern in patterns)),
+            None,
+        )
+        if token_override is not None:
+            signals.append(f"SLASH_OVERRIDE:{token_override.value}")
         if any(re.search(p, text) for p in self._hyper_patterns):
             signals.append("OVERRIDE:hyper-rigorous-explicit")
 
-        if any(re.search(p, text) for p in self._hyper_patterns):
+        if token_override is not None:
+            level = token_override
+        elif any(re.search(p, text) for p in self._hyper_patterns):
             level = AdaptiveLevel.L06_HYPER_RIGOROUS
         elif risk_score >= 1:
             level = AdaptiveLevel.L05_CRITICAL
