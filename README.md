@@ -39,10 +39,10 @@ Python support: `>=3.13`; CI tests 3.13 and 3.15.
 For text-only live execution, configure `RIGORX_MODEL_BASE_URL`, `RIGORX_MODEL_NAME`, optional `RIGORX_API_KEY`, then run `rigorx-agent "your question"`. Plugin tool execution requires an actual host adapter and registered callbacks.
 
 ## Governance
-- Canonical work branch is `main`; this run created no feature branches. Two pre-existing Dependabot branches remain; scheduled version updates are disabled, but branch deletion is blocked by the available connector.
+- Canonical work branch is `main`; no feature branches were created by this work. One pre-existing Dependabot branch remains; its setup-python v7 workflow update has been applied to `main`. The stale branch ref could not be deleted using the available GitHub connector/browser session.
 - No fake providers, dummy handlers or placeholder code presented as functional.
 - Capability states: PLANNED / SPECIFIED / IMPLEMENTED / TESTED / VERIFIED / PARTIAL / BLOCKED / NOT_IMPLEMENTED / NOT_ASSESSED.
 - Release tag `v0.4.0` only after exact-head CI, integration acceptance, security and release gates.
 - Standards are engineering references, not certification claims.
 
-Progress and receipts: [AI System Engineering Index](engineering/ai-system/00-ENGINEERING-INDEX.md), [Execution Receipts](engineering/ai-system/06-EXECUTION-RECEIPTS.md). Historical v0.3.9 issues are being corrected against available evidence; inaccessible historical artifacts cannot be independently audited.
+Progress and receipts: [AI System Engineering Index](engineering/ai-system/00-ENGINEERING-INDEX.md), [Execution Receipts](engineering/ai-system/06-EXECUTION-RECEIPTS.md). See the [Public Release Readiness Checklist](PUBLIC-RELEASE-CHECKLIST.md) for remaining publication gates.
