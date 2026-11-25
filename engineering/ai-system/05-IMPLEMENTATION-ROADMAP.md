@@ -18,12 +18,16 @@
 | WS-14 | Release engineering | Build pipeline | reproducible build, SBOM, provenance | NOT STARTED |
 | WS-15 | Registry Resolver & typed stage contracts | Registry corpus + pipeline | Resolver/census/crosswalk + typed artifacts | VERIFIED |
 | WS-16 | Reasoning-control guard (first increment) | Control-plane contracts | bounded repeats/stall/budget, validation, tests + CI | VERIFIED (not pipeline-integrated) |
+| WS-17 | World-class standards and execution plan | Repository baseline | standards applicability, risk and execution gates documented | DOCUMENTED |
+| WS-18 | Canonical FG inventory + candidate taxonomy crosswalk | 18 FG design + 18 candidate library groups | IDs/counts/coverage/refs validated; regression tests + CI | VERIFIED (category-level; not command activation) |
 
 ## Dependency order
 
 `WS-03 → WS-04 → WS-05 → WS-06/07 → WS-08 → WS-09 → WS-10 → WS-11`
 
 WS16 guard is a parallel experimental control-plane increment. Before integration, false-stop and valid-repeated-operation benchmarks must be measured.
+
+WS18 provides a structural taxonomy alignment baseline. It does not replace command-by-command operational contracts or capability ownership validation.
 
 Security, test, observability and release controls are cross-cutting from the beginning, not postponed to the end.
 
@@ -32,3 +36,9 @@ WS15 is complete and merged. It resolves the proposed records and candidate comm
 
 ## WS16 current acceptance status
 Implemented in `src/rigorx/reasoning_guard.py`: Unicode NFKC/casefold/text normalization, SHA-256 state fingerprints, repeat warning/stop threshold, hard step ceiling, optional progress-window stall signal, finite numeric validation and structured decision output. Nine targeted tests plus all 44 repository tests pass; Ruff passes in GitHub Actions. It remains unintegrated and does not detect semantic paraphrase loops or certify reasoning correctness.
+
+## WS17 acceptance status
+World-class engineering standards and execution plan are saved in `engineering/ai-system/12-WORLD-CLASS-ENGINEERING-EXECUTION-PLAN.md`. The listed standards are applicability baselines, not certification.
+
+## WS18 acceptance status
+Canonical FG IDs/names were saved separately from the candidate slash-library taxonomy. A many-to-many category crosswalk was added with explicit non-activation status. Validator and four regression tests passed in [GitHub Actions run #45518939024](https://github.com/aetherica/rigor.x/actions/runs/45518939024), commit `608e249eb4044aa369d8db58fea10256d6ef944f`. Per-entry mapping and command activation remain out of scope.
