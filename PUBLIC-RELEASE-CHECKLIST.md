@@ -43,7 +43,7 @@ This checklist separates public source visibility from a stable release. Publish
 ## C. Current confirmed findings
 
 - Repository is private, default branch `main`, not archived.
-- Two non-main Dependabot branches remain: checkout-7 and setup-python-7. Scheduled Dependabot updates are disabled; workflow action updates have been applied to main. Branch deletion is not available through the connected GitHub action.
+- One non-main branch remains: `dependabot/github_actions/actions/setup-python-7`. The equivalent setup-python workflow update is applied on main; Dependabot update automation is disabled. Branch deletion is not available through the connected GitHub action.
 - No open PRs were found in the last audit.
 - `SECURITY.md`, `CONTRIBUTING.md`, `CHANGELOG.md`, issue templates, and package metadata have been added/updated on main.
 - License remains undecided; no `LICENSE` file.
@@ -57,7 +57,7 @@ This checklist separates public source visibility from a stable release. Publish
 1. Owner selects license and approves public exposure.
 2. Complete full-history secret/privacy audit and remediate any findings.
 3. Configure branch protection and public CI behavior.
-4. Delete the two stale branch refs; verify `main` is the only branch.
+4. Delete the stale branch ref; verify `main` is the only branch.
 5. Make repository public through GitHub settings.
 6. Run exact-head CI, then publish the source baseline as a clearly labeled development pre-release—or continue stable release gates and publish `v0.4.0` separately.
 
