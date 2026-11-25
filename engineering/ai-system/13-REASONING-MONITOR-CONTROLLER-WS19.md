@@ -36,7 +36,7 @@ A controller stop is a control-plane receipt, not proof of model-level terminati
 - Capability absence cannot silently produce an unconfirmed fallback plan.
 
 ## Test/benchmark result (baseline fixture; corrective CI pending)
-- 18 controller/selector unit tests + 1 fixture benchmark test are now defined; corrective CI result has not been retrieved.
+- 19 controller/selector unit tests + 1 fixture benchmark test are now defined; corrective CI result has not been retrieved.
 - Eight hand-authored paired fixtures at Jaccard threshold 0.88: TP=2, FP=0, TN=4, FN=2; precision=1.00, recall=0.50, FPR=0.00.
 - Small, unblinded fixture only; no production or generalization claim. Three paraphrase-style loop cases are missed.
 
