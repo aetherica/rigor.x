@@ -4,30 +4,26 @@
 
 RIGOR-X is a deterministic control-plane and live model/tool orchestration framework. It provides pipeline state, typed contracts, registry validation, durable storage and a bounded tool-call runtime. It is **not** a hosted model, provider service, or automatically connected ChatGPT plugin runtime.
 
-## Proprietary licensing status
+## Open-source licensing
 
-**RIGOR-X is proprietary, source-available commercial software — NOT Open Source.** Source visibility or repository access does not grant a general software license to modify, redistribute, sublicense, host, or commercially deploy the software; limited rights arising under the hosting platform's terms remain applicable.
-
-Commercial deployment, integration into a commercial product or service, hosted provision to third parties, OEM/embedded distribution, and white-label use require contractual authorization under the **RIGOR-X Commercial Subscription License (CSL)** and the applicable executed Order Form and addenda. No fixed public prices are offered; subscription and usage terms are negotiated for the authorized deployment.
+**RIGOR-X is licensed under the Apache License, Version 2.0 (SPDX: `Apache-2.0`).** You may use, modify, distribute, sublicense, and commercially exploit the licensed Work without paying Aetherica a software license fee, provided you comply with the license conditions. There is no paid core edition, license key, or mandatory subscription.
 
 Start with:
-- [Repository LICENSE notice](LICENSE)
-- [Commercial Subscription License](COMMERCIAL-LICENSE.md)
-- [Licensing policy, categories and application process](LICENSING.md)
-- [Monthly subscription terms](SUBSCRIPTION-TERMS.md)
-- [Platform Provider Addendum](PLATFORM-PROVIDER-ADDENDUM.md)
-- [OEM / Embedded Addendum](OEM-EMBEDDED-ADDENDUM.md)
-- [Licensing Changelog](LICENSING-CHANGELOG.md)
+- [Apache License 2.0](LICENSE)
+- [Licensing policy](LICENSING.md)
+- [NOTICE](NOTICE)
+- [Trademark policy](TRADEMARKS.md)
+- [Contribution guidelines](CONTRIBUTING.md)
 
-**Commercial enquiries:** contact the rights holder through the official [Aetherica GitHub channel](https://github.com/aetherica) and request the current licensing application route. An enquiry, unsigned proposal, or repository access does not authorize use. Existing executed agreements are governed by their incorporated versions and amendment/renewal provisions; later public revisions do not automatically rewrite them.
+Third-party software, models, datasets, and services retain their own licenses and terms. Review component-specific notices and dependency metadata before deployment. The Apache license does not grant rights to use Aetherica or RIGOR.X marks as a brand or endorsement.
 
-RIGOR-X may include or interoperate with third-party software, models, datasets, and services. Those components remain subject to their own applicable licenses and terms. The proprietary notice does not override third-party rights or mandatory legal exceptions. Review component-specific notices and dependency metadata before deployment.
+Aetherica may offer optional paid managed hosting, API capacity, compute, enterprise deployment, integration, support, SLA, training, and consulting. These services are separate from the open-source license; users may self-host or obtain equivalent services elsewhere. Other providers may commercially host or distribute RIGOR-X under Apache-2.0.
 
 ## Public review status
 
 This repository is published for **source review of a development baseline**, not as a stable `0.4.0` release or a production-readiness claim. Review scope, known limitations, feedback channels, and security-reporting instructions are documented in [PUBLIC-REVIEW.md](PUBLIC-REVIEW.md). The package remains `0.4.0.dev0`.
 
-A public GitHub repository is subject to GitHub's [Terms of Service](https://docs.github.com/en/site-policy/github-terms/github-terms-of-service). These terms allow other users to view and fork content through GitHub; they also grant GitHub and its affiliates rights to use public content to develop, train, and improve AI/ML models and technologies. The proprietary CSL does not remove those platform-level rights. Public visibility is not a promise that source copies or forks can be recalled later. Do not publish secrets, personal data, third-party materials without sufficient rights, or confidential information.
+A public GitHub repository is subject to GitHub's [Terms of Service](https://docs.github.com/en/site-policy/github-terms/github-terms-of-service). The repository's Apache-2.0 license is a separate copyright license for the covered Work. Public visibility is not a promise that source copies or forks can be recalled later. Do not publish secrets, personal data, third-party materials without sufficient rights, or confidential information.
 
 ## Implemented components
 - 11-stage pipeline state machine with explicit transitions, verification gate and bounded re-entry.
