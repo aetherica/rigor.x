@@ -7,6 +7,7 @@
 
 ## Saved engineering documents
 - [Canonical Engineering Baseline](14-CANONICAL-ENGINEERING-BASELINE.md)
+- [WS21 Live Agent Runtime](15-LIVE-AGENT-RUNTIME.md)
 - [Standards applicability](01-REFERENCE-STANDARDS.md)
 - [Architecture](02-SYSTEM-ARCHITECTURE.md)
 - [Threat model](03-THREAT-MODEL.md)
@@ -42,8 +43,10 @@
 - WS16 normalized fingerprint guard: implemented; 9 original dedicated tests and full 44-test suite passed; Ruff PASS (corrective increment adds 2 guard tests; current exact-head CI pending) in GitHub Actions [run #45517446772](https://github.com/aetherica/rigor.x/actions/runs/45517446772).
 - WS18 crosswalk integrity: **4 regression tests passed**, validator passed on GitHub Actions. No runtime command activation.
 - WS19 baseline implementation: experimental controller/selector, lexical signal and fixture benchmark; no pipeline integration.
-- WS20 command execution framework: fail-closed typed registry/dispatcher, capability and approval gates, safe receipts; 8 tests added, exact-head CI pending.
-- WS19 corrective engineering adds terminal-decision latching, resettable episode state, exact hard-step ceilings, strict profile/limit validation, truthful empty-capability plans and stable prior-step references. Corrective CI is pending.
+- WS20 command execution framework: fail-closed typed registry/dispatcher, capability and approval gates, safe receipts; exact-head CI verified.
+- WS19 corrective engineering exact-head CI verified.
+
+- WS21 Live Agent Runtime implemented and CI verified: model backend, tool callback registry, bounded loop, capability/approval gates, schema validation, receipts and OpenAI-compatible HTTPS transport. Requires real host/plugin callbacks; no internal ChatGPT connection is claimed.
 
 ## Still incomplete
 - WS19 corrective exact-head CI is now verified SUCCESS for commit `14f10ca4fdb1e6670c00ec7becbadb220232c4e9` (run #45568949396); pipeline integration remains gated.
@@ -62,4 +65,4 @@
 - Interface/operational-command registry: 102 target remains partial (91 historical definitions reported; 11 unresolved).
 
 ## Maturity boundary
-This is an implemented, tested control-plane increment—not a complete autonomous AI runtime. No model/tool execution, dynamic routing or research acquisition is claimed.
+This is an implemented, tested control-plane increment—not a complete autonomous AI runtime. Model/tool loop is implemented through host-injected backend/callbacks. Dynamic RIGOR-X mode routing, research adapters, provider connections and 999 handlers are not claimed.

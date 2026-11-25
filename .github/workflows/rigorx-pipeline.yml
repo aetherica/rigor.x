@@ -9,6 +9,9 @@ on:
       - "pyproject.toml"
       - "schemas/**"
       - ".github/workflows/rigorx-pipeline.yml"
+      - "README.md"
+      - "docs/**"
+      - "engineering/ai-system/**"
   pull_request:
     branches: [main]
     paths:

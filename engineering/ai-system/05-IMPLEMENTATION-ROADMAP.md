@@ -51,4 +51,13 @@ Canonical FG IDs/names were saved separately from the candidate slash-library ta
 
 ## WS20 implementation status
 
-Implemented in `src/rigorx/command_runtime.py`: typed command definition/registry, duplicate rejection, ID/name resolution, execution state guard, capability gating, explicit approval gating, optional input contract, JSON-safe input/output checks, and redacted failure receipts. Eight unit tests added. This is a framework increment, not activation or handler implementation for the 999 entries. Exact-head CI is pending.
+Implemented in `src/rigorx/command_runtime.py`: typed command definition/registry, duplicate rejection, ID/name resolution, execution state guard, capability gating, explicit approval gating, optional input contract, JSON-safe input/output checks, and redacted failure receipts. Eight unit tests added. CI verified. This is a framework increment, not activation or handler implementation for the 999 entries.
+
+
+## WS21 — Live Model/Tool Agent Runtime (0.4.0 development)
+
+Implemented source: `src/rigorx/agent_runtime.py` (bounded model-tool loop, registry, capability/approval gates, JSON argument validation, receipts, safe errors, budgets); `src/rigorx/model_backend.py` (actual OpenAI-compatible HTTP transport with HTTPS remote policy and environment credential support); package exports/version CLI. Tests cover tool execution, permissions, approval, budgets, schema errors, redaction and context validation.
+
+Package version is `0.4.0.dev0`; final tag withheld until release acceptance. CI matrix: Python 3.13 and 3.15.
+
+Limit: synchronous callback cancellation/timeout must be provided by the connector adapter; the core cannot forcibly cancel external side effects. Host/plugin wiring is required and is not simulated. Exact-head CI run #45572558422 passed both matrix jobs, Ruff, 93 tests and CLI smoke for commit `d41c2ba09c8563591882f8c262cb66733ac21739`.
