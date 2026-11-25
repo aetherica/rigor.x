@@ -47,7 +47,7 @@
 - WS19 corrected controller/selector is implemented; exact-head corrective CI verification is pending. Pipeline integration remains gated.
 - Broader false-stop benchmark/ablation and semantic-loop evaluation remain pending.
 - WS18 per-command verified mapping to capability contracts and the canonical FG architecture.
-- Claim-evidence gate, typed memory conflict handling and adaptive mechanism controller.
+- Claim-evidence gate and typed memory conflict handling.
 - Runtime registry activation/lifecycle governance and complete traceability graph.
 - Research channel adapters and source receipts.
 - Capability/tool/model routing.
