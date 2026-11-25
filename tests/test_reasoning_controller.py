@@ -68,8 +68,37 @@ class ControllerTests(unittest.TestCase):
     def test_step_budget(self):
         c=ReasoningController(max_steps=1,repeat_limit=8); c.observe("one")
         self.assertEqual(c.observe("two").action,ControllerAction.STOP_BUDGET)
-    def test_reset(self):
+    def test_terminal_receipt_is_latched(self):
+        c=ReasoningController(max_steps=1,repeat_limit=9)
+        c.observe("first")
+        stopped=c.observe("second")
+        self.assertEqual(stopped.action,ControllerAction.STOP_BUDGET)
+        self.assertIs(c.observe("third"),stopped)
+        self.assertEqual(stopped.step,2)
+
+    def test_reset_episode_clears_monitor_and_budget(self):
         c=ReasoningController(max_steps=20,repeat_limit=5,semantic_threshold=.6,recovery_budget=1)
-        c.observe("a b c d e f g h"); c.observe("a b c d e f g h modified")
-        c.reset_recovery_budget(); self.assertEqual(c.recovery_budget,1)
+        c.observe("a b c d e f g h")
+        triggered=c.observe("a b c d e f g h modified")
+        self.assertEqual(triggered.recovery_attempts,1)
+        c.reset_episode()
+        fresh=c.observe("fresh episode has distinct tokens and context")
+        self.assertEqual(fresh.step,1)
+        self.assertEqual(fresh.recovery_attempts,0)
+        self.assertIsNone(fresh.semantic_signal)
+
+    def test_no_available_mechanisms_does_not_claim_fallback(self):
+        plan=MechanismSelector().select(TaskProfile(available_mechanisms=frozenset()))
+        self.assertIsNone(plan.primary)
+        self.assertEqual(plan.supporting,())
+        self.assertTrue(plan.capability_gaps)
+
+    def test_semantic_signal_uses_absolute_prior_step(self):
+        monitor=SemanticLoopMonitor(window=3,threshold=.8,min_tokens=3)
+        monitor.observe("alpha beta gamma delta")
+        signal=monitor.observe("alpha beta gamma delta modified")
+        self.assertEqual(signal.compared_state,1)
+        monitor.observe("unrelated phrase with enough tokens here")
+        signal=monitor.observe("alpha beta gamma delta modified again")
+        self.assertEqual(signal.compared_state,2)
 if __name__=="__main__": unittest.main()
