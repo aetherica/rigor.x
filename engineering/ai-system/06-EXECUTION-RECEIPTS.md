@@ -157,3 +157,9 @@
 - AdaptiveProfile carries multiple analysis modes with signal provenance; heuristic and overrideable.
 - Modes: Exploratory, Descriptive, Diagnostic, Causal, Historical, Comparative, Quantitative, Qualitative, Forensic, Systems, Strategic, Action Research.
 - Exact-head CI [run #45578259206 — SUCCESS](https://github.com/aetherica/rigor.x/actions/runs/45578259206), commit `39981054da9053987b1c3be363136046db6c1850`: **136 tests PASS**, Ruff PASS, Python 3.13/3.15, sdist/wheel build and wheel install smoke PASS.
+
+
+## WS29 — Main acceptance snapshot and branch audit
+- Main commit `c5a93a29454134c7e52e304a5734197ab4f5a64e` passed run #45578438756: 136 tests, Ruff, Python 3.13/3.15, wheel/sdist build and installed-wheel smoke.
+- Current main version `0.4.0.dev0`; no final release tag.
+- Branch list: main plus two existing Dependabot branches. Dependabot scheduled updates disabled in `.github/dependabot.yml`; automatic branch creation is reduced. Existing branch refs could not be deleted through the available connector; browser cleanup attempt was blocked by tool-credit availability. No branch created by this run.

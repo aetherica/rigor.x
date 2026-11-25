@@ -102,3 +102,10 @@ Package remains `0.4.0.dev0`. Final `v0.4.0` tag is intentionally withheld. Veri
 ## WS28 — Adaptive analysis modes
 
 AdaptiveProfile now exposes transparent method modes: EXPLORATORY, DESCRIPTIVE, DIAGNOSTIC, CAUSAL, HISTORICAL, COMPARATIVE, QUANTITATIVE, QUALITATIVE, FORENSIC, SYSTEMS, STRATEGIC and ACTION_RESEARCH. Pattern signals select multiple relevant modes; intent-based defaults apply when no mode signal is present. Profiles are included in AgentRuntime and pipeline artifacts. Exact-head CI #45578259206: 136 tests PASS, Ruff PASS, Python 3.13/3.15, distribution build and installed-wheel smoke PASS.
+
+
+## WS29 — Final main-branch acceptance snapshot
+
+Canonical main at `c5a93a29454134c7e52e304a5734197ab4f5a64e` passed GitHub Actions run #45578438756: 136 tests, Ruff, Python 3.13 and 3.15, wheel/sdist build and installed-wheel smoke. CLI pipeline integration and durable run ledger are included. Final `v0.4.0` release remains gated.
+
+Repository branch audit: main plus two pre-existing Dependabot branches (`dependabot/github_actions/actions/checkout-7`, `dependabot/github_actions/actions/setup-python-7`). Scheduled Dependabot version updates have been disabled via `updates: []`; deletion of the existing refs is unavailable through the connected GitHub action, and browser branch cleanup was blocked by unavailable automation credits. No feature branch was created by this engineering run.
