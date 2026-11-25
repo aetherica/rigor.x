@@ -171,7 +171,7 @@ class AgentPipeline:
 
         # 8 — evidence ledger references and digests, no raw output.
         begin()
-        run.record_evidence(evidence_type="AGENT_RESPONSE", source_ref=f"sha256:{self._digest(result.response)", metadata={"response_chars": len(result.response)})
+        run.record_evidence(evidence_type="AGENT_RESPONSE", source_ref=f"sha256:{self._digest(result.response)}", metadata={"response_chars": len(result.response)})
         for receipt in result.receipts:
             run.record_evidence(
                 evidence_type=f"TOOL_{receipt.status.value}",
