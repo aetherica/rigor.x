@@ -18,6 +18,13 @@
 - [WS16 Reasoning Control & Experiments](10-REASONING-CONTROL-AND-EXPERIMENTS.md)
 - [WS16 Experiment Test Plan](11-REASONING-EXPERIMENT-TEST-PLAN.md)
 - [WS17 World-Class Engineering Execution Plan](12-WORLD-CLASS-ENGINEERING-EXECUTION-PLAN.md)
+- [Canonical 18 Functional Groups](functional-groups.json)
+
+## Registry alignment (WS18)
+- The candidate slash-command library's 18 taxonomy groups are distinct from the canonical 18 Functional Groups.
+- [Many-to-many crosswalk](../../library/slash-commands/functional-group-crosswalk.json) is explicitly non-activating; it is category-level exploratory alignment, not a verified per-command ownership map.
+- [Crosswalk validator](../../library/slash-commands/scripts/validate_functional_group_crosswalk.py) and [regression tests](../../tests/test_registry_crosswalk.py) validate count/order, coverage and referential integrity.
+- CI: [Functional Group Crosswalk Validation run #45518939024](https://github.com/aetherica/rigor.x/actions/runs/45518939024) — SUCCESS; exact commit `608e249eb4044aa369d8db58fea10256d6ef944f`.
 
 ## Verified baseline
 - 11-stage primary pipeline: specification and deterministic controller implemented.
@@ -32,9 +39,11 @@
 - Typed StageArtifact contracts: implemented with JSON-safe metadata and schema.
 - WS15 GitHub Actions: 35 tests passed; Ruff static analysis: PASS.
 - WS16 normalized fingerprint guard: implemented; 9 dedicated tests and full 44-test suite passed; Ruff PASS in GitHub Actions [run #45517446772](https://github.com/aetherica/rigor.x/actions/runs/45517446772).
+- WS18 crosswalk integrity: **4 regression tests passed**, validator passed on GitHub Actions. No runtime command activation.
 
 ## Still incomplete
 - WS16 pipeline integration, false-stop benchmark/ablation and semantic loop detection.
+- WS18 per-command verified mapping to capability contracts and the canonical FG architecture.
 - Claim-evidence gate, typed memory conflict handling and adaptive mechanism controller.
 - Runtime registry activation/lifecycle governance and complete traceability graph.
 - Research channel adapters and source receipts.
