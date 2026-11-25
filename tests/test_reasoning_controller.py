@@ -66,15 +66,16 @@ class ControllerTests(unittest.TestCase):
         self.assertEqual(c.observe("alpha beta gamma delta epsilon zeta eta theta changed").action,ControllerAction.DIVERSIFY)
         self.assertEqual(c.observe("alpha beta gamma delta epsilon zeta eta theta changed again").action,ControllerAction.STOP_LOOP_SIGNAL)
     def test_step_budget(self):
-        c=ReasoningController(max_steps=1,repeat_limit=8); c.observe("one")
-        self.assertEqual(c.observe("two").action,ControllerAction.STOP_BUDGET)
+        c=ReasoningController(max_steps=1,repeat_limit=8)
+        stopped=c.observe("one")
+        self.assertEqual(stopped.action,ControllerAction.STOP_BUDGET)
+        self.assertIs(c.observe("two"),stopped)
     def test_terminal_receipt_is_latched(self):
         c=ReasoningController(max_steps=1,repeat_limit=9)
-        c.observe("first")
-        stopped=c.observe("second")
+        stopped=c.observe("first")
         self.assertEqual(stopped.action,ControllerAction.STOP_BUDGET)
-        self.assertIs(c.observe("third"),stopped)
-        self.assertEqual(stopped.step,2)
+        self.assertIs(c.observe("second"),stopped)
+        self.assertEqual(stopped.step,1)
 
     def test_reset_episode_clears_monitor_and_budget(self):
         c=ReasoningController(max_steps=20,repeat_limit=5,semantic_threshold=.6,recovery_budget=1)
