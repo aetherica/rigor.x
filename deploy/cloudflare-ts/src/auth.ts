@@ -10,7 +10,6 @@
 //   OAUTH_KV                  KV namespace for clients, grants and tokens (stored hashed/encrypted)
 //   GOOGLE_CLIENT_ID          secret: Google OAuth client ID (Web application)
 //   GOOGLE_CLIENT_SECRET      secret: Google OAuth client secret
-//   ALLOWED_EMAILS            optional: comma-separated allowlist of verified Google addresses
 //   RIGORX_SPIKE_TOKEN        optional secret: shared development token (one development owner)
 
 import { timingSafeEqual } from "node:crypto";
@@ -26,7 +25,6 @@ import {
 	PRIVACY_PAGE,
 	TERMS_PAGE,
 	consentPage,
-	emailAllowed,
 	googleAuthorizeUrl,
 	googleTokenRequestBody,
 	messagePage,
@@ -42,7 +40,6 @@ export interface AuthEnv {
 	OAUTH_PROVIDER: OAuthHelpers;
 	GOOGLE_CLIENT_ID?: string;
 	GOOGLE_CLIENT_SECRET?: string;
-	ALLOWED_EMAILS?: string;
 	RIGORX_SPIKE_TOKEN?: string;
 }
 
@@ -136,9 +133,6 @@ async function googleCallback(request: Request, env: AuthEnv, origin: string): P
 	} catch (e) {
 		console.error("RIGORX_AUTH id token rejected", e instanceof Error ? e.message : String(e));
 		return redirect(authorizationErrorRedirect(original, "server_error"), headers);
-	}
-	if (!emailAllowed(identity, env.ALLOWED_EMAILS)) {
-		return redirect(authorizationErrorRedirect(original, "access_denied"), headers);
 	}
 
 	const props: AuthProps = { owner: ownerFromGoogle(identity.sub) };

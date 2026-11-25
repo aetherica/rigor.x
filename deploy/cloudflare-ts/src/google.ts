@@ -8,8 +8,6 @@ const GOOGLE_ISSUERS = new Set(["https://accounts.google.com", "accounts.google.
 
 export interface GoogleIdentity {
 	sub: string;
-	email?: string;
-	emailVerified: boolean;
 }
 
 /** Owner identity for the engine: issuer + subject, never the e-mail address (WS31 section 7). */
@@ -34,7 +32,7 @@ export function googleAuthorizeUrl(o: { clientId: string; redirectUri: string; s
 		client_id: o.clientId,
 		redirect_uri: o.redirectUri,
 		response_type: "code",
-		scope: "openid email",
+		scope: "openid",
 		state: o.state,
 		code_challenge: o.codeChallenge,
 		code_challenge_method: "S256",
@@ -74,21 +72,7 @@ export function parseGoogleIdToken(idToken: string, clientId: string, nowSeconds
 	if (!(aud === clientId || (Array.isArray(aud) && aud.includes(clientId)))) throw new Error("ID token audience mismatch");
 	if (typeof claims.exp !== "number" || claims.exp + 60 < nowSeconds) throw new Error("ID token expired");
 	if (typeof claims.sub !== "string" || claims.sub === "") throw new Error("ID token has no subject");
-	return {
-		sub: claims.sub,
-		email: typeof claims.email === "string" ? claims.email : undefined,
-		emailVerified: claims.email_verified === true || claims.email_verified === "true",
-	};
-}
-
-/**
- * Optional allowlist (Worker variable ALLOWED_EMAILS, comma-separated). Unset or empty: every
- * Google account may sign in. Only verified addresses can match.
- */
-export function emailAllowed(identity: GoogleIdentity, allowed: string | undefined): boolean {
-	const list = (allowed ?? "").split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
-	if (list.length === 0) return true;
-	return identity.emailVerified && !!identity.email && list.includes(identity.email.toLowerCase());
+	return { sub: claims.sub };
 }
 
 export const escapeHtml = (value: string) => value.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
@@ -116,7 +100,7 @@ export function consentPage(facts: ConsentFacts, handle: string): string {
 <h1>Allow ${name} to use RIGOR-X?</h1>
 <p>${origin} Access will be sent to <strong>${escapeHtml(facts.redirectHost)}</strong>.</p>
 ${facts.redirectIsLoopback ? '<p class="warn"><strong>This sends access to an app on your computer.</strong> Continue only if you just started signing in from it.</p>' : ""}
-<p>You will sign in with your Google account. RIGOR-X receives only your Google account ID and e-mail address, and keeps your runs separate from everyone else's.</p>
+<p>You will sign in with your Google account. RIGOR-X receives only your Google account ID (not your name or e-mail address), and keeps your runs separate from everyone else's.</p>
 <form method="post">
 <input type="hidden" name="handle" value="${escapeHtml(handle)}">
 <p><button name="decision" value="approve">Continue with Google</button><button name="decision" value="deny">Deny</button></p>
@@ -132,7 +116,7 @@ export const PRIVACY_PAGE = `<!doctype html>
 <h1>RIGOR-X privacy policy</h1>
 <p>RIGOR-X is an MCP server that AI assistants (such as ChatGPT and Claude) call to structure multi-step work. This page describes what it stores. Status: early development.</p>
 <h2>Sign-in</h2>
-<p>You sign in with Google. RIGOR-X receives your Google account ID and e-mail address. Your runs are stored under your Google account ID; the e-mail address is used only to check an optional allowlist and is not stored with your runs.</p>
+<p>You sign in with Google. RIGOR-X asks Google only for your account ID (the <code>openid</code> scope), not your name or e-mail address. Your runs are stored under that account ID.</p>
 <h2>What is stored</h2>
 <ul>
 <li>Task text and raw tool outputs: stored only as SHA-256 digests and lengths, not as text.</li>

@@ -31,10 +31,9 @@ The Worker is its own OAuth authorization server (`src/auth.ts`, on `@cloudflare
 
 Setup (once):
 
-1. Google Cloud Console → APIs & Services → **OAuth consent screen**: External; app name RIGOR-X; scopes `openid`, `email`. While the app is in *Testing*, add the Google accounts that may sign in as test users.
+1. Google Cloud Console → Google Auth Platform: External; app name RIGOR-X. Only the `openid` scope is requested (no e-mail), so publishing needs no verification. Any Google account can sign in; each account's runs are separate.
 2. **Credentials → Create credentials → OAuth client ID → Web application.** Authorized redirect URI: `https://rigorx-mcp.<subdomain>.workers.dev/oauth/google/callback`.
 3. Worker → Settings → Runtime variables and secrets (Production) → add secrets `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`, then **Deploy**.
-4. Optional: plain variable `ALLOWED_EMAILS` (comma-separated); only those verified Google addresses can sign in. Unset: any Google account.
 
 Add to a host with the URL `https://rigorx-mcp.<subdomain>.workers.dev/mcp` and no token: Claude (Settings → Connectors → Add custom connector) and ChatGPT (developer mode, authentication OAuth) discover sign-in from the `401`.
 

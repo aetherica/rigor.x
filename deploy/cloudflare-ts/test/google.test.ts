@@ -2,7 +2,6 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
 	consentPage,
-	emailAllowed,
 	googleAuthorizeUrl,
 	googleTokenRequestBody,
 	ownerFromGoogle,
@@ -17,7 +16,7 @@ const NOW = 1_800_000_000;
 const good = { iss: "https://accounts.google.com", aud: "cid", sub: "1234567890", exp: NOW + 600, email: "A@Example.com", email_verified: true };
 
 test("ID token: issuer, audience, expiry and subject are checked", () => {
-	assert.deepEqual(parseGoogleIdToken(idToken(good), "cid", NOW), { sub: "1234567890", email: "A@Example.com", emailVerified: true });
+	assert.deepEqual(parseGoogleIdToken(idToken(good), "cid", NOW), { sub: "1234567890" });
 	assert.equal(parseGoogleIdToken(idToken({ ...good, iss: "accounts.google.com" }), "cid", NOW).sub, "1234567890");
 	assert.throws(() => parseGoogleIdToken(idToken({ ...good, iss: "https://evil.example" }), "cid", NOW), /issuer/);
 	assert.throws(() => parseGoogleIdToken(idToken({ ...good, aud: "other" }), "cid", NOW), /audience/);
@@ -33,22 +32,12 @@ test("owner identity comes from the subject, never the e-mail; user ID has no ':
 	assert.ok(!userIdFromGoogle("42").includes(":"));
 });
 
-test("allowlist: empty allows everyone; otherwise only verified, listed addresses", () => {
-	const id = { sub: "1", email: "A@Example.com", emailVerified: true };
-	assert.equal(emailAllowed(id, undefined), true);
-	assert.equal(emailAllowed(id, " "), true);
-	assert.equal(emailAllowed(id, "x@y.z, a@example.com"), true);
-	assert.equal(emailAllowed(id, "x@y.z"), false);
-	assert.equal(emailAllowed({ ...id, emailVerified: false }, "a@example.com"), false);
-	assert.equal(emailAllowed({ sub: "1", emailVerified: true }, "a@example.com"), false);
-});
-
-test("Google authorize URL uses PKCE S256 and OpenID scopes", async () => {
+test("Google authorize URL uses PKCE S256 and only the openid scope", async () => {
 	const url = new URL(googleAuthorizeUrl({ clientId: "cid", redirectUri: "https://w.example/oauth/google/callback", state: "st", codeChallenge: await s256("v") }));
 	assert.equal(url.origin + url.pathname, "https://accounts.google.com/o/oauth2/v2/auth");
 	assert.equal(url.searchParams.get("code_challenge_method"), "S256");
 	assert.equal(url.searchParams.get("code_challenge"), await s256("v"));
-	assert.equal(url.searchParams.get("scope"), "openid email");
+	assert.equal(url.searchParams.get("scope"), "openid");
 	assert.equal(url.searchParams.get("state"), "st");
 	// RFC 7636 appendix B test vector
 	assert.equal(await s256("dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"), "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM");
