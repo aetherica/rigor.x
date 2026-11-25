@@ -32,6 +32,17 @@ class SlashCommandCatalogTests(unittest.TestCase):
         }], expected_count=1)
         self.assertEqual(catalog.resolve("/tldr").name, "/summarize")
 
+    def test_image_keyword_applies_prompt_modifier(self):
+        catalog = SlashCommandCatalog([{
+            "id": "SLC-0001", "name": "/f1.4", "description": "Wide aperture and strong background blur",
+            "classification": "IMAGE KEYWORD", "group_id": "image", "aliases_or_equivalents": [],
+            "lifecycle_status": "candidate", "runtime_status": "not_implemented_in_rigor_x",
+        }], expected_count=1)
+        result = catalog.resolve_prompt("/f1.4 portrait")
+        self.assertIn("image keyword /f1.4", result.applied_modifiers[0])
+        self.assertIn("portrait", result.effective_prompt)
+        self.assertNotIn("Host/native/UI", result.effective_prompt)
+
     def test_native_command_is_preserved_not_executed(self):
         catalog = SlashCommandCatalog([{
             "id": "SLC-0001", "name": "/native", "description": "Native feature",

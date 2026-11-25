@@ -128,8 +128,9 @@ class SlashCommandCatalog:
             if command is None:
                 unknown.append(token)
                 break  # Preserve unknown command and all following user text.
-            if command.classification in {"MACRO", "MACRO ALIAS"}:
-                modifiers.append(f"{command.name}: {command.description}")
+            if command.classification in {"MACRO", "MACRO ALIAS", "IMAGE KEYWORD"}:
+                label = "image keyword" if command.classification == "IMAGE KEYWORD" else "task modifier"
+                modifiers.append(f"{label} {command.name}: {command.description}")
                 remainder = remainder[match.end():]
                 continue
             passthrough.append(command.name)
