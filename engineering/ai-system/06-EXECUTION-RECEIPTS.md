@@ -130,3 +130,16 @@
 - AgentRuntime and CLI can accept the optional catalogue/router. Activation records preserve source/canonical status.
 - CI pending exact-head commit `98ceaa5b9d0314e06decc5e367a52e791df749fa`.
 - Limit: heuristic matching only; owner ratification and semantic activation evaluation remain open.
+
+
+## WS25 — Knowledge Domain Activation
+- Historical 36-name list loaded with `HISTORICAL_ASSISTANT_RECORD` / `PENDING_OWNER_RATIFICATION` provenance.
+- Keyword activation integrated into AgentRuntime and optional CLI; bounded, context-sensitive, results retain provenance.
+- Exact-head CI [run #45576146787 — SUCCESS](https://github.com/aetherica/rigor.x/actions/runs/45576146787), commit `874ec20b4c15aef3a2f048e18ab8c5a103a7d2a2`: Ruff PASS, **130 tests PASS** on Python 3.13/3.15; sdist/wheel builds; wheel installation, pip check and CLI smoke PASS.
+
+## 0.4.0 release gate — NOT RELEASED
+- Package version remains `0.4.0.dev0`; no final tag created.
+- 999 command classification census verified: 647 MACRO + 6 MACRO ALIAS + 256 IMAGE KEYWORD = 909 prompt-level modifiers. 31 NATIVE + 3 UI/MENU + 14 NATIVE-OPENAI + 8 NATIVE-CHATGPT + 34 NATIVE-CODEX = 90 host integration-dependent entries.
+- No live external provider call or real plugin-host callback integration has been acceptance-tested in this session.
+- 90 native/platform adapters, per-command contracts for 999, 30/33/111/15 registries, 18 FG exact ownership mapping, source acquisition, memory, evidence, and production evaluation remain release blockers.
+- Historical 0.3.9 item-by-item audit remains blocked because its source/tag archive is not accessible through this GitHub connector; this branch is a clean consolidated development baseline, not a proven forensic repair of every 0.3.9 artifact.

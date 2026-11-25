@@ -12,7 +12,7 @@ RIGOR-X is a deterministic control-plane and live model/tool orchestration frame
 - Reasoning guard and adaptive selector; integration/evaluation boundaries are documented.
 - Fail-closed command execution framework.
 - Live model/tool loop using injected backend and registered host callbacks; capability/approval gates, JSON argument validation, receipts and bounded budgets.
-- Slash-command catalog integration: macro and image keyword descriptions can be applied as user-level prompt modifiers; native/UI/platform entries require real host adapters. Domain activation is optional and heuristic; historical names remain pending ratification.
+- Slash-command catalog integration: **909/999** macro/image entries can be applied as user-level prompt modifiers; **90/999** native/UI/platform entries require actual host adapters. Domain activation is optional and heuristic; historical names remain pending ratification.
 - OpenAI-compatible Chat Completions transport over HTTPS (loopback HTTP allowed), standard-library networking and environment credentials.
 - Package version CLI.
 - Runnable text-agent CLI `rigorx-agent` for a configured OpenAI-compatible endpoint (no tools unless host callbacks are wired).

@@ -83,3 +83,12 @@ The OpenAI-compatible transport rejects remote HTTP, endpoint credentials/query/
 ## WS25 — Knowledge Domain Activation (provisional historical inventory)
 
 `library/knowledge-domains/domains.json` stores the recovered 36 ordered domain names with `source_status=HISTORICAL_ASSISTANT_RECORD` and `canonical_status=PENDING_OWNER_RATIFICATION`. `src/rigorx/domain_router.py` provides bounded keyword activation; results carry provenance status. AgentRuntime can receive an optional DomainRouter and include activated domains in context and result receipts. No domain names are silently promoted to canonical. CI exact-head acceptance is pending.
+
+
+## WS25 — Knowledge Domain Activation acceptance
+
+The 36-domain historical record is loaded and validated with source/canonical status. Bounded keyword activation is integrated into AgentRuntime and optional CLI wiring. Exact-head CI run #45576146787: Python 3.13/3.15, Ruff PASS, 130 tests PASS, sdist/wheel build and installed-wheel checks PASS. Canonical ratification remains pending.
+
+## WS26 — 0.4.0 Development Release Review
+
+Package remains `0.4.0.dev0`. Final `v0.4.0` tag is intentionally withheld. Verified coverage includes live configured text-model transport, bounded callback tool loop, 909/999 prompt modifiers (macro + image keyword classifications), six-level heuristic routing, provisional 36-domain activation, packaging and CI. Remaining release blockers include real provider acceptance, actual host/plugin tool adapters, 90 native/UI command integrations, 999 per-entry operational contracts, recovered/ratified 30/33/111/15 inventories, 18 FG ownership mapping, research/source acquisition, memory integrations, evidence/provenance, full security/quality/performance evaluation, and end-to-end acceptance.
