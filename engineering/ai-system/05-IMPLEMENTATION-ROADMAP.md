@@ -73,3 +73,8 @@ Implemented `src/rigorx/slash_commands.py` and integrated into `AgentRuntime`. T
 `src/rigorx/adaptive_router.py` selects intent and methods using deterministic text signals and risk/complexity cues. It supports L01 BASIC through L06 HYPER RIGOROUS, explicit user overrides, transparent signal records and a serialized AdaptiveProfile. AgentRuntime injects this profile into the request as a heuristic route, not an immutable truth. CLI supports `--level`. Exact-head CI run #45574552128: Python 3.13/3.15, Ruff PASS, 117 tests PASS, package CLI smoke PASS.
 
 Known limit: this is a deterministic heuristic baseline, not a semantic classifier or all-36-domain activation system. Domain registry activation and evaluation against real task datasets remain future work.
+
+
+## WS24 — Release Build & Model Transport Hardening
+
+The OpenAI-compatible transport rejects remote HTTP, endpoint credentials/query/fragment, non-finite timeouts, invalid token/response limits and oversized model response bodies. CI now pins GitHub Actions by full commit SHA, tests both supported Python versions, builds wheel+sdist, installs the wheel, checks dependencies and smoke-tests both CLI entry points. Exact-head CI #45575436952: 123 tests PASS, Ruff PASS, source/wheel build PASS and installed-wheel checks PASS on 3.13 and 3.15.

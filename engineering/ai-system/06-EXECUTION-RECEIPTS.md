@@ -115,3 +115,10 @@
 - Integrated into AgentRuntime and CLI `--level`.
 - Exact-head CI [run #45574552128 — SUCCESS](https://github.com/aetherica/rigor.x/actions/runs/45574552128), commit `3103d1fe656fa5eb2e26b098217b3e85da1e5542`: Ruff PASS; **117 tests PASS** on Python 3.13 and 3.15; package CLI smoke PASS.
 - Limit: deterministic signal-based heuristic; not validated as a semantic model router. 36-domain activation is not yet integrated.
+
+
+## WS24 — Release Build & Transport Hardening
+- Transport security: remote HTTPS-only, loopback HTTP exception, reject userinfo/query/fragment, validate finite timeout, cap response bytes, redact transport details.
+- CI actions pinned to immutable commit SHAs.
+- CI builds wheel and source distribution, installs wheel, `pip check`, version CLI and agent CLI smoke.
+- Exact-head CI [run #45575436952 — SUCCESS](https://github.com/aetherica/rigor.x/actions/runs/45575436952), commit `6dba3bec89a165f5d44391ca24d7cc6b86af39ab`: **123 tests PASS** on Python 3.13/3.15; Ruff PASS; package build + installed-wheel smoke PASS.
