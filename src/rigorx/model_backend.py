@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import ipaddress
 import json
+import math
 import os
 from collections.abc import Mapping, Sequence
 from typing import Any

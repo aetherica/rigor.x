@@ -55,9 +55,8 @@ class ModelBackendTests(unittest.TestCase):
 
     def test_response_size_limit_is_enforced(self):
         backend = OpenAICompatibleBackend(base_url="https://example.org/v1", model="x", max_response_bytes=1024)
-        with patch("rigorx.model_backend.urlopen", return_value=FakeResponse({"choices": [{"message": {"content": "x" * 2000}}]})):
-            with self.assertRaises(BackendConfigurationError):
-                backend.generate([], [], timeout_seconds=1)
+        with patch("rigorx.model_backend.urlopen", return_value=FakeResponse({"choices": [{"message": {"content": "x" * 2000}}]})), self.assertRaises(BackendConfigurationError):
+            backend.generate([], [], timeout_seconds=1)
 
     def test_nonfinite_timeout_rejected(self):
         backend = OpenAICompatibleBackend(base_url="https://example.org/v1", model="x")
