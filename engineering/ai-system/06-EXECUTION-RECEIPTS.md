@@ -22,8 +22,18 @@
 - Fail-closed corruption tests: reduced corpus and duplicate command name rejected.
 - PR merge was performed after CI success and head-SHA verification.
 
+## WS16 — Reasoning Guard Corrective Engineering
+- Initial code commit: [`d08572c`](https://github.com/aetherica/rigor.x/commit/d08572ca6e167a0a740ca10a5010e7c82f5aa2f6)
+- Ruff correction: [`ad4a5ec`](https://github.com/aetherica/rigor.x/commit/ad4a5ec47db59606c3a3442ceb6a0c844a3c1b2c)
+- GitHub Actions: [Run #45517446772 — SUCCESS](https://github.com/aetherica/rigor.x/actions/runs/45517446772)
+- Outcome: **44 repository tests passed**, including **9 dedicated reasoning-guard tests**; Ruff static analysis **PASS**.
+- Defect corrected: regex escaping previously prevented intended whitespace/punctuation normalization.
+- Hardening: NFKC and casefold normalization, empty/non-string state validation, finite progress validation, bool progress rejection and finite non-negative threshold validation.
+- The first CI run exposed Ruff UP035 (legacy `typing.Iterable` import); corrected to `collections.abc.Iterable`, then CI rerun passed.
+- Status: merged directly on canonical `main`; no branch created. Verified commit SHA: `ad4a5ec47db59606c3a3442ceb6a0c844a3c1b2c`.
+
 ## Static analysis and repository hygiene
-- Ruff static-analysis gate: **PASS** in run #45513882250.
+- Ruff static-analysis gate: **PASS** in run #45517446772.
 - Dependency update automation: Dependabot weekly configured.
 - Workflow concurrency: superseded runs cancelled.
 
@@ -33,3 +43,4 @@
 - No live external provider/model or acquisition adapters.
 - No end-to-end autonomous task executor.
 - The proposed registry inventory has not been owner-ratified; command membership is not runtime activation.
+- WS16 is not integrated with the pipeline; false-positive/valid-loop benchmarking and semantic-loop detection remain pending.

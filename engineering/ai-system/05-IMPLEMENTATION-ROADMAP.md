@@ -16,12 +16,19 @@
 | WS-12 | Security controls | All planes | threat-based tests, scans, policy | NOT STARTED |
 | WS-13 | Observability | Runtime | trace/run metrics, redaction, correlation | NOT STARTED |
 | WS-14 | Release engineering | Build pipeline | reproducible build, SBOM, provenance | NOT STARTED |
+| WS-15 | Registry Resolver & typed stage contracts | Registry corpus + pipeline | Resolver/census/crosswalk + typed artifacts | VERIFIED |
+| WS-16 | Reasoning-control guard (first increment) | Control-plane contracts | bounded repeats/stall/budget, validation, tests + CI | VERIFIED (not pipeline-integrated) |
 
 ## Dependency order
 
 `WS-03 → WS-04 → WS-05 → WS-06/07 → WS-08 → WS-09 → WS-10 → WS-11`
 
+WS16 guard is a parallel experimental control-plane increment. Before integration, false-stop and valid-repeated-operation benchmarks must be measured.
+
 Security, test, observability and release controls are cross-cutting from the beginning, not postponed to the end.
 
 ## WS15 acceptance status
 WS15 is complete and merged. It resolves the proposed records and candidate command corpus by stable ID while preserving their status, validates the recovered census, and defines typed artifacts for stage outputs. It does **not** activate command handlers, make the proposed architecture canonical, or implement routing/execution.
+
+## WS16 current acceptance status
+Implemented in `src/rigorx/reasoning_guard.py`: Unicode NFKC/casefold/text normalization, SHA-256 state fingerprints, repeat warning/stop threshold, hard step ceiling, optional progress-window stall signal, finite numeric validation and structured decision output. Nine targeted tests plus all 44 repository tests pass; Ruff passes in GitHub Actions. It remains unintegrated and does not detect semantic paraphrase loops or certify reasoning correctness.
