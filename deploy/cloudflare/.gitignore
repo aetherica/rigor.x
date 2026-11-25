@@ -7,3 +7,6 @@ node_modules/
 python_modules/
 .wrangler/
 .dev.vars
+pylock.toml
+*.egg-info/
+.venv-workers/

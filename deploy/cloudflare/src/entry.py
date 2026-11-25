@@ -3,6 +3,9 @@
 - The Worker serves MCP over stateless Streamable HTTP at ``/mcp``.
 - Each owner's runs live in that owner's Durable Object (``OwnerRuns``), which
   runs the unchanged synchronous ``HostEngine`` on Durable Object SQL storage.
+- CPU budget: the MCP app is built once per isolate, only when ``/mcp`` is first
+  called, and the slash-command catalogue is loaded only when first used. Other
+  paths answer without touching the MCP stack.
 - Spike authentication: a single shared bearer token (Worker secret
   ``RIGORX_SPIKE_TOKEN``) maps to one development owner. Phase P4 replaces this
   with OAuth sign-in (Google) in front of this Worker.
@@ -47,11 +50,19 @@ class _NoStore:
     create = load = save = delete = _refuse
 
 
-def _load_catalog():
-    try:
-        return SlashCommandCatalog.from_file(CATALOG_PATH)
-    except Exception:  # noqa: BLE001 - the catalogue is optional; resolve_commands reports it missing
-        return None
+class _LazyCatalogEngine(HostEngine):
+    """Loads the 999-entry catalogue on the first resolve_commands call, not at startup."""
+
+    _catalog_loaded = False
+
+    def resolve_commands(self, text):
+        if not self._catalog_loaded:
+            self._catalog_loaded = True
+            try:
+                self.command_catalog = SlashCommandCatalog.from_file(CATALOG_PATH)
+            except Exception:  # noqa: BLE001 - optional; resolve_commands then reports it missing
+                self.command_catalog = None
+        return super().resolve_commands(text)
 
 
 def build_app(env):
@@ -62,9 +73,20 @@ def build_app(env):
         stub = env.OWNER_RUNS.get(env.OWNER_RUNS.idFromName(name))
         return str(await stub.call(owner_id, operation, payload_json))
 
-    local = HostEngine(_NoStore(), command_catalog=_load_catalog())
+    local = _LazyCatalogEngine(_NoStore())
     server = build_server(RemoteEngine(transport, local=local), owner_resolver=_current_owner.get)
     return server.streamable_http_app(streamable_http_path="/mcp", stateless_http=True)
+
+
+_APP = None
+
+
+def _app(env):
+    """Build the MCP app once per isolate (Durable Object bindings are stable within it)."""
+    global _APP
+    if _APP is None:
+        _APP = build_app(env)
+    return _APP
 
 
 def _owner_from(request, env):
@@ -82,10 +104,6 @@ def _owner_from(request, env):
 
 
 class Default(WorkerEntrypoint):
-    def __init__(self, ctx, env):
-        super().__init__(ctx, env)
-        self.app = build_app(env)
-
     async def fetch(self, request):
         path = urlparse(request.url).path
         if path == "/" and request.method == "GET":
@@ -97,6 +115,6 @@ class Default(WorkerEntrypoint):
             return error
         token = _current_owner.set(owner)
         try:
-            return await asgi.fetch(self.app, request, self.env)
+            return await asgi.fetch(_app(self.env), request, self.env)
         finally:
             _current_owner.reset(token)

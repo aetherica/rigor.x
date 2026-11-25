@@ -5,6 +5,8 @@
 	"name": "rigorx-mcp",
 	"main": "src/entry.py",
 	"compatibility_date": "2026-09-07",
+	"workers_dev": true,
+	"preview_urls": false,
 	"compatibility_flags": [
 		"python_workers",
 		"python_workers_314"
