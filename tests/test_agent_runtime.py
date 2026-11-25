@@ -2,8 +2,6 @@ from __future__ import annotations
 
 import unittest
 
-from rigorx.slash_commands import SlashCommandCatalog
-
 from rigorx.agent_runtime import (
     AgentBudget,
     AgentRuntime,
