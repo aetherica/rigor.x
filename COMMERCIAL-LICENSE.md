@@ -6,6 +6,8 @@
 
 This document is the standard contractual framework for commercial subscriptions to RIGOR-X. It is intended to be incorporated into an agreement signed by the applicable rights holder (the **Licensor**) and the customer identified in an executed Order Form (the **Licensee**). It is not, by itself, an offer capable of acceptance. No license is granted until the parties execute an agreement or Order Form that expressly incorporates this document.
 
+**Public GitHub hosting notice:** If RIGOR-X is hosted in a public GitHub repository, the applicable GitHub Terms of Service separately govern platform access. Those terms permit other GitHub users to view and fork public content through GitHub functionality and grant GitHub and its affiliates rights to use public content to develop, train, and improve AI/ML models and technologies. This CSL does not purport to cancel those platform rights. They are not a general Open Source or commercial deployment license. See the [GitHub Terms of Service](https://docs.github.com/en/site-policy/github-terms/github-terms-of-service).
+
 > **Core principle:** The Licensor does not sell ownership of RIGOR-X. The Licensor grants a scoped contractual right to commercially deploy, integrate, operate, and derive business value from authorized RIGOR-X capabilities for the applicable subscription term.
 
 ## 1. Definitions
