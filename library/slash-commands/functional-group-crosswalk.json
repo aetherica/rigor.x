@@ -1,0 +1,205 @@
+{
+  "schema_version": "1.0.0",
+  "status": "proposed_taxonomy_alignment_not_command_activation",
+  "source_library_id": "AETHERICA-RIGORX-SLASH-COMMAND-LIBRARY",
+  "mapping_policy": "Library categories are broad discovery taxonomy, not runtime capability owners. Mappings are many-to-many and do not activate commands. Entry-level mapping and verification remain required before runtime use.",
+  "mappings": [
+    {
+      "library_group_id": "aliases_and_shorthand_variants",
+      "functional_group_ids": [
+        "FG-01",
+        "FG-13",
+        "FG-16"
+      ]
+    },
+    {
+      "library_group_id": "communication_email_and_social_messaging",
+      "functional_group_ids": [
+        "FG-01",
+        "FG-02",
+        "FG-16",
+        "FG-15"
+      ]
+    },
+    {
+      "library_group_id": "comparison_evaluation_and_decision_support",
+      "functional_group_ids": [
+        "FG-05",
+        "FG-10",
+        "FG-11",
+        "FG-12",
+        "FG-17"
+      ]
+    },
+    {
+      "library_group_id": "documents_projects_and_automation",
+      "functional_group_ids": [
+        "FG-04",
+        "FG-14",
+        "FG-15",
+        "FG-16",
+        "FG-18"
+      ]
+    },
+    {
+      "library_group_id": "education_learning_and_tutoring",
+      "functional_group_ids": [
+        "FG-01",
+        "FG-02",
+        "FG-05",
+        "FG-06",
+        "FG-16",
+        "FG-17"
+      ]
+    },
+    {
+      "library_group_id": "finance_business_and_investment",
+      "functional_group_ids": [
+        "FG-05",
+        "FG-10",
+        "FG-11",
+        "FG-12",
+        "FG-17",
+        "FG-18"
+      ]
+    },
+    {
+      "library_group_id": "general_purpose_ai_workflows",
+      "functional_group_ids": [
+        "FG-01",
+        "FG-02",
+        "FG-04",
+        "FG-05",
+        "FG-06",
+        "FG-13",
+        "FG-14",
+        "FG-16",
+        "FG-17"
+      ]
+    },
+    {
+      "library_group_id": "hardware_maker_and_digital_fabrication",
+      "functional_group_ids": [
+        "FG-05",
+        "FG-10",
+        "FG-12",
+        "FG-13",
+        "FG-15",
+        "FG-17",
+        "FG-18"
+      ]
+    },
+    {
+      "library_group_id": "information_extraction_and_knowledge_organization",
+      "functional_group_ids": [
+        "FG-01",
+        "FG-07",
+        "FG-08",
+        "FG-09",
+        "FG-10",
+        "FG-17",
+        "FG-18"
+      ]
+    },
+    {
+      "library_group_id": "output_format_and_response_control",
+      "functional_group_ids": [
+        "FG-01",
+        "FG-13",
+        "FG-16",
+        "FG-17",
+        "FG-18"
+      ]
+    },
+    {
+      "library_group_id": "platform_native_commands_and_interface_controls",
+      "functional_group_ids": [
+        "FG-01",
+        "FG-13",
+        "FG-15",
+        "FG-18"
+      ]
+    },
+    {
+      "library_group_id": "reasoning_diagnosis_and_critical_analysis",
+      "functional_group_ids": [
+        "FG-04",
+        "FG-05",
+        "FG-06",
+        "FG-10",
+        "FG-11",
+        "FG-12",
+        "FG-17"
+      ]
+    },
+    {
+      "library_group_id": "research_discovery_and_source_verification",
+      "functional_group_ids": [
+        "FG-07",
+        "FG-08",
+        "FG-09",
+        "FG-10",
+        "FG-17",
+        "FG-18"
+      ]
+    },
+    {
+      "library_group_id": "science_mathematics_and_data_analysis",
+      "functional_group_ids": [
+        "FG-05",
+        "FG-09",
+        "FG-10",
+        "FG-12",
+        "FG-17"
+      ]
+    },
+    {
+      "library_group_id": "software_coding_and_technical_engineering",
+      "functional_group_ids": [
+        "FG-04",
+        "FG-05",
+        "FG-09",
+        "FG-10",
+        "FG-13",
+        "FG-14",
+        "FG-15",
+        "FG-17",
+        "FG-18"
+      ]
+    },
+    {
+      "library_group_id": "translation_language_and_localization",
+      "functional_group_ids": [
+        "FG-01",
+        "FG-02",
+        "FG-09",
+        "FG-16",
+        "FG-17"
+      ]
+    },
+    {
+      "library_group_id": "visual_design_image_generation_and_photography",
+      "functional_group_ids": [
+        "FG-01",
+        "FG-04",
+        "FG-05",
+        "FG-13",
+        "FG-15",
+        "FG-16",
+        "FG-17",
+        "FG-18"
+      ]
+    },
+    {
+      "library_group_id": "writing_editing_and_content_refinement",
+      "functional_group_ids": [
+        "FG-01",
+        "FG-04",
+        "FG-05",
+        "FG-09",
+        "FG-16",
+        "FG-17"
+      ]
+    }
+  ]
+}
