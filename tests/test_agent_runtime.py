@@ -120,6 +120,50 @@ class AgentRuntimeTests(unittest.TestCase):
         self.assertEqual(result.receipts[0].status, ToolStatus.INVALID_ARGUMENTS)
         self.assertFalse(executed)
 
+    def test_schema_type_list_is_supported_and_never_crashes_run(self):
+        executed = []
+        tool = ToolDefinition("t", "tool", {"type": "object", "properties": {"a": {"type": ["string", "null"]}}, "required": ["a"]}, lambda a: executed.append(a) or {"ok": True})
+        backend = ScriptedBackend([ModelTurn(tool_calls=(ToolCall("c1", "t", {"a": None}), ToolCall("c2", "t", {"a": 5}))), ModelTurn(text="done")])
+        result = AgentRuntime(backend, ToolRegistry([tool]), capabilities=frozenset({"tool.execute"})).run("task", run_id="r-types")
+        self.assertEqual([r.status for r in result.receipts], [ToolStatus.EXECUTED, ToolStatus.INVALID_ARGUMENTS])
+        self.assertEqual(executed, [{"a": None}])
+
+    def test_unsupported_schema_keyword_fails_closed(self):
+        executed = []
+        tool = ToolDefinition("t", "tool", {"type": "object", "properties": {"a": {"$ref": "#/$defs/x"}}}, lambda a: executed.append(a))
+        backend = ScriptedBackend([ModelTurn(tool_calls=(ToolCall("c1", "t", {"a": "x"}),)), ModelTurn(text="done")])
+        result = AgentRuntime(backend, ToolRegistry([tool]), capabilities=frozenset({"tool.execute"})).run("task", run_id="r-ref")
+        self.assertEqual(result.receipts[0].status, ToolStatus.INVALID_ARGUMENTS)
+        self.assertFalse(executed)
+
+    def test_pattern_const_and_any_of_are_enforced(self):
+        from rigorx.agent_runtime import _schema_error
+        self.assertIsNone(_schema_error({"type": "string", "pattern": "^a+$"}, "aaa"))
+        self.assertIsNotNone(_schema_error({"type": "string", "pattern": "^a+$"}, "b"))
+        self.assertIsNotNone(_schema_error({"const": 1}, 2))
+        self.assertIsNone(_schema_error({"anyOf": [{"type": "integer"}, {"type": "string"}]}, "x"))
+        self.assertIsNotNone(_schema_error({"anyOf": [{"type": "integer"}, {"type": "string"}]}, 1.5))
+
+    def test_malformed_arguments_from_backend_are_rejected(self):
+        executed = []
+        tool = ToolDefinition("t", "tool", {"type": "object"}, lambda a: executed.append(a))
+        backend = ScriptedBackend([ModelTurn(tool_calls=(ToolCall("c1", "t", {"_malformed_arguments": "{bad"}),)), ModelTurn(text="done")])
+        result = AgentRuntime(backend, ToolRegistry([tool]), capabilities=frozenset({"tool.execute"})).run("task", run_id="r-bad")
+        self.assertEqual(result.receipts[0].status, ToolStatus.INVALID_ARGUMENTS)
+        self.assertEqual(result.receipts[0].error_code, "MALFORMED_ARGUMENTS")
+        self.assertFalse(executed)
+
+    def test_hung_tool_handler_is_bounded_by_time_budget(self):
+        import time
+        tool = ToolDefinition("slow", "tool", {"type": "object"}, lambda _a: time.sleep(3) or {"ok": True})
+        backend = ScriptedBackend([ModelTurn(tool_calls=(ToolCall("c1", "slow", {}),)), ModelTurn(text="done")])
+        runtime = AgentRuntime(backend, ToolRegistry([tool]), capabilities=frozenset({"tool.execute"}), budget=AgentBudget(max_elapsed_seconds=0.3))
+        started = time.monotonic()
+        result = runtime.run("task", run_id="r-slow")
+        self.assertLess(time.monotonic() - started, 2)
+        self.assertEqual(result.receipts[0].status, ToolStatus.FAILED)
+        self.assertEqual(result.receipts[0].error_code, "TOOL_TIMEOUT")
+
     def test_malformed_tool_call_contract(self):
         backend = ScriptedBackend([ModelTurn(tool_calls=(ToolCall("", "", []),)), ModelTurn(text="invalid")])
         result = AgentRuntime(backend, ToolRegistry()).run("task", run_id="r11")

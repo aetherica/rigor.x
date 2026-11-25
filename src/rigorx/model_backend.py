@@ -93,7 +93,9 @@ class OpenAICompatibleBackend:
                 raise BackendConfigurationError("Model response exceeds configured size limit")
             data = json.loads(raw)
         except HTTPError as exc:
-            raise BackendConfigurationError(f"Model HTTP status {exc.code}") from None
+            code = exc.code
+            exc.close()
+            raise BackendConfigurationError(f"Model HTTP status {code}") from None
         except URLError as exc:
             raise BackendConfigurationError(f"Model transport error: {type(exc.reason).__name__}") from None
         except (json.JSONDecodeError, UnicodeDecodeError) as exc:
