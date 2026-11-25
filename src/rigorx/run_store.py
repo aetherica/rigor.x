@@ -15,6 +15,7 @@ from __future__ import annotations
 import json
 import os
 import sqlite3
+import threading
 from collections.abc import Iterator, Mapping
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -77,7 +78,12 @@ class SQLiteRunStore:
         self.database_path = str(database_path)
         if self.database_path != ":memory:":
             Path(self.database_path).expanduser().resolve().parent.mkdir(parents=True, exist_ok=True)
-        self._db = sqlite3.connect(self.database_path, timeout=busy_timeout_ms / 1000, isolation_level=None)
+        # One connection shared across threads (MCP SDK runs sync handlers on worker
+        # threads); every use is serialized by ``self._lock``.
+        self._lock = threading.RLock()
+        self._db = sqlite3.connect(
+            self.database_path, timeout=busy_timeout_ms / 1000, isolation_level=None, check_same_thread=False
+        )
         if self.database_path != ":memory:":
             os.chmod(self.database_path, 0o600)
             self._db.execute("PRAGMA journal_mode = WAL")
@@ -106,14 +112,15 @@ class SQLiteRunStore:
 
     @contextmanager
     def _transaction(self) -> Iterator[None]:
-        self._db.execute("BEGIN IMMEDIATE")
-        try:
-            yield
-        except BaseException:
-            self._db.rollback()
-            raise
-        else:
-            self._db.commit()
+        with self._lock:
+            self._db.execute("BEGIN IMMEDIATE")
+            try:
+                yield
+            except BaseException:
+                self._db.rollback()
+                raise
+            else:
+                self._db.commit()
 
     def create(self, owner_id: str, run: PipelineRun, meta: Mapping[str, Any]) -> int:
         snapshot = run.snapshot()
@@ -130,10 +137,11 @@ class SQLiteRunStore:
         return 1
 
     def load(self, owner_id: str, run_id: str) -> StoredHostRun:
-        row = self._db.execute(
-            "SELECT revision, snapshot_json, meta_json FROM host_runs WHERE run_id = ? AND owner_id = ?",
-            (run_id, owner_id),
-        ).fetchone()
+        with self._lock:
+            row = self._db.execute(
+                "SELECT revision, snapshot_json, meta_json FROM host_runs WHERE run_id = ? AND owner_id = ?",
+                (run_id, owner_id),
+            ).fetchone()
         if row is None:
             raise RunNotFound(run_id)
         return StoredHostRun(
@@ -173,7 +181,8 @@ class SQLiteRunStore:
                 raise RunNotFound(run_id)
 
     def close(self) -> None:
-        self._db.close()
+        with self._lock:
+            self._db.close()
 
     def __enter__(self) -> Self:
         return self

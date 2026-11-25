@@ -38,6 +38,7 @@ A public GitHub repository is subject to GitHub's [Terms of Service](https://doc
 - OpenAI-compatible Chat Completions transport over HTTPS (loopback HTTP allowed), standard-library networking and environment credentials.
 - Package version CLI.
 - Runnable text-agent CLI `rigorx-agent` for a configured OpenAI-compatible endpoint (no tools unless host callbacks are wired).
+- Host plugin engine and MCP server (`rigorx-mcp`, official MCP SDK, optional extra `[mcp]`): 12 annotated tools, owner-scoped runs, deterministic verification gate. Local single-user mode only; remote sign-in and Cloudflare deployment are not implemented yet.
 
 ## Owner requirements (scope, not implementation claims)
 18 Functional Groups; six adaptive intensity levels and 12 heuristic analysis modes; nine research acquisition channels; 999 slash-command corpus; separate 102 operational/interface registry; 30 formulas; 33 algorithms; 111 topics; 15 operators; 36 knowledge domains; host/GitHub/cloud memory and Web/Android/iOS architecture.
@@ -55,6 +56,13 @@ ruff check src tests
 python -m build
 rigorx-version
 rigorx-agent --help
+```
+
+MCP plugin server (development, single user; see [WS31 Host Plugin Architecture](engineering/ai-system/24-HOST-PLUGIN-ARCHITECTURE.md)):
+```bash
+python -m pip install -e '.[mcp]'
+rigorx-mcp --catalog library/slash-commands/commands.json            # stdio, for Claude Desktop / Claude Code
+rigorx-mcp --transport streamable-http --port 8000                    # http://127.0.0.1:8000/mcp (loopback only until sign-in exists)
 ```
 
 Python support: `>=3.13`; CI tests 3.13 and 3.15.

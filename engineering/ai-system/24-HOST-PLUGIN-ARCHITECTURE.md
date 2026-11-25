@@ -1,7 +1,7 @@
 # WS31 — Host Plugin Architecture (RIGOR-X as an MCP engine)
 
 **Document ID:** RX-PLUGIN-001
-**Status:** DRAFT — for owner review. Phase P1 implemented (see section 14); everything else is not yet implemented
+**Status:** DRAFT — for owner review. Phases P1 and P2 implemented (see section 14); everything else is not yet implemented
 **Canonical branch:** `main`
 **Last updated:** 2026-11-25
 
@@ -177,6 +177,20 @@ Rationale:
 - `src/rigorx/host_engine.py`: `HostEngine` with the operations behind every tool in section 5 except `rigorx_profile`, which belongs to the authentication layer (P4). The current stage is always started automatically, so evidence can be recorded at any time during an active stage. Partial and blocked stages resume on the next submission. VERIFICATION, DECISION and FEEDBACK cannot be skipped. Task text, stage summaries, evidence claims and criteria are stored only as SHA-256 digests and character counts.
 - `tests/test_host_engine.py`: 17 tests — unguessable handles, no raw content stored, cross-owner isolation, stage order, full run to COMPLETED, gate failures (uncited, dangling, unmet, missing criteria) and recovery by re-entry, research and execution intent checks, action resolution, partial/blocked resume, unskippable gate stages, bounded re-entry, cancel/delete, size limits, revision conflict and persistence across reopen.
 - Evidence and action IDs (`ev-N`) are the ledger event sequence numbers; evidence from earlier lineages remains valid after re-entry.
+
+**P2 — IMPLEMENTED (2026-11-25), not yet CI-verified.**
+- `src/rigorx/mcp_server.py`: `build_server()` registers the 12 tools of section 5 in a fixed order on the official SDK (`MCPServer`, tested against release v2.3.0). Every tool has a `title`, a description and annotations (`readOnlyHint` for the four read tools, `destructiveHint` true only for cancel and delete, `openWorldHint` false for all). `rigorx_profile` carries `_meta["openai/profile"] = true`. Engine errors become tool errors prefixed with a stable code (`STAGE_CONFLICT`, `RUN_NOT_FOUND`, `AUTH_REQUIRED`, ...).
+- Owner identity: injected resolver, else the verified access token's issuer and `sub` (never client ID or e-mail), else the local single-user owner. Run tools without an owner fail with `AUTH_REQUIRED`; `rigorx_route` and `rigorx_resolve_commands` work without one.
+- `rigorx-mcp` entry point: stdio (default) and Streamable HTTP. HTTP refuses non-loopback bind addresses until P4 sign-in exists. The SDK is an optional extra (`[mcp]`); the core package keeps no runtime dependencies.
+- `SQLiteRunStore` is now thread-safe (one connection, serialized by a lock), because the SDK runs synchronous tool handlers on worker threads.
+- Tests: `tests/test_mcp_server.py` (7, skipped when the SDK is absent) via the SDK's in-process client. Manual smoke tests on 2026-11-25 against SDK v2.3.0 source on Python 3.13: a real stdio subprocess (12 tools, run start, slash-command resolution with the 999-entry catalogue) and Streamable HTTP on 127.0.0.1.
+- CI runs the suite on Python 3.13 and 3.15 twice: without the SDK (core) and with `[mcp]` installed.
+- Not done yet: ChatGPT per-tool `securitySchemes`, the `401` + `resource_metadata` challenge for lazy sign-in (both P4).
+
+Local use with Claude Desktop (`claude_desktop_config.json`):
+```json
+{"mcpServers": {"rigor-x": {"command": "rigorx-mcp", "args": ["--catalog", "/path/to/rigor.x/library/slash-commands/commands.json"]}}}
+```
 
 ## Sources
 

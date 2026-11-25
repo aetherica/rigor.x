@@ -27,10 +27,12 @@ Security = "https://github.com/aetherica/rigor.x/security"
 
 [project.optional-dependencies]
 test = ["jsonschema>=4.25,<5"]
+mcp = ["mcp>=2.3,<3"]
 
 [project.scripts]
 rigorx-version = "rigorx.version_cli:main"
 rigorx-agent = "rigorx.cli:main"
+rigorx-mcp = "rigorx.mcp_server:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
