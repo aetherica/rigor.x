@@ -15,6 +15,7 @@ RIGOR-X is a deterministic control-plane and live model/tool orchestration frame
 - Slash-command catalog integration: macro modifiers functional; native/UI/image entries remain host integration dependent.
 - OpenAI-compatible Chat Completions transport over HTTPS (loopback HTTP allowed), standard-library networking and environment credentials.
 - Package version CLI.
+- Runnable text-agent CLI `rigorx-agent` for a configured OpenAI-compatible endpoint (no tools unless host callbacks are wired).
 
 ## Owner requirements (scope, not implementation claims)
 18 Functional Groups; six adaptive intensity levels; nine research acquisition channels; 999 slash-command corpus; separate 102 operational/interface registry; 30 formulas; 33 algorithms; 111 topics; 15 operators; 36 knowledge domains; host/GitHub/cloud memory and Web/Android/iOS architecture.
@@ -30,8 +31,11 @@ python -m pip install -e '.[test]'
 python -m unittest discover -s tests -v
 ruff check src tests
 rigorx-version
+rigorx-agent --help
 ```
 Python support: `>=3.13`; CI tests 3.13 and 3.15.
+
+For text-only live execution, configure `RIGORX_MODEL_BASE_URL`, `RIGORX_MODEL_NAME`, optional `RIGORX_API_KEY`, then run `rigorx-agent "your question"`. Plugin tool execution requires an actual host adapter and registered callbacks.
 
 ## Governance
 - Only canonical branch `main`; no feature branches.
