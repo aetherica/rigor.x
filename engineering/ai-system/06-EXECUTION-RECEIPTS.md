@@ -180,3 +180,45 @@
 - Current branch audit: `main` plus one stale branch, `dependabot/github_actions/actions/setup-python-7`. Its equivalent workflow change is on main; branch deletion tool unavailable.
 - Exact HEAD CI remains **UNVERIFIED**: combined commit status API returned no status records; connector has no Actions dispatch or all-push-runs listing. Full repository tests were not run locally because repository archive/clone access is unavailable in this session.
 - Public exposure gates remain blocked by final owner/legal approval of the CSL, full-history secret scan, stale Dependabot branch cleanup, visibility change and branch protection configuration.
+
+
+## History rewrite and full-history scan (2026-11-25)
+
+**Owner decision:** remove the superseded proprietary licensing documents from all Git history. Author e-mail addresses are retained intentionally.
+
+**History rewrite**
+- Paths removed from every commit on `main`: `COMMERCIAL-LICENSE.md`, `OEM-EMBEDDED-ADDENDUM.md`, `PLATFORM-PROVIDER-ADDENDUM.md`, `SUBSCRIPTION-TERMS.md`.
+- Tool: `git filter-branch` (index filter). Commits that only touched those paths were dropped (9); commits that were already empty before the rewrite were kept.
+- Result: 319 → 310 commits. Verified before force-push: for every one of the 310 remaining commits the tree is identical to its pre-rewrite counterpart except for the four removed paths; the `HEAD` tree is byte-identical; no blob at those paths is reachable from `main`.
+- Pre-rewrite `main` was `14d9363a97e3f3e0ed22631f7ff47c57226cb453`. A Git bundle of the pre-rewrite repository was kept by the operator.
+- Commit SHAs cited elsewhere in this repository's documents and in earlier GitHub Actions runs refer to **pre-rewrite** history. Copies, forks and GitHub's cached objects may still hold the removed files; removal from those requires separate action (e.g. GitHub Support for cached views).
+
+Pre-rewrite → post-rewrite equivalents for SHAs cited in the documentation (SHAs not listed are unchanged or are not `main` commits):
+
+| Pre-rewrite | Post-rewrite |
+|---|---|
+| `12aa5b4d3896eeae579bcfba47409aaabdbeb68c` | `8fd2b9b633f6630065c9e7282e421f9e2e302f51` |
+| `14f10ca4fdb1e6670c00ec7becbadb220232c4e9` | `902baea8cea0c8dbcf3b7c6a7c96995cc9150758` |
+| `3103d1fe656fa5eb2e26b098217b3e85da1e5542` | `aeca817d798c1a356ac94cf09ada8d6f718bd89e` |
+| `35edcf7c2405c4e6e02fc6935846d648126d24eb` | `10a966505a6c75d43434e33f1cdda7736288cb60` |
+| `36c8ca8e7d1b1e29aaccefbb3d3bc9bfe65275ea` | `d9326fff6d4ad121d65ea071934715168223a877` |
+| `39981054da9053987b1c3be363136046db6c1850` | `8169da52f8be7dd12aa14a17ab7bbe34895156fc` |
+| `44be55736f8eb7eb70de201c34d2256e1d7da3ba` | `ca1340a80cdf6434c248030a16dedbe7fd5a4b19` |
+| `5a7522dcf3658f8f8fca3a27f69684cb20b9fd2d` | `ff966f6a9871cee3699c8e348dffcba4bd77b74a` |
+| `608e249eb4044aa369d8db58fea10256d6ef944f` | `84cd3ca2addf0820ebf669a6851ea909107d2730` |
+| `6dba3bec89a165f5d44391ca24d7cc6b86af39ab` | `4ca309e82a0d36210879c7524aa6f399859cd149` |
+| `7abe310a22ed740c96789a0a23678e042a435afb` | `458f4f3113d1436b62c1459fda2b0e62dcc7b8c8` |
+| `874ec20b4c15aef3a2f048e18ab8c5a103a7d2a2` | `7fcb7418dc2eeb56bbc7c7919225bc300e639368` |
+| `98ceaa5b9d0314e06decc5e367a52e791df749fa` | `28bbbd681b69d4dffc7ccbdbd9552f47623ccd59` |
+| `ad4a5ec47db59606c3a3442ceb6a0c844a3c1b2c` | `76be0415b2640c67d79470cd95994b9509d7e684` |
+| `c5a93a29454134c7e52e304a5734197ab4f5a64e` | `e4161a46415dd420bd7333a74de66889bbf6f382` |
+| `c9d2fbae1ce57f6ee53c89e551f2e8709aeff95c` | `c50f37ed23bc6aa13278bc20052eb2a41bda3b22` |
+| `d08572ca6e167a0a740ca10a5010e7c82f5aa2f6` | `5a07990b5f347a9165b43d3fe5cae28164bf9d09` |
+| `d41c2ba09c8563591882f8c262cb66733ac21739` | `f3e0f178c537d16bb607271b0fa508e987095f0b` |
+| `f420832d20655e7971f3b382de60b3a2b5d3b6bc` | `d82fec2d59a3deff7a8e5b80e760548e2f50bcea` |
+
+**Full-history scan (same date, before the rewrite)**
+- Scope: all 319 commits reachable from `main` (the only branch found on the remote; the previously recorded `dependabot/github_actions/actions/setup-python-7` ref no longer exists). Added lines of every commit, every path ever committed, and blob sizes.
+- Method: regex patterns for private keys, AWS/GitHub/Slack/OpenAI/Anthropic/Google keys, JWTs, bearer tokens, assigned secrets, e-mail, phone numbers, home-directory paths and private IP ranges; path patterns for env/key/database/archive/build/cache files. This is **not** gitleaks/trufflehog; a dedicated scanner run remains recommended.
+- Result: no credentials or secrets found. No env/key/database/build/cache files ever committed. Largest blob 861 KB (`library/slash-commands/commands.json`). One e-mail-like string, a synthetic test fixture (`pass@example.org`). Commit author e-mail `aetherica.inc@gmail.com` is retained by owner decision.
+- Not covered: GitHub Actions logs and artifacts, issues/PR content, refs other than `main`.
