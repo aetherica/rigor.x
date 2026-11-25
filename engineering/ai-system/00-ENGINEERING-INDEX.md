@@ -42,7 +42,8 @@
 - WS18 crosswalk integrity: **4 regression tests passed**, validator passed on GitHub Actions. No runtime command activation.
 
 ## Still incomplete
-- WS16 pipeline integration, false-stop benchmark/ablation and semantic loop detection.
+- WS19 experimental controller/mechanism selector implemented; CI pending; not pipeline-integrated.
+- Broader false-stop benchmark/ablation and semantic-loop evaluation remain pending.
 - WS18 per-command verified mapping to capability contracts and the canonical FG architecture.
 - Claim-evidence gate, typed memory conflict handling and adaptive mechanism controller.
 - Runtime registry activation/lifecycle governance and complete traceability graph.

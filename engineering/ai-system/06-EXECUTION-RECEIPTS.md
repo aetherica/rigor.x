@@ -61,3 +61,13 @@
 - No end-to-end autonomous task executor.
 - The proposed registry inventory has not been owner-ratified; command membership is not runtime activation.
 - WS16 is not integrated with the pipeline; false-positive/valid-loop benchmarking and semantic-loop detection remain pending.
+
+
+## WS19 — Reasoning Monitor, Controller & Adaptive Mechanism Selection
+- Code: `src/rigorx/reasoning_controller.py`; tests: `tests/test_reasoning_controller.py` (14 tests).
+- Fixture benchmark: `tests/semantic_loop_benchmark.py` and `tests/test_semantic_loop_benchmark.py` (8 hand-authored pairs).
+- Specification: `engineering/ai-system/13-REASONING-MONITOR-CONTROLLER-WS19.md`.
+- Isolated local tests: **14 controller tests + 1 benchmark test passed**.
+- At lexical Jaccard 0.88: TP=2, FP=0, TN=3, FN=3; precision=1.00, recall=0.40, false-positive rate=0.00. Tiny fixture only; not production evidence.
+- CI: pending.
+- Limits: lexical heuristic; not pipeline-integrated, no model/tool execution or hidden-state control.
