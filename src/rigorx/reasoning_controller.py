@@ -34,10 +34,17 @@ class TaskProfile:
     time_sensitive:bool=False
     available_mechanisms:frozenset[Mechanism]|None=None
     def __post_init__(self):
-        if isinstance(self.intensity,bool) or not isinstance(self.intensity,int): raise TypeError("intensity must be an integer in 1..6")\n        if not 1<=self.intensity<=6: raise ValueError("intensity must be 1..6 (L01-L06)")
-        if not isinstance(self.task_kind,TaskKind): raise TypeError("task_kind must be TaskKind")\n        for n,v in (("uncertainty",self.uncertainty),("risk",self.risk)):
+        if isinstance(self.intensity,bool) or not isinstance(self.intensity,int): raise TypeError("intensity must be an integer in 1..6")
+        if not 1<=self.intensity<=6: raise ValueError("intensity must be 1..6 (L01-L06)")
+        if not isinstance(self.task_kind,TaskKind): raise TypeError("task_kind must be TaskKind")
+        for n,v in (("uncertainty",self.uncertainty),("risk",self.risk)):
             if isinstance(v,bool) or not isinstance(v,(int,float)) or not math.isfinite(v) or not 0<=v<=1:
-                raise ValueError(f"{n} must be finite in [0,1]")\n        for n,v in (("evidence_required",self.evidence_required),("tool_capable",self.tool_capable),("time_sensitive",self.time_sensitive)):\n            if not isinstance(v,bool): raise TypeError(f"{n} must be bool")\n        if self.available_mechanisms is not None:\n            if not isinstance(self.available_mechanisms,frozenset): raise TypeError("available_mechanisms must be frozenset or None")\n            if any(not isinstance(m,Mechanism) for m in self.available_mechanisms): raise TypeError("available_mechanisms must contain Mechanism values")
+                raise ValueError(f"{n} must be finite in [0,1]")
+        for n,v in (("evidence_required",self.evidence_required),("tool_capable",self.tool_capable),("time_sensitive",self.time_sensitive)):
+            if not isinstance(v,bool): raise TypeError(f"{n} must be bool")
+        if self.available_mechanisms is not None:
+            if not isinstance(self.available_mechanisms,frozenset): raise TypeError("available_mechanisms must be frozenset or None")
+            if any(not isinstance(m,Mechanism) for m in self.available_mechanisms): raise TypeError("available_mechanisms must contain Mechanism values")
 
 @dataclass(frozen=True,slots=True)
 class MechanismPlan:
@@ -76,8 +83,12 @@ class SemanticLoopMonitor:
         if not math.isfinite(threshold) or not 0<threshold<=1: raise ValueError("threshold must be in (0,1]")
         if min_tokens<1: raise ValueError("min_tokens >= 1 required")
         self.window=window; self.threshold=threshold; self.min_tokens=min_tokens
-        self._states:deque[tuple[int,str]]=deque(maxlen=window)\n        self._step=0
-    def reset_episode(self)->None:\n        self._states.clear()\n        self._step=0\n    def observe(self,state:str)->SemanticLoopSignal|None:
+        self._states:deque[tuple[int,str]]=deque(maxlen=window)
+        self._step=0
+    def reset_episode(self)->None:
+        self._states.clear()
+        self._step=0
+    def observe(self,state:str)->SemanticLoopSignal|None:
         if not isinstance(state,str) or not state.strip(): raise ValueError("state must be non-empty")
         score,index=0.0,-1
         if len(_tokens(state))>=self.min_tokens:
