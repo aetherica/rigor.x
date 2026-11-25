@@ -17,7 +17,6 @@ classifiers = [
   "Programming Language :: Python :: 3.13",
   "Programming Language :: Python :: 3.15",
   "Operating System :: OS Independent",
-  "License :: OSI Approved :: Apache Software License",
 ]
 
 [project.urls]
