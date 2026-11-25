@@ -312,7 +312,7 @@ class AgentRuntime:
                     self.registry.schemas(),
                     timeout_seconds=min(self.budget.model_timeout_seconds, self.budget.max_elapsed_seconds - elapsed),
                 )
-            except Exception as exc:
+            except Exception as exc:  # noqa: BLE001 - isolate backend boundary and redact exception details
                 return finish(AgentStatus.FAILED, "Model backend request failed.", turn, f"MODEL_ERROR:{type(exc).__name__}")
             if not isinstance(model_turn, ModelTurn):
                 return finish(AgentStatus.FAILED, "Model backend returned an invalid response contract.", turn, "INVALID_MODEL_RESPONSE")
@@ -360,7 +360,7 @@ class AgentRuntime:
                         if len(encoded) > self.budget.max_tool_output_chars:
                             output = {"truncated": True, "original_chars": len(encoded), "preview": encoded[:self.budget.max_tool_output_chars]}
                         receipt = ToolReceipt(receipt_id, tc.name, ToolStatus.EXECUTED, digest, call_start, time.monotonic() - call_start, output=output)
-                    except Exception as exc:
+                    except Exception as exc:  # noqa: BLE001 - isolate connector boundary and redact exception details
                         receipt = ToolReceipt(receipt_id, tc.name, ToolStatus.FAILED, digest, call_start, time.monotonic() - call_start, error_code="TOOL_HANDLER_ERROR", safe_reason=type(exc).__name__)
                 receipts.append(receipt)
                 messages.append({
