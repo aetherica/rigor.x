@@ -3,7 +3,7 @@
 This command runs the 11-stage pipeline and persists stage receipts. It does not
 register any external plugin tools; tool callbacks require a real host adapter.
 """
-from __future__ import annotations__
+from __future__ import annotations
 
 import argparse
 import json
