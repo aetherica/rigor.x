@@ -20,8 +20,8 @@ class FakeResponse:
     def __exit__(self, *_args):
         return None
 
-    def read(self):
-        return self.payload
+    def read(self, size=-1):
+        return self.payload if size < 0 else self.payload[:size]
 
 
 class ModelBackendTests(unittest.TestCase):
@@ -44,6 +44,25 @@ class ModelBackendTests(unittest.TestCase):
         request = mock.call_args.args[0]
         self.assertEqual(request.full_url, "https://example.org/v1/chat/completions")
         self.assertEqual(request.get_header("Authorization"), "Bearer secret")
+
+    def test_loopback_http_is_permitted(self):
+        backend = OpenAICompatibleBackend(base_url="http://127.0.0.1:1234/v1", model="local")
+        self.assertEqual(backend.model, "local")
+
+    def test_url_credentials_are_rejected(self):
+        with self.assertRaises(BackendConfigurationError):
+            OpenAICompatibleBackend(base_url="https://user:pass@example.org/v1", model="x")
+
+    def test_response_size_limit_is_enforced(self):
+        backend = OpenAICompatibleBackend(base_url="https://example.org/v1", model="x", max_response_bytes=1024)
+        with patch("rigorx.model_backend.urlopen", return_value=FakeResponse({"choices": [{"message": {"content": "x" * 2000}}]})):
+            with self.assertRaises(BackendConfigurationError):
+                backend.generate([], [], timeout_seconds=1)
+
+    def test_nonfinite_timeout_rejected(self):
+        backend = OpenAICompatibleBackend(base_url="https://example.org/v1", model="x")
+        with self.assertRaises(ValueError):
+            backend.generate([], [], timeout_seconds=float("nan"))
 
     def test_remote_http_endpoint_rejected(self):
         with self.assertRaises(BackendConfigurationError):

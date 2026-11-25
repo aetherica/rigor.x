@@ -4,11 +4,13 @@ Use an explicitly configured endpoint and credential. API keys are never logged.
 """
 from __future__ import annotations
 
+import ipaddress
 import json
 import os
 from collections.abc import Mapping, Sequence
 from typing import Any
 from urllib.error import HTTPError, URLError
+from urllib.parse import urlsplit
 from urllib.request import Request, urlopen
 
 from .agent_runtime import ModelTurn, ToolCall
@@ -27,21 +29,39 @@ class OpenAICompatibleBackend:
         api_key: str | None = None,
         api_key_env: str = "RIGORX_API_KEY",
         max_tokens: int = 2048,
+        max_response_bytes: int = 5_000_000,
     ) -> None:
-        if not base_url.startswith(("https://", "http://127.0.0.1", "http://localhost")):
-            raise BackendConfigurationError("Remote model endpoints must use HTTPS")
+        try:
+            parsed = urlsplit(base_url)
+            hostname = parsed.hostname
+            if not parsed.scheme or not hostname or parsed.username or parsed.password or parsed.query or parsed.fragment:
+                raise BackendConfigurationError("Endpoint URL must be absolute and contain no userinfo, query or fragment")
+            loopback = hostname.casefold() == "localhost"
+            try:
+                loopback = loopback or ipaddress.ip_address(hostname).is_loopback
+            except ValueError:
+                pass
+            if parsed.scheme != "https" and not (parsed.scheme == "http" and loopback):
+                raise BackendConfigurationError("Remote model endpoints must use HTTPS")
+        except ValueError as exc:
+            if isinstance(exc, BackendConfigurationError):
+                raise
+            raise BackendConfigurationError("Invalid model endpoint URL") from None
         if not model.strip():
             raise BackendConfigurationError("model is required")
         if isinstance(max_tokens, bool) or not isinstance(max_tokens, int) or max_tokens < 1:
             raise BackendConfigurationError("max_tokens must be a positive integer")
+        if isinstance(max_response_bytes, bool) or not isinstance(max_response_bytes, int) or max_response_bytes < 1024:
+            raise BackendConfigurationError("max_response_bytes must be an integer of at least 1024")
         self.base_url = base_url.rstrip("/")
         self.model = model
         self.api_key = api_key or os.environ.get(api_key_env)
         self.max_tokens = max_tokens
+        self.max_response_bytes = max_response_bytes
 
     def generate(self, messages: Sequence[Mapping[str, Any]], tools: Sequence[Mapping[str, Any]], *, timeout_seconds: float) -> ModelTurn:
-        if timeout_seconds <= 0:
-            raise ValueError("timeout_seconds must be positive")
+        if isinstance(timeout_seconds, bool) or not isinstance(timeout_seconds, (int, float)) or not math.isfinite(timeout_seconds) or timeout_seconds <= 0:
+            raise ValueError("timeout_seconds must be finite and positive")
         payload: dict[str, Any] = {"model": self.model, "messages": list(messages), "max_tokens": self.max_tokens}
         if tools:
             payload["tools"] = list(tools)
@@ -52,8 +72,11 @@ class OpenAICompatibleBackend:
             headers["Authorization"] = f"Bearer {self.api_key}"
         request = Request(f"{self.base_url}/chat/completions", data=body, headers=headers, method="POST")
         try:
-            with urlopen(request, timeout=timeout_seconds) as response:
-                data = json.loads(response.read())
+            with urlopen(request, timeout=float(timeout_seconds)) as response:
+                raw = response.read(self.max_response_bytes + 1)
+            if len(raw) > self.max_response_bytes:
+                raise BackendConfigurationError("Model response exceeds configured size limit")
+            data = json.loads(raw)
         except HTTPError as exc:
             raise BackendConfigurationError(f"Model HTTP status {exc.code}") from None
         except URLError as exc:
