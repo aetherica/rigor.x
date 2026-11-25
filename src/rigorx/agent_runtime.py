@@ -16,6 +16,8 @@ from enum import StrEnum
 from hashlib import sha256
 from typing import Any, Protocol
 
+from .slash_commands import CommandResolution, SlashCommandCatalog
+
 
 class AgentError(RuntimeError):
     """Agent runtime error."""
@@ -133,6 +135,9 @@ class AgentResult:
     receipts: tuple[ToolReceipt, ...]
     elapsed_seconds: float
     reason: str | None = None
+    applied_modifiers: tuple[str, ...] = ()
+    pass_through_commands: tuple[str, ...] = ()
+    unknown_commands: tuple[str, ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -144,6 +149,9 @@ class AgentResult:
             "receipts": [r.to_dict() for r in self.receipts],
             "elapsed_seconds": self.elapsed_seconds,
             "reason": self.reason,
+            "applied_modifiers": list(self.applied_modifiers),
+            "pass_through_commands": list(self.pass_through_commands),
+            "unknown_commands": list(self.unknown_commands),
         }
 
 
@@ -277,12 +285,14 @@ class AgentRuntime:
         capabilities: frozenset[str] = frozenset(),
         approved_tools: frozenset[str] = frozenset(),
         budget: AgentBudget | None = None,
+        command_catalog: SlashCommandCatalog | None = None,
     ) -> None:
         self.backend = backend
         self.registry = registry
         self.capabilities = capabilities
         self.approved_tools = approved_tools
         self.budget = budget or AgentBudget()
+        self.command_catalog = command_catalog
 
     def run(self, prompt: str, *, run_id: str, context: Sequence[Mapping[str, Any]] = ()) -> AgentResult:
         if not isinstance(prompt, str) or not prompt.strip():
@@ -296,11 +306,21 @@ class AgentRuntime:
             if not isinstance(message, Mapping) or message.get("role") not in {"user", "assistant"}:
                 raise ValueError("context may only contain user/assistant messages")
             messages.append(_json_safe(dict(message)))
-        messages.append({"role": "user", "content": prompt})
+        command_resolution: CommandResolution | None = None
+        effective_prompt = prompt
+        if self.command_catalog is not None:
+            command_resolution = self.command_catalog.resolve_prompt(prompt)
+            effective_prompt = command_resolution.effective_prompt
+        messages.append({"role": "user", "content": effective_prompt})
         calls = 0
 
         def finish(status: AgentStatus, response: str, turns: int, reason: str | None = None) -> AgentResult:
-            return AgentResult(run_id, status, response, turns, calls, tuple(receipts), time.monotonic() - start, reason)
+            return AgentResult(
+                run_id, status, response, turns, calls, tuple(receipts), time.monotonic() - start, reason,
+                command_resolution.applied_modifiers if command_resolution else (),
+                command_resolution.pass_through_commands if command_resolution else (),
+                command_resolution.unknown_commands if command_resolution else (),
+            )
 
         for turn in range(1, self.budget.max_model_turns + 1):
             elapsed = time.monotonic() - start
@@ -341,17 +361,17 @@ class AgentRuntime:
                 receipt_seed = f"{run_id}:{safe_call_id}:{safe_tool_name}:{digest}:{call_start}"
                 receipt_id = sha256(receipt_seed.encode()).hexdigest()
                 if not safe_call_id.strip() or not safe_tool_name.strip() or not valid_args:
-                    receipt = ToolReceipt(receipt_id, tc.name, ToolStatus.INVALID_ARGUMENTS, digest, call_start, 0.0, error_code="INVALID_TOOL_CALL", safe_reason="Malformed model tool-call contract.")
+                    receipt = ToolReceipt(receipt_id, safe_tool_name, ToolStatus.INVALID_ARGUMENTS, digest, call_start, 0.0, error_code="INVALID_TOOL_CALL", safe_reason="Malformed model tool-call contract.")
                 elif tool is None or not tool.enabled:
-                    receipt = ToolReceipt(receipt_id, tc.name, ToolStatus.BLOCKED, digest, call_start, 0.0, error_code="TOOL_UNAVAILABLE", safe_reason="Tool is not registered or disabled.")
+                    receipt = ToolReceipt(receipt_id, safe_tool_name, ToolStatus.BLOCKED, digest, call_start, 0.0, error_code="TOOL_UNAVAILABLE", safe_reason="Tool is not registered or disabled.")
                 elif tool.capability not in self.capabilities:
-                    receipt = ToolReceipt(receipt_id, tc.name, ToolStatus.BLOCKED, digest, call_start, 0.0, error_code="CAPABILITY_DENIED", safe_reason="Required capability is not granted.")
+                    receipt = ToolReceipt(receipt_id, safe_tool_name, ToolStatus.BLOCKED, digest, call_start, 0.0, error_code="CAPABILITY_DENIED", safe_reason="Required capability is not granted.")
                 elif tool.approval_required and tc.name not in self.approved_tools:
-                    receipt = ToolReceipt(receipt_id, tc.name, ToolStatus.BLOCKED, digest, call_start, 0.0, error_code="APPROVAL_REQUIRED", safe_reason="Explicit approval is required.")
+                    receipt = ToolReceipt(receipt_id, safe_tool_name, ToolStatus.BLOCKED, digest, call_start, 0.0, error_code="APPROVAL_REQUIRED", safe_reason="Explicit approval is required.")
                 elif (schema_error := _schema_error(tool.parameters, dict(tc.arguments))) is not None:
-                    receipt = ToolReceipt(receipt_id, tc.name, ToolStatus.INVALID_ARGUMENTS, digest, call_start, 0.0, error_code="SCHEMA_VALIDATION", safe_reason=schema_error)
+                    receipt = ToolReceipt(receipt_id, safe_tool_name, ToolStatus.INVALID_ARGUMENTS, digest, call_start, 0.0, error_code="SCHEMA_VALIDATION", safe_reason=schema_error)
                 elif time.monotonic() - start >= self.budget.max_elapsed_seconds:
-                    receipt = ToolReceipt(receipt_id, tc.name, ToolStatus.BLOCKED, digest, call_start, 0.0, error_code="TIME_BUDGET", safe_reason="Overall execution time budget exhausted.")
+                    receipt = ToolReceipt(receipt_id, safe_tool_name, ToolStatus.BLOCKED, digest, call_start, 0.0, error_code="TIME_BUDGET", safe_reason="Overall execution time budget exhausted.")
                 else:
                     try:
                         result = tool.handler(_json_safe(dict(tc.arguments)))
@@ -359,14 +379,14 @@ class AgentRuntime:
                         encoded = json.dumps(output, ensure_ascii=False)
                         if len(encoded) > self.budget.max_tool_output_chars:
                             output = {"truncated": True, "original_chars": len(encoded), "preview": encoded[:self.budget.max_tool_output_chars]}
-                        receipt = ToolReceipt(receipt_id, tc.name, ToolStatus.EXECUTED, digest, call_start, time.monotonic() - call_start, output=output)
+                        receipt = ToolReceipt(receipt_id, safe_tool_name, ToolStatus.EXECUTED, digest, call_start, time.monotonic() - call_start, output=output)
                     except Exception as exc:  # noqa: BLE001 - isolate connector boundary and redact exception details
-                        receipt = ToolReceipt(receipt_id, tc.name, ToolStatus.FAILED, digest, call_start, time.monotonic() - call_start, error_code="TOOL_HANDLER_ERROR", safe_reason=type(exc).__name__)
+                        receipt = ToolReceipt(receipt_id, safe_tool_name, ToolStatus.FAILED, digest, call_start, time.monotonic() - call_start, error_code="TOOL_HANDLER_ERROR", safe_reason=type(exc).__name__)
                 receipts.append(receipt)
                 messages.append({
                     "role": "tool",
                     "tool_call_id": tc.call_id,
-                    "name": tc.name,
+                    "name": safe_tool_name,
                     "content": json.dumps(receipt.to_dict(), ensure_ascii=False, allow_nan=False),
                 })
             if sum(len(str(m.get("content", ""))) for m in messages) > self.budget.max_total_output_chars:

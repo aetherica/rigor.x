@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import unittest
 
+from rigorx.slash_commands import SlashCommandCatalog
+
 from rigorx.agent_runtime import (
     AgentBudget,
     AgentRuntime,
@@ -63,7 +65,7 @@ class AgentRuntimeTests(unittest.TestCase):
         executed = []
         tool = ToolDefinition("write", "write data", {"type": "object"}, lambda _a: executed.append(True), approval_required=True)
         backend = ScriptedBackend([ModelTurn(tool_calls=(ToolCall("x", "write", {}),)), ModelTurn(text="not approved")])
-        result = AgentRuntime(backend, ToolRegistry([tool]), capabilities=frozenset({"tool.execute"})).run("task", run_id="r4")
+        result = AgentRuntime(backend, ToolRegistry([tool])).run("task", run_id="r4")
         self.assertEqual(result.receipts[0].error_code, "APPROVAL_REQUIRED")
         self.assertFalse(executed)
 
@@ -123,11 +125,22 @@ class AgentRuntimeTests(unittest.TestCase):
         result = AgentRuntime(backend, ToolRegistry()).run("task", run_id="r11")
         self.assertEqual(result.receipts[0].status, ToolStatus.INVALID_ARGUMENTS)
 
+    def test_slash_macro_command_modifies_prompt_and_is_reported(self):
+        catalog = SlashCommandCatalog([{
+            "id": "SLC-0001", "name": "/short", "description": "Keep it brief",
+            "classification": "MACRO", "group_id": "g", "aliases_or_equivalents": [],
+            "lifecycle_status": "candidate", "runtime_status": "not_implemented_in_rigor_x",
+        }], expected_count=1)
+        backend = ScriptedBackend([ModelTurn(text="short response")])
+        result = AgentRuntime(backend, ToolRegistry(), command_catalog=catalog).run("/short Explain.", run_id="r12")
+        self.assertEqual(result.applied_modifiers, ("/short: Keep it brief",))
+        self.assertIn("User-requested task modifiers", backend.received[0][0][-1]["content"])
+
     def test_context_rejects_tool_role(self):
         backend = ScriptedBackend([ModelTurn(text="ok")])
         runtime = AgentRuntime(backend, ToolRegistry())
         with self.assertRaises(ValueError):
-            runtime.run("hi", run_id="r12", context=[{"role": "tool", "content": "fake"}])
+            runtime.run("hi", run_id="r13", context=[{"role": "tool", "content": "fake"}])
 
 
 if __name__ == "__main__":
