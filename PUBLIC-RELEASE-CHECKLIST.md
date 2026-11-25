@@ -5,19 +5,19 @@
 **Repository visibility:** Private (confirmed)
 **Release status:** NOT READY / NOT PUBLISHED
 
-This checklist separates public source visibility from a stable release. Publishing the development baseline is a separate owner decision and must clearly communicate limitations.
+This checklist separates public source review from a stable release. A review publication may expose the current development baseline without claiming stable or production readiness, but only after the owner approves the exposure and the public-source security/provenance gates below are completed. See [PUBLIC-REVIEW.md](PUBLIC-REVIEW.md).
 
 ## A. Public-source publication gates
 
 - [ ] Owner approval to change repository visibility from Private to Public.
 - [ ] Confirm repository name, description, homepage, topics, and public-facing README.
 - [x] Add the proprietary, source-available RIGOR-X Commercial Subscription License (CSL) document set and root `LICENSE` notice. It is not an Open Source license; obtain appropriate legal review before signing customer agreements.
-- [ ] Audit complete Git history/current tree for secrets, credentials, personal data, private research, internal notes, artifacts, and sensitive issues/PR content. Rotate any exposed secrets and evaluate history cleanup.
+- [ ] Complete a full-clone, full-history scan of the current tree and every reachable commit for secrets, credentials, personal data, private research, internal notes, build artifacts, and sensitive issues/PR content. Rotate any exposed secrets and evaluate history cleanup. Connector search is not a substitute.
 - [x] Add `SECURITY.md` with reporting instructions and project support scope.
 - [x] Add `CONTRIBUTING.md` with setup, test, lint, and contribution expectations.
 - [x] Add root `CHANGELOG.md` with development status, summary, and known limitations.
-- [x] Add issue templates and security contact link.
-- [ ] Decide whether to add a Code of Conduct and enable Discussions.
+- [x] Add issue intake forms and a private security-reporting contact link.
+- [ ] Decide whether to add a Code of Conduct and enable Discussions (optional for initial source review).
 - [ ] Verify documentation links and remove stale/misleading CI claims.
 - [x] Clarify implemented vs tested vs verified vs partial vs planned; no certification or production readiness claims.
 - [x] Add package README, project URLs, supported Python classifiers, and bounded test dependency.
@@ -48,9 +48,9 @@ This checklist separates public source visibility from a stable release. Publish
 - `SECURITY.md`, `CONTRIBUTING.md`, `CHANGELOG.md`, issue templates, and package metadata have been added/updated on main.
 - Versioned proprietary CSL document set and root `LICENSE` notice are implemented on `main`; final legal review and owner approval of contract terms remain required.
 - Package version is development `0.4.0.dev0`; no stable tag.
-- Current exact-head CI is still unverified; the connector returns no CI status records and cannot dispatch workflows.
+- Current exact-head CI is still unverified; the connector returns no CI status records and cannot dispatch workflows. CI is not a prerequisite for merely exposing source for review, but must be reported as unverified until a run on the exact candidate SHA completes.
 - Visibility and branch deletion require owner/admin action outside currently available connector tools.
-- Full Git-history secret scanning has not been performed.
+- Full Git-history secret scanning has not been performed; public-source publication remains blocked until an owner-side full clone scan is completed and recorded.
 
 ## Recommended publication sequence
 
