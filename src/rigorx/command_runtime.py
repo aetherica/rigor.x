@@ -178,5 +178,5 @@ class CommandExecutor:
             output = self.handlers[definition.command_id](payload, context)
             self._digest({"output": output})  # reject non-JSON and non-finite results
             return receipt(ExecutionStatus.EXECUTED, output=output)
-        except Exception as exc:  # handler failures become safe receipts; no traceback/secrets leaked
+        except Exception as exc:  # noqa: BLE001 - isolate handler boundary; redact traceback and message
             return receipt(ExecutionStatus.FAILED, error="HANDLER_FAILURE", reason=type(exc).__name__)
