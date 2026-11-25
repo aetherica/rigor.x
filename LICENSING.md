@@ -4,7 +4,7 @@
 
 ## 1. Licensing position
 
-RIGOR-X is proprietary, source-available commercial software. It is not Open Source Software and is not offered under a standard OSI-approved license. Public or private repository access does not itself authorize use, modification, redistribution, hosting, or commercial deployment.
+RIGOR-X is proprietary, source-available commercial software. It is not Open Source Software and is not offered under a standard OSI-approved license. Public or private repository access does not itself grant a general software license for modification, redistribution, hosting, or commercial deployment. If hosted publicly on GitHub, the current GitHub Terms of Service separately grant platform-level rights to view and fork/reproduce content through GitHub functionality. Those platform rights are not an Open Source license or a commercial deployment grant. Review the [GitHub Terms of Service](https://docs.github.com/en/site-policy/github-terms/github-terms-of-service) and the [public review guide](PUBLIC-REVIEW.md) before publication.
 
 Commercial rights are granted through the **RIGOR-X Commercial Subscription License (CSL)**, the applicable modular addenda, and a mutually executed commercial Order Form. The standard framework is described in [COMMERCIAL-LICENSE.md](COMMERCIAL-LICENSE.md).
 
