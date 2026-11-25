@@ -28,6 +28,7 @@
 - [WS16 Experiment Test Plan](11-REASONING-EXPERIMENT-TEST-PLAN.md)
 - [WS17 World-Class Engineering Execution Plan](12-WORLD-CLASS-ENGINEERING-EXECUTION-PLAN.md)
 - [Canonical 18 Functional Groups](functional-groups.json)
+- [Registry reconciliation & completion ledger](23-REGISTRY-RECONCILIATION-AND-COMPLETION-LEDGER.md)
 
 ## Registry alignment (WS18)
 - The candidate slash-command library's 18 taxonomy groups are distinct from the canonical 18 Functional Groups.
