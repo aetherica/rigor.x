@@ -92,3 +92,12 @@
 - Initial CI [run #45570737833 — FAILURE](https://github.com/aetherica/rigor.x/actions/runs/45570737833): Ruff flagged broad exception handling at the handler boundary; tests were skipped. Corrected with an explicit boundary annotation and committed `35edcf7c2405c4e6e02fc6935846d648126d24eb`.
 - Corrective exact-head CI [run #45570818762 — SUCCESS](https://github.com/aetherica/rigor.x/actions/runs/45570818762), commit `35edcf7c2405c4e6e02fc6935846d648126d24eb`: Ruff PASS; **78 tests passed**; functional-group crosswalk validator PASS.
 - Acceptance: initial framework VERIFIED. It does not implement or verify 999 individual handlers.
+
+
+## WS21 — Live Agent Runtime
+- Package engineering version: `0.4.0.dev0`; final release tag not created.
+- Source: `src/rigorx/agent_runtime.py`, `src/rigorx/model_backend.py`.
+- Tests: 12 agent-runtime cases + 2 package CLI cases; total suite 93.
+- Exact-head CI [run #45572558422 — SUCCESS](https://github.com/aetherica/rigor.x/actions/runs/45572558422), commit `d41c2ba09c8563591882f8c262cb66733ac21739`: Python 3.13 and 3.15, Ruff PASS, 93 tests PASS, CLI smoke PASS.
+- Host-injected backend and real connector callbacks are required. No ChatGPT plugin connection is claimed. Callback timeout/cancellation is delegated to adapter.
+- Corrective CI history: initial commit failed package install due duplicate TOML table; subsequent run failed Ruff, then test setup exposed missing capability grant. All defects corrected; exact-head acceptance passed.
