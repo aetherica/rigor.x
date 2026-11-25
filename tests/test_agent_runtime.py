@@ -64,7 +64,7 @@ class AgentRuntimeTests(unittest.TestCase):
         executed = []
         tool = ToolDefinition("write", "write data", {"type": "object"}, lambda _a: executed.append(True), approval_required=True)
         backend = ScriptedBackend([ModelTurn(tool_calls=(ToolCall("x", "write", {}),)), ModelTurn(text="not approved")])
-        result = AgentRuntime(backend, ToolRegistry([tool]), capabilities=frozenset({"tool.execute"})).run("task", run_id="r4")
+        result = AgentRuntime(backend, ToolRegistry([tool])).run("task", run_id="r4")
         self.assertEqual(result.receipts[0].error_code, "APPROVAL_REQUIRED")
         self.assertFalse(executed)
 
@@ -134,6 +134,12 @@ class AgentRuntimeTests(unittest.TestCase):
         result = AgentRuntime(backend, ToolRegistry(), command_catalog=catalog).run("/short Explain.", run_id="r12")
         self.assertEqual(result.applied_modifiers, ("/short: Keep it brief",))
         self.assertIn("User-requested task modifiers", backend.received[0][0][-1]["content"])
+
+    def test_adaptive_profile_attached_to_result(self):
+        backend = ScriptedBackend([ModelTurn(text="done")])
+        result = AgentRuntime(backend, ToolRegistry()).run("Research the latest and verify sources", run_id="r-adaptive")
+        self.assertEqual(result.adaptive_profile.level.value, "L03_DEEP")
+        self.assertEqual(result.adaptive_profile.intent.value, "RESEARCH")
 
     def test_context_rejects_tool_role(self):
         backend = ScriptedBackend([ModelTurn(text="ok")])

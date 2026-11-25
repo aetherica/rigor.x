@@ -16,6 +16,7 @@ from enum import StrEnum
 from hashlib import sha256
 from typing import Any, Protocol
 
+from .adaptive_router import AdaptiveLevel, AdaptiveProfile, AdaptiveRouter
 from .slash_commands import CommandResolution, SlashCommandCatalog
 
 
@@ -138,6 +139,7 @@ class AgentResult:
     applied_modifiers: tuple[str, ...] = ()
     pass_through_commands: tuple[str, ...] = ()
     unknown_commands: tuple[str, ...] = ()
+    adaptive_profile: AdaptiveProfile | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -152,6 +154,7 @@ class AgentResult:
             "applied_modifiers": list(self.applied_modifiers),
             "pass_through_commands": list(self.pass_through_commands),
             "unknown_commands": list(self.unknown_commands),
+            "adaptive_profile": self.adaptive_profile.to_dict() if self.adaptive_profile else None,
         }
 
 
@@ -286,6 +289,7 @@ class AgentRuntime:
         approved_tools: frozenset[str] = frozenset(),
         budget: AgentBudget | None = None,
         command_catalog: SlashCommandCatalog | None = None,
+        adaptive_router: AdaptiveRouter | None = None,
     ) -> None:
         self.backend = backend
         self.registry = registry
@@ -293,8 +297,16 @@ class AgentRuntime:
         self.approved_tools = approved_tools
         self.budget = budget or AgentBudget()
         self.command_catalog = command_catalog
+        self.adaptive_router = adaptive_router or AdaptiveRouter()
 
-    def run(self, prompt: str, *, run_id: str, context: Sequence[Mapping[str, Any]] = ()) -> AgentResult:
+    def run(
+        self,
+        prompt: str,
+        *,
+        run_id: str,
+        context: Sequence[Mapping[str, Any]] = (),
+        override_level: AdaptiveLevel | None = None,
+    ) -> AgentResult:
         if not isinstance(prompt, str) or not prompt.strip():
             raise ValueError("prompt must be non-empty text")
         if not isinstance(run_id, str) or not run_id.strip():
@@ -306,11 +318,17 @@ class AgentRuntime:
             if not isinstance(message, Mapping) or message.get("role") not in {"user", "assistant"}:
                 raise ValueError("context may only contain user/assistant messages")
             messages.append(_json_safe(dict(message)))
+        adaptive_profile = self.adaptive_router.route(prompt, override_level=override_level)
+        adaptive_header = (
+            "Adaptive route (heuristic, may be refined): "
+            f"intent={adaptive_profile.intent.value}; level={adaptive_profile.level.value}; "
+            f"methods={', '.join(adaptive_profile.methods)}.\n"
+        )
         command_resolution: CommandResolution | None = None
-        effective_prompt = prompt
+        effective_prompt = adaptive_header + prompt
         if self.command_catalog is not None:
             command_resolution = self.command_catalog.resolve_prompt(prompt)
-            effective_prompt = command_resolution.effective_prompt
+            effective_prompt = adaptive_header + command_resolution.effective_prompt
         messages.append({"role": "user", "content": effective_prompt})
         calls = 0
 
@@ -320,6 +338,7 @@ class AgentRuntime:
                 command_resolution.applied_modifiers if command_resolution else (),
                 command_resolution.pass_through_commands if command_resolution else (),
                 command_resolution.unknown_commands if command_resolution else (),
+                adaptive_profile,
             )
 
         for turn in range(1, self.budget.max_model_turns + 1):
