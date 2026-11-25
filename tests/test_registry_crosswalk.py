@@ -89,6 +89,40 @@ class CrosswalkTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "coverage mismatch"):
             validator.validate_data(fg, xw, manifest, groups)
 
+    def test_rejects_non_object_crosswalk(self):
+        fg, _, manifest, groups = documents()
+        with self.assertRaisesRegex(ValueError, "must be JSON objects"):
+            validator.validate_data(fg, [], manifest, groups)
+
+    def test_rejects_non_object_manifest(self):
+        fg, xw, _, groups = documents()
+        with self.assertRaisesRegex(ValueError, "must be JSON objects"):
+            validator.validate_data(fg, xw, [], groups)
+
+    def test_rejects_blank_functional_group_name(self):
+        fg, xw, manifest, groups = documents()
+        fg["functional_groups"][0]["name"] = "  "
+        with self.assertRaisesRegex(ValueError, "unique and non-empty"):
+            validator.validate_data(fg, xw, manifest, groups)
+
+    def test_rejects_duplicate_candidate_group_ids(self):
+        fg, xw, manifest, groups = documents()
+        groups[1]["id"] = groups[0]["id"]
+        with self.assertRaisesRegex(ValueError, "duplicate IDs"):
+            validator.validate_data(fg, xw, manifest, groups)
+
+    def test_rejects_blank_candidate_group_id(self):
+        fg, xw, manifest, groups = documents()
+        groups[0]["id"] = "  "
+        with self.assertRaisesRegex(ValueError, "non-empty strings"):
+            validator.validate_data(fg, xw, manifest, groups)
+
+    def test_rejects_manifest_group_count_mismatch(self):
+        fg, xw, manifest, groups = documents()
+        manifest["group_count"] = 17
+        with self.assertRaisesRegex(ValueError, "group count mismatch"):
+            validator.validate_data(fg, xw, manifest, groups)
+
 
 if __name__ == "__main__":
     unittest.main()
