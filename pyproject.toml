@@ -6,11 +6,25 @@ build-backend = "setuptools.build_meta"
 name = "rigor-x-core"
 version = "0.4.0.dev0"
 description = "RIGOR-X deterministic control plane and live model/tool orchestration core"
+readme = "README.md"
 requires-python = ">=3.13"
 dependencies = []
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.15",
+  "Operating System :: OS Independent",
+]
+
+[project.urls]
+Homepage = "https://github.com/aetherica/rigor.x"
+Repository = "https://github.com/aetherica/rigor.x"
+Issues = "https://github.com/aetherica/rigor.x/issues"
+Security = "https://github.com/aetherica/rigor.x/security"
 
 [project.optional-dependencies]
-test = ["jsonschema>=4.25"]
+test = ["jsonschema>=4.25,<5"]
 
 [project.scripts]
 rigorx-version = "rigorx.version_cli:main"
