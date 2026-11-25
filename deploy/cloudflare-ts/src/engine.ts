@@ -47,6 +47,27 @@ const digest = (text: string) => createHash("sha256").update(text, "utf8").diges
 /** Python `len(str)` counts code points; JS `.length` counts UTF-16 units. */
 const chars = (text: string) => [...text].length;
 
+/** Minimum substance for host-submitted text; mirrors TextPolicy in the Python engine. */
+export interface TextPolicy {
+	minSummaryChars: number;
+	minSummaryWords: number;
+	minNoteChars: number;
+	minNoteWords: number;
+	distinctSummaries: boolean;
+}
+export const DEFAULT_TEXT_POLICY: TextPolicy = { minSummaryChars: 40, minSummaryWords: 6, minNoteChars: 15, minNoteWords: 3, distinctSummaries: true };
+export const RELAXED_TEXT_POLICY: TextPolicy = { minSummaryChars: 0, minSummaryWords: 0, minNoteChars: 0, minNoteWords: 0, distinctSummaries: false };
+
+const words = (value: string) => value.split(/\s+/).filter((t) => /[\p{L}\p{N}]/u.test(t)).length;
+const normalized = (value: string) => value.toLowerCase().split(/\s+/).filter(Boolean).join(" ");
+
+function substantial(name: string, value: string, minChars: number, minWords: number, hint: string): void {
+	const trimmed = value.trim();
+	if (chars(trimmed) < minChars || words(trimmed) < minWords) {
+		throw invalid(`${name} is too short: use at least ${minChars} characters and ${minWords} words (${hint})`);
+	}
+}
+
 function text(name: string, value: unknown, maxChars: number, required = true): string {
 	if ((value === undefined || value === null) && !required) return "";
 	if (typeof value !== "string") throw invalid(`${name} must be text`);
@@ -71,6 +92,7 @@ export interface EngineOptions {
 	maxTextChars?: number;
 	maxRefChars?: number;
 	maxCriteria?: number;
+	textPolicy?: TextPolicy;
 }
 
 export class HostEngine {
@@ -79,6 +101,7 @@ export class HostEngine {
 	readonly maxTextChars: number;
 	readonly maxRefChars: number;
 	readonly maxCriteria: number;
+	readonly textPolicy: TextPolicy;
 
 	private readonly store: RunStore;
 
@@ -89,6 +112,7 @@ export class HostEngine {
 		this.maxTextChars = options.maxTextChars ?? 20_000;
 		this.maxRefChars = options.maxRefChars ?? 2_048;
 		this.maxCriteria = options.maxCriteria ?? 50;
+		this.textPolicy = options.textPolicy ?? DEFAULT_TEXT_POLICY;
 	}
 
 	// ---------------------------------------------------------------- stateless
@@ -138,17 +162,19 @@ export class HostEngine {
 		this.activate(run);
 		if (target !== run.current_stage) throw conflict(`Current stage is ${run.current_stage}, not ${target}`);
 		if (target === "VERIFICATION") throw conflict("VERIFICATION is completed only through rigorx_verify");
-		const resultRef = `summary:sha256:${digest(summary)}:chars:${chars(summary)}`;
+		const norm = digest(normalized(summary));
+		const resultRef = `summary:sha256:${digest(summary)}:norm:${norm}:chars:${chars(summary)}`;
 		try {
 			if (args.outcome === "completed") {
+				this.checkSummary(run, target, summary, norm);
 				run.completeStage(resultRef);
 			} else if (args.outcome === "skipped") {
 				if (NO_SKIP.has(target)) throw conflict(`${target} cannot be skipped`);
-				run.skipStage(text("reason", args.reason, this.maxRefChars));
+				run.skipStage(this.note("reason", args.reason));
 			} else if (args.outcome === "partial") {
-				run.markPartial(text("reason", args.reason, this.maxRefChars));
+				run.markPartial(this.note("reason", args.reason));
 			} else {
-				run.markBlocked(text("reason", args.reason, this.maxRefChars));
+				run.markBlocked(this.note("reason", args.reason));
 			}
 		} catch (e) {
 			if (e instanceof InvalidTransition) throw conflict(e.message);
@@ -164,6 +190,7 @@ export class HostEngine {
 		const { run, meta } = stored;
 		const sourceRef = text("source_ref", args.source_ref, this.maxRefChars);
 		const claim = text("claim", args.claim, this.maxTextChars);
+		substantial("claim", claim, this.textPolicy.minNoteChars, this.textPolicy.minNoteWords, "state what this source supports");
 		const evidenceType = text("evidence_type", args.evidence_type ?? "SOURCE", 64);
 		if (!/^[A-Z][A-Z0-9_]{0,63}$/.test(evidenceType) || evidenceType === ACTION_EVIDENCE_TYPE) {
 			throw invalid("evidence_type must be an upper-case identifier and not HOST_REPORTED_ACTION");
@@ -269,10 +296,11 @@ export class HostEngine {
 		const recorded: JsonObject[] = [];
 		const problems: string[] = [];
 		const dangling: string[] = [];
+		const cited: [number, Set<string>][] = [];
 		criteria.forEach((item: unknown, index: number) => {
 			if (typeof item !== "object" || item === null || Array.isArray(item)) throw invalid(`criteria[${index}] must be an object`);
 			const c = item as Record<string, unknown>;
-			const criterion = text(`criteria[${index}].criterion`, c.criterion, this.maxRefChars);
+			const criterion = this.note(`criteria[${index}].criterion`, c.criterion, "state what must be true");
 			const refs = c.evidence_ids ?? [];
 			if (typeof c.passed !== "boolean") {
 				problems.push(`criteria[${index}]: passed must be true or false`);
@@ -283,6 +311,7 @@ export class HostEngine {
 				return;
 			}
 			if (c.passed && refs.length === 0) problems.push(`criteria[${index}]: a passed criterion must cite evidence`);
+			if (c.passed && refs.length > 0) cited.push([index, new Set(refs as string[])]);
 			if (!c.passed) problems.push(`criteria[${index}]: criterion reported as not met`);
 			for (const r of refs as string[]) if (!allIds.has(r)) dangling.push(r);
 			recorded.push({ criterion_sha256: digest(criterion), passed: c.passed, evidence_ids: [...(refs as string[])] });
@@ -290,10 +319,38 @@ export class HostEngine {
 		checks.push({ check: "criteria_present", passed: criteria.length > 0, detail: criteria.length });
 		checks.push({ check: "criteria_met_with_evidence", passed: problems.length === 0, detail: problems });
 		checks.push({ check: "evidence_references_exist", passed: dangling.length === 0, detail: [...new Set(dangling)].sort() });
+		// One source may support several criteria, but each passed criterion needs at least one
+		// evidence ID of its own: citing the same record for everything does not pass the gate.
+		const shared: string[] = [];
+		for (const [index, refs] of cited) {
+			const others = new Set(cited.filter(([i]) => i !== index).flatMap(([, r]) => [...r]));
+			if (![...refs].some((r) => !others.has(r))) {
+				shared.push(`criteria[${index}]: cites no evidence of its own (every cited ID is also cited by another criterion)`);
+			}
+		}
+		checks.push({ check: "criteria_have_own_evidence", passed: shared.length === 0, detail: shared });
 		return { checks, recorded };
 	}
 
 	// ---------------------------------------------------------------- helpers
+
+	private note(name: string, value: unknown, hint = "explain why"): string {
+		const t = text(name, value, this.maxRefChars);
+		substantial(name, t, this.textPolicy.minNoteChars, this.textPolicy.minNoteWords, hint);
+		return t;
+	}
+
+	private checkSummary(run: PipelineRun, target: Stage, summary: string, norm: string): void {
+		const p = this.textPolicy;
+		substantial("summary", summary, p.minSummaryChars, p.minSummaryWords, "describe what was done in this stage");
+		if (!p.distinctSummaries) return;
+		const marker = `:norm:${norm}:`;
+		for (const e of run.events) {
+			if (e.event_type === "STAGE_COMPLETED" && e.stage !== target && String(e.details.result_ref ?? "").includes(marker)) {
+				throw invalid(`summary repeats the ${e.stage} summary: describe this stage's own work`);
+			}
+		}
+	}
 
 	private owner(ownerId: unknown): string {
 		if (typeof ownerId !== "string" || !ownerId.trim() || chars(ownerId) > 256) throw invalid("A verified owner identity is required");

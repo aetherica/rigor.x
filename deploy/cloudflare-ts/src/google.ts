@@ -119,8 +119,8 @@ export const PRIVACY_PAGE = `<!doctype html>
 <p>You sign in with Google. RIGOR-X asks Google only for your account ID (the <code>openid</code> scope), not your name or e-mail address. Your runs are stored under that account ID.</p>
 <h2>What is stored</h2>
 <ul>
-<li>Task text and raw tool outputs: stored only as SHA-256 digests and lengths, not as text.</li>
-<li>Stage summaries, evidence references and verification criteria that your assistant submits: stored as text, because they are the record of the run.</li>
+<li>Task text, stage summaries, evidence claims and verification criteria: stored only as SHA-256 digests and lengths, not as text.</li>
+<li>Stored as text, because they are the record of the run: source references (for example URLs), reasons given for skipping, pausing, re-entering or cancelling a stage, and the names and receipt references of actions your assistant reports.</li>
 <li>Sign-in records (registered apps, grants, tokens): stored hashed or encrypted.</li>
 </ul>
 <p>Each account's runs live in separate storage on Cloudflare. RIGOR-X does not sell data, show ads or use your data to train models, and does not call any AI model itself.</p>

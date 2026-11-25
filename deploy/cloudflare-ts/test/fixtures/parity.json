@@ -857,6 +857,11 @@
         "check": "evidence_references_exist",
         "detail": [],
         "passed": true
+       },
+       {
+        "check": "criteria_have_own_evidence",
+        "detail": [],
+        "passed": true
        }
       ],
       "current_stage": "DECISION",
@@ -881,6 +886,11 @@
         },
         {
          "check": "evidence_references_exist",
+         "detail": [],
+         "passed": true
+        },
+        {
+         "check": "criteria_have_own_evidence",
          "detail": [],
          "passed": true
         }
@@ -956,6 +966,11 @@
          "check": "evidence_references_exist",
          "detail": [],
          "passed": true
+        },
+        {
+         "check": "criteria_have_own_evidence",
+         "detail": [],
+         "passed": true
         }
        ],
        "criteria": [
@@ -1025,6 +1040,11 @@
         },
         {
          "check": "evidence_references_exist",
+         "detail": [],
+         "passed": true
+        },
+        {
+         "check": "criteria_have_own_evidence",
          "detail": [],
          "passed": true
         }
@@ -1214,7 +1234,8 @@
       "source_ref": "late"
      }
     ]
-   ]
+   ],
+   "text_policy": "relaxed"
   },
   "gate_failure_and_reentry": {
    "expected": [
@@ -1584,6 +1605,11 @@
          "ev-999"
         ],
         "passed": false
+       },
+       {
+        "check": "criteria_have_own_evidence",
+        "detail": [],
+        "passed": true
        }
       ],
       "current_stage": "VERIFICATION",
@@ -1615,6 +1641,11 @@
           "ev-999"
          ],
          "passed": false
+        },
+        {
+         "check": "criteria_have_own_evidence",
+         "detail": [],
+         "passed": true
         }
        ],
        "criteria": [
@@ -1706,6 +1737,11 @@
           "ev-999"
          ],
          "passed": false
+        },
+        {
+         "check": "criteria_have_own_evidence",
+         "detail": [],
+         "passed": true
         }
        ],
        "criteria": [
@@ -1788,6 +1824,11 @@
           "ev-999"
          ],
          "passed": false
+        },
+        {
+         "check": "criteria_have_own_evidence",
+         "detail": [],
+         "passed": true
         }
        ],
        "criteria": [
@@ -1870,6 +1911,11 @@
           "ev-999"
          ],
          "passed": false
+        },
+        {
+         "check": "criteria_have_own_evidence",
+         "detail": [],
+         "passed": true
         }
        ],
        "criteria": [
@@ -1944,6 +1990,11 @@
          "ev-22"
         ],
         "passed": false
+       },
+       {
+        "check": "criteria_have_own_evidence",
+        "detail": [],
+        "passed": true
        }
       ],
       "current_stage": "VERIFICATION",
@@ -1972,6 +2023,11 @@
           "ev-22"
          ],
          "passed": false
+        },
+        {
+         "check": "criteria_have_own_evidence",
+         "detail": [],
+         "passed": true
         }
        ],
        "criteria": [
@@ -2191,7 +2247,8 @@
       "run_id": "$RUN"
      }
     ]
-   ]
+   ],
+   "text_policy": "relaxed"
   },
   "isolation_validation_cancel_delete": {
    "expected": [
@@ -2437,7 +2494,8 @@
      "unknown_op",
      {}
     ]
-   ]
+   ],
+   "text_policy": "relaxed"
   },
   "research_and_execution_intents": {
    "expected": [
@@ -2940,6 +2998,11 @@
          "ev-24"
         ],
         "passed": false
+       },
+       {
+        "check": "criteria_have_own_evidence",
+        "detail": [],
+        "passed": true
        }
       ],
       "current_stage": "VERIFICATION",
@@ -2980,6 +3043,11 @@
           "ev-24"
          ],
          "passed": false
+        },
+        {
+         "check": "criteria_have_own_evidence",
+         "detail": [],
+         "passed": true
         }
        ],
        "criteria": [
@@ -3073,6 +3141,11 @@
           "ev-24"
          ],
          "passed": false
+        },
+        {
+         "check": "criteria_have_own_evidence",
+         "detail": [],
+         "passed": true
         }
        ],
        "criteria": [
@@ -3168,6 +3241,11 @@
           "ev-24"
          ],
          "passed": false
+        },
+        {
+         "check": "criteria_have_own_evidence",
+         "detail": [],
+         "passed": true
         }
        ],
        "criteria": [
@@ -3259,6 +3337,11 @@
           "ev-24"
          ],
          "passed": false
+        },
+        {
+         "check": "criteria_have_own_evidence",
+         "detail": [],
+         "passed": true
         }
        ],
        "criteria": [
@@ -3346,6 +3429,11 @@
          "ev-29"
         ],
         "passed": false
+       },
+       {
+        "check": "criteria_have_own_evidence",
+        "detail": [],
+        "passed": true
        }
       ],
       "current_stage": "VERIFICATION",
@@ -3386,6 +3474,11 @@
           "ev-29"
          ],
          "passed": false
+        },
+        {
+         "check": "criteria_have_own_evidence",
+         "detail": [],
+         "passed": true
         }
        ],
        "criteria": [
@@ -3618,7 +3711,8 @@
       "run_id": "$RUN"
      }
     ]
-   ]
+   ],
+   "text_policy": "relaxed"
   },
   "research_without_sources": {
    "expected": [
@@ -4036,6 +4130,11 @@
          "ev-17"
         ],
         "passed": false
+       },
+       {
+        "check": "criteria_have_own_evidence",
+        "detail": [],
+        "passed": true
        }
       ],
       "current_stage": "VERIFICATION",
@@ -4069,6 +4168,11 @@
           "ev-17"
          ],
          "passed": false
+        },
+        {
+         "check": "criteria_have_own_evidence",
+         "detail": [],
+         "passed": true
         }
        ],
        "criteria": [
@@ -4219,7 +4323,1387 @@
       "run_id": "$RUN"
      }
     ]
-   ]
+   ],
+   "text_policy": "relaxed"
+  },
+  "strict_text_policy": {
+   "expected": [
+    {
+     "ok": true,
+     "result": {
+      "actions": [],
+      "current_stage": "CONTEXT",
+      "evidence_count": 0,
+      "guidance": "Collect the context the task depends on: prior decisions, constraints, available tools, and what is missing. Submit a short summary.",
+      "last_verification": null,
+      "reentries": {
+       "max": 6,
+       "used": 0
+      },
+      "route": {
+       "intent": "TECHNICAL",
+       "level": "L02_STANDARD",
+       "modes": [
+        "COMPARATIVE"
+       ]
+      },
+      "run_id": "$RUN",
+      "stage_status": {
+       "CONTEXT": "IN_PROGRESS",
+       "DECISION": "NOT_STARTED",
+       "EVIDENCE": "NOT_STARTED",
+       "EXECUTION": "NOT_STARTED",
+       "FEEDBACK": "NOT_STARTED",
+       "INTENT": "NOT_STARTED",
+       "KNOWLEDGE": "NOT_STARTED",
+       "REASONING": "NOT_STARTED",
+       "RESEARCH": "NOT_STARTED",
+       "ROUTING": "NOT_STARTED",
+       "VERIFICATION": "NOT_STARTED"
+      },
+      "status": "IN_PROGRESS",
+      "verified": false
+     }
+    },
+    {
+     "code": "INVALID_REQUEST",
+     "ok": false
+    },
+    {
+     "ok": true,
+     "result": {
+      "actions": [],
+      "current_stage": "INTENT",
+      "evidence_count": 0,
+      "guidance": "State what the user actually wants, the expected output and the success criteria. Submit them as the summary.",
+      "last_verification": null,
+      "reentries": {
+       "max": 6,
+       "used": 0
+      },
+      "route": {
+       "intent": "TECHNICAL",
+       "level": "L02_STANDARD",
+       "modes": [
+        "COMPARATIVE"
+       ]
+      },
+      "run_id": "$RUN",
+      "stage_status": {
+       "CONTEXT": "COMPLETED",
+       "DECISION": "NOT_STARTED",
+       "EVIDENCE": "NOT_STARTED",
+       "EXECUTION": "NOT_STARTED",
+       "FEEDBACK": "NOT_STARTED",
+       "INTENT": "IN_PROGRESS",
+       "KNOWLEDGE": "NOT_STARTED",
+       "REASONING": "NOT_STARTED",
+       "RESEARCH": "NOT_STARTED",
+       "ROUTING": "NOT_STARTED",
+       "VERIFICATION": "NOT_STARTED"
+      },
+      "status": "IN_PROGRESS",
+      "verified": false
+     }
+    },
+    {
+     "code": "INVALID_REQUEST",
+     "ok": false
+    },
+    {
+     "ok": true,
+     "result": {
+      "actions": [],
+      "current_stage": "KNOWLEDGE",
+      "evidence_count": 0,
+      "guidance": "Identify the knowledge domains and known facts that apply, and what must still be looked up.",
+      "last_verification": null,
+      "reentries": {
+       "max": 6,
+       "used": 0
+      },
+      "route": {
+       "intent": "TECHNICAL",
+       "level": "L02_STANDARD",
+       "modes": [
+        "COMPARATIVE"
+       ]
+      },
+      "run_id": "$RUN",
+      "stage_status": {
+       "CONTEXT": "COMPLETED",
+       "DECISION": "NOT_STARTED",
+       "EVIDENCE": "NOT_STARTED",
+       "EXECUTION": "NOT_STARTED",
+       "FEEDBACK": "NOT_STARTED",
+       "INTENT": "COMPLETED",
+       "KNOWLEDGE": "IN_PROGRESS",
+       "REASONING": "NOT_STARTED",
+       "RESEARCH": "NOT_STARTED",
+       "ROUTING": "NOT_STARTED",
+       "VERIFICATION": "NOT_STARTED"
+      },
+      "status": "IN_PROGRESS",
+      "verified": false
+     }
+    },
+    {
+     "code": "INVALID_REQUEST",
+     "ok": false
+    },
+    {
+     "ok": true,
+     "result": {
+      "actions": [],
+      "current_stage": "RESEARCH",
+      "evidence_count": 0,
+      "guidance": "Acquire sources for anything that must be looked up. Record each source with rigorx_record_evidence. Skip with a reason if no research is needed.",
+      "last_verification": null,
+      "reentries": {
+       "max": 6,
+       "used": 0
+      },
+      "route": {
+       "intent": "TECHNICAL",
+       "level": "L02_STANDARD",
+       "modes": [
+        "COMPARATIVE"
+       ]
+      },
+      "run_id": "$RUN",
+      "stage_status": {
+       "CONTEXT": "COMPLETED",
+       "DECISION": "NOT_STARTED",
+       "EVIDENCE": "NOT_STARTED",
+       "EXECUTION": "NOT_STARTED",
+       "FEEDBACK": "NOT_STARTED",
+       "INTENT": "COMPLETED",
+       "KNOWLEDGE": "SKIPPED_WITH_REASON",
+       "REASONING": "NOT_STARTED",
+       "RESEARCH": "IN_PROGRESS",
+       "ROUTING": "NOT_STARTED",
+       "VERIFICATION": "NOT_STARTED"
+      },
+      "status": "IN_PROGRESS",
+      "verified": false
+     }
+    },
+    {
+     "code": "INVALID_REQUEST",
+     "ok": false
+    },
+    {
+     "ok": true,
+     "result": {
+      "actions": [],
+      "current_stage": "RESEARCH",
+      "evidence_count": 1,
+      "evidence_id": "ev-8",
+      "guidance": "Acquire sources for anything that must be looked up. Record each source with rigorx_record_evidence. Skip with a reason if no research is needed.",
+      "last_verification": null,
+      "reentries": {
+       "max": 6,
+       "used": 0
+      },
+      "route": {
+       "intent": "TECHNICAL",
+       "level": "L02_STANDARD",
+       "modes": [
+        "COMPARATIVE"
+       ]
+      },
+      "run_id": "$RUN",
+      "stage": "RESEARCH",
+      "stage_status": {
+       "CONTEXT": "COMPLETED",
+       "DECISION": "NOT_STARTED",
+       "EVIDENCE": "NOT_STARTED",
+       "EXECUTION": "NOT_STARTED",
+       "FEEDBACK": "NOT_STARTED",
+       "INTENT": "COMPLETED",
+       "KNOWLEDGE": "SKIPPED_WITH_REASON",
+       "REASONING": "NOT_STARTED",
+       "RESEARCH": "IN_PROGRESS",
+       "ROUTING": "NOT_STARTED",
+       "VERIFICATION": "NOT_STARTED"
+      },
+      "status": "IN_PROGRESS",
+      "verified": false
+     }
+    },
+    {
+     "ok": true,
+     "result": {
+      "actions": [],
+      "current_stage": "RESEARCH",
+      "evidence_count": 2,
+      "evidence_id": "ev-9",
+      "guidance": "Acquire sources for anything that must be looked up. Record each source with rigorx_record_evidence. Skip with a reason if no research is needed.",
+      "last_verification": null,
+      "reentries": {
+       "max": 6,
+       "used": 0
+      },
+      "route": {
+       "intent": "TECHNICAL",
+       "level": "L02_STANDARD",
+       "modes": [
+        "COMPARATIVE"
+       ]
+      },
+      "run_id": "$RUN",
+      "stage": "RESEARCH",
+      "stage_status": {
+       "CONTEXT": "COMPLETED",
+       "DECISION": "NOT_STARTED",
+       "EVIDENCE": "NOT_STARTED",
+       "EXECUTION": "NOT_STARTED",
+       "FEEDBACK": "NOT_STARTED",
+       "INTENT": "COMPLETED",
+       "KNOWLEDGE": "SKIPPED_WITH_REASON",
+       "REASONING": "NOT_STARTED",
+       "RESEARCH": "IN_PROGRESS",
+       "ROUTING": "NOT_STARTED",
+       "VERIFICATION": "NOT_STARTED"
+      },
+      "status": "IN_PROGRESS",
+      "verified": false
+     }
+    },
+    {
+     "ok": true,
+     "result": {
+      "actions": [],
+      "current_stage": "ROUTING",
+      "evidence_count": 2,
+      "guidance": "Choose which tools or methods will carry out the work and why. Note any capability that is unavailable.",
+      "last_verification": null,
+      "reentries": {
+       "max": 6,
+       "used": 0
+      },
+      "route": {
+       "intent": "TECHNICAL",
+       "level": "L02_STANDARD",
+       "modes": [
+        "COMPARATIVE"
+       ]
+      },
+      "run_id": "$RUN",
+      "stage_status": {
+       "CONTEXT": "COMPLETED",
+       "DECISION": "NOT_STARTED",
+       "EVIDENCE": "NOT_STARTED",
+       "EXECUTION": "NOT_STARTED",
+       "FEEDBACK": "NOT_STARTED",
+       "INTENT": "COMPLETED",
+       "KNOWLEDGE": "SKIPPED_WITH_REASON",
+       "REASONING": "NOT_STARTED",
+       "RESEARCH": "COMPLETED",
+       "ROUTING": "IN_PROGRESS",
+       "VERIFICATION": "NOT_STARTED"
+      },
+      "status": "IN_PROGRESS",
+      "verified": false
+     }
+    },
+    {
+     "ok": true,
+     "result": {
+      "actions": [],
+      "current_stage": "REASONING",
+      "evidence_count": 2,
+      "guidance": "Work out the answer or plan. Keep reasoning separate from actions: nothing is executed in this stage.",
+      "last_verification": null,
+      "reentries": {
+       "max": 6,
+       "used": 0
+      },
+      "route": {
+       "intent": "TECHNICAL",
+       "level": "L02_STANDARD",
+       "modes": [
+        "COMPARATIVE"
+       ]
+      },
+      "run_id": "$RUN",
+      "stage_status": {
+       "CONTEXT": "COMPLETED",
+       "DECISION": "NOT_STARTED",
+       "EVIDENCE": "NOT_STARTED",
+       "EXECUTION": "NOT_STARTED",
+       "FEEDBACK": "NOT_STARTED",
+       "INTENT": "COMPLETED",
+       "KNOWLEDGE": "SKIPPED_WITH_REASON",
+       "REASONING": "IN_PROGRESS",
+       "RESEARCH": "COMPLETED",
+       "ROUTING": "COMPLETED",
+       "VERIFICATION": "NOT_STARTED"
+      },
+      "status": "IN_PROGRESS",
+      "verified": false
+     }
+    },
+    {
+     "ok": true,
+     "result": {
+      "actions": [],
+      "current_stage": "EXECUTION",
+      "evidence_count": 2,
+      "guidance": "Perform the actions with your tools. Report each one with rigorx_report_action, including failures. Skip with a reason if nothing must be executed.",
+      "last_verification": null,
+      "reentries": {
+       "max": 6,
+       "used": 0
+      },
+      "route": {
+       "intent": "TECHNICAL",
+       "level": "L02_STANDARD",
+       "modes": [
+        "COMPARATIVE"
+       ]
+      },
+      "run_id": "$RUN",
+      "stage_status": {
+       "CONTEXT": "COMPLETED",
+       "DECISION": "NOT_STARTED",
+       "EVIDENCE": "NOT_STARTED",
+       "EXECUTION": "IN_PROGRESS",
+       "FEEDBACK": "NOT_STARTED",
+       "INTENT": "COMPLETED",
+       "KNOWLEDGE": "SKIPPED_WITH_REASON",
+       "REASONING": "COMPLETED",
+       "RESEARCH": "COMPLETED",
+       "ROUTING": "COMPLETED",
+       "VERIFICATION": "NOT_STARTED"
+      },
+      "status": "IN_PROGRESS",
+      "verified": false
+     }
+    },
+    {
+     "ok": true,
+     "result": {
+      "actions": [],
+      "current_stage": "EVIDENCE",
+      "evidence_count": 2,
+      "guidance": "Make sure every claim the answer depends on has recorded evidence. Record anything still missing.",
+      "last_verification": null,
+      "reentries": {
+       "max": 6,
+       "used": 0
+      },
+      "route": {
+       "intent": "TECHNICAL",
+       "level": "L02_STANDARD",
+       "modes": [
+        "COMPARATIVE"
+       ]
+      },
+      "run_id": "$RUN",
+      "stage_status": {
+       "CONTEXT": "COMPLETED",
+       "DECISION": "NOT_STARTED",
+       "EVIDENCE": "IN_PROGRESS",
+       "EXECUTION": "SKIPPED_WITH_REASON",
+       "FEEDBACK": "NOT_STARTED",
+       "INTENT": "COMPLETED",
+       "KNOWLEDGE": "SKIPPED_WITH_REASON",
+       "REASONING": "COMPLETED",
+       "RESEARCH": "COMPLETED",
+       "ROUTING": "COMPLETED",
+       "VERIFICATION": "NOT_STARTED"
+      },
+      "status": "IN_PROGRESS",
+      "verified": false
+     }
+    },
+    {
+     "ok": true,
+     "result": {
+      "actions": [],
+      "current_stage": "VERIFICATION",
+      "evidence_count": 2,
+      "guidance": "Call rigorx_verify with your success criteria. Each passed criterion must cite evidence IDs. Submitting this stage directly is not allowed.",
+      "last_verification": null,
+      "reentries": {
+       "max": 6,
+       "used": 0
+      },
+      "route": {
+       "intent": "TECHNICAL",
+       "level": "L02_STANDARD",
+       "modes": [
+        "COMPARATIVE"
+       ]
+      },
+      "run_id": "$RUN",
+      "stage_status": {
+       "CONTEXT": "COMPLETED",
+       "DECISION": "NOT_STARTED",
+       "EVIDENCE": "COMPLETED",
+       "EXECUTION": "SKIPPED_WITH_REASON",
+       "FEEDBACK": "NOT_STARTED",
+       "INTENT": "COMPLETED",
+       "KNOWLEDGE": "SKIPPED_WITH_REASON",
+       "REASONING": "COMPLETED",
+       "RESEARCH": "COMPLETED",
+       "ROUTING": "COMPLETED",
+       "VERIFICATION": "IN_PROGRESS"
+      },
+      "status": "IN_PROGRESS",
+      "verified": false
+     }
+    },
+    {
+     "code": "INVALID_REQUEST",
+     "ok": false
+    },
+    {
+     "ok": true,
+     "result": {
+      "actions": [],
+      "checks": [
+       {
+        "check": "prior_stages_closed",
+        "detail": [],
+        "passed": true
+       },
+       {
+        "check": "criteria_present",
+        "detail": 2,
+        "passed": true
+       },
+       {
+        "check": "criteria_met_with_evidence",
+        "detail": [],
+        "passed": true
+       },
+       {
+        "check": "evidence_references_exist",
+        "detail": [],
+        "passed": true
+       },
+       {
+        "check": "criteria_have_own_evidence",
+        "detail": [
+         "criteria[0]: cites no evidence of its own (every cited ID is also cited by another criterion)",
+         "criteria[1]: cites no evidence of its own (every cited ID is also cited by another criterion)"
+        ],
+        "passed": false
+       }
+      ],
+      "current_stage": "VERIFICATION",
+      "evidence_count": 2,
+      "guidance": "Verification failed: call rigorx_reenter to return to an earlier stage and fix the gaps.",
+      "last_verification": {
+       "checks": [
+        {
+         "check": "prior_stages_closed",
+         "detail": [],
+         "passed": true
+        },
+        {
+         "check": "criteria_present",
+         "detail": 2,
+         "passed": true
+        },
+        {
+         "check": "criteria_met_with_evidence",
+         "detail": [],
+         "passed": true
+        },
+        {
+         "check": "evidence_references_exist",
+         "detail": [],
+         "passed": true
+        },
+        {
+         "check": "criteria_have_own_evidence",
+         "detail": [
+          "criteria[0]: cites no evidence of its own (every cited ID is also cited by another criterion)",
+          "criteria[1]: cites no evidence of its own (every cited ID is also cited by another criterion)"
+         ],
+         "passed": false
+        }
+       ],
+       "criteria": [
+        {
+         "criterion_sha256": "da0898bb54eff26435f9996025d4aa32a480f2423cf1749bb73a5cfdbe094487",
+         "evidence_ids": [
+          "ev-8"
+         ],
+         "passed": true
+        },
+        {
+         "criterion_sha256": "b38ab3f8f6520600478d6627d5a43fa7776bdb6a3428a16f43ad44c88bc3b7a6",
+         "evidence_ids": [
+          "ev-8"
+         ],
+         "passed": true
+        }
+       ],
+       "gate_version": "1.0.0",
+       "passed": false
+      },
+      "passed": false,
+      "reentries": {
+       "max": 6,
+       "used": 0
+      },
+      "route": {
+       "intent": "TECHNICAL",
+       "level": "L02_STANDARD",
+       "modes": [
+        "COMPARATIVE"
+       ]
+      },
+      "run_id": "$RUN",
+      "stage_status": {
+       "CONTEXT": "COMPLETED",
+       "DECISION": "NOT_STARTED",
+       "EVIDENCE": "COMPLETED",
+       "EXECUTION": "SKIPPED_WITH_REASON",
+       "FEEDBACK": "NOT_STARTED",
+       "INTENT": "COMPLETED",
+       "KNOWLEDGE": "SKIPPED_WITH_REASON",
+       "REASONING": "COMPLETED",
+       "RESEARCH": "COMPLETED",
+       "ROUTING": "COMPLETED",
+       "VERIFICATION": "FAILED"
+      },
+      "status": "VERIFICATION_FAILED",
+      "verified": false,
+      "wording": "not verified"
+     }
+    },
+    {
+     "ok": true,
+     "result": {
+      "actions": [],
+      "current_stage": "EVIDENCE",
+      "evidence_count": 2,
+      "guidance": "Make sure every claim the answer depends on has recorded evidence. Record anything still missing.",
+      "last_verification": {
+       "checks": [
+        {
+         "check": "prior_stages_closed",
+         "detail": [],
+         "passed": true
+        },
+        {
+         "check": "criteria_present",
+         "detail": 2,
+         "passed": true
+        },
+        {
+         "check": "criteria_met_with_evidence",
+         "detail": [],
+         "passed": true
+        },
+        {
+         "check": "evidence_references_exist",
+         "detail": [],
+         "passed": true
+        },
+        {
+         "check": "criteria_have_own_evidence",
+         "detail": [
+          "criteria[0]: cites no evidence of its own (every cited ID is also cited by another criterion)",
+          "criteria[1]: cites no evidence of its own (every cited ID is also cited by another criterion)"
+         ],
+         "passed": false
+        }
+       ],
+       "criteria": [
+        {
+         "criterion_sha256": "da0898bb54eff26435f9996025d4aa32a480f2423cf1749bb73a5cfdbe094487",
+         "evidence_ids": [
+          "ev-8"
+         ],
+         "passed": true
+        },
+        {
+         "criterion_sha256": "b38ab3f8f6520600478d6627d5a43fa7776bdb6a3428a16f43ad44c88bc3b7a6",
+         "evidence_ids": [
+          "ev-8"
+         ],
+         "passed": true
+        }
+       ],
+       "gate_version": "1.0.0",
+       "passed": false
+      },
+      "reentries": {
+       "max": 6,
+       "used": 1
+      },
+      "route": {
+       "intent": "TECHNICAL",
+       "level": "L02_STANDARD",
+       "modes": [
+        "COMPARATIVE"
+       ]
+      },
+      "run_id": "$RUN",
+      "stage_status": {
+       "CONTEXT": "COMPLETED",
+       "DECISION": "NOT_STARTED",
+       "EVIDENCE": "IN_PROGRESS",
+       "EXECUTION": "SKIPPED_WITH_REASON",
+       "FEEDBACK": "NOT_STARTED",
+       "INTENT": "COMPLETED",
+       "KNOWLEDGE": "SKIPPED_WITH_REASON",
+       "REASONING": "COMPLETED",
+       "RESEARCH": "COMPLETED",
+       "ROUTING": "COMPLETED",
+       "VERIFICATION": "NOT_STARTED"
+      },
+      "status": "IN_PROGRESS",
+      "verified": false
+     }
+    },
+    {
+     "ok": true,
+     "result": {
+      "actions": [],
+      "current_stage": "VERIFICATION",
+      "evidence_count": 2,
+      "guidance": "Call rigorx_verify with your success criteria. Each passed criterion must cite evidence IDs. Submitting this stage directly is not allowed.",
+      "last_verification": {
+       "checks": [
+        {
+         "check": "prior_stages_closed",
+         "detail": [],
+         "passed": true
+        },
+        {
+         "check": "criteria_present",
+         "detail": 2,
+         "passed": true
+        },
+        {
+         "check": "criteria_met_with_evidence",
+         "detail": [],
+         "passed": true
+        },
+        {
+         "check": "evidence_references_exist",
+         "detail": [],
+         "passed": true
+        },
+        {
+         "check": "criteria_have_own_evidence",
+         "detail": [
+          "criteria[0]: cites no evidence of its own (every cited ID is also cited by another criterion)",
+          "criteria[1]: cites no evidence of its own (every cited ID is also cited by another criterion)"
+         ],
+         "passed": false
+        }
+       ],
+       "criteria": [
+        {
+         "criterion_sha256": "da0898bb54eff26435f9996025d4aa32a480f2423cf1749bb73a5cfdbe094487",
+         "evidence_ids": [
+          "ev-8"
+         ],
+         "passed": true
+        },
+        {
+         "criterion_sha256": "b38ab3f8f6520600478d6627d5a43fa7776bdb6a3428a16f43ad44c88bc3b7a6",
+         "evidence_ids": [
+          "ev-8"
+         ],
+         "passed": true
+        }
+       ],
+       "gate_version": "1.0.0",
+       "passed": false
+      },
+      "reentries": {
+       "max": 6,
+       "used": 1
+      },
+      "route": {
+       "intent": "TECHNICAL",
+       "level": "L02_STANDARD",
+       "modes": [
+        "COMPARATIVE"
+       ]
+      },
+      "run_id": "$RUN",
+      "stage_status": {
+       "CONTEXT": "COMPLETED",
+       "DECISION": "NOT_STARTED",
+       "EVIDENCE": "COMPLETED",
+       "EXECUTION": "SKIPPED_WITH_REASON",
+       "FEEDBACK": "NOT_STARTED",
+       "INTENT": "COMPLETED",
+       "KNOWLEDGE": "SKIPPED_WITH_REASON",
+       "REASONING": "COMPLETED",
+       "RESEARCH": "COMPLETED",
+       "ROUTING": "COMPLETED",
+       "VERIFICATION": "IN_PROGRESS"
+      },
+      "status": "IN_PROGRESS",
+      "verified": false
+     }
+    },
+    {
+     "ok": true,
+     "result": {
+      "actions": [],
+      "checks": [
+       {
+        "check": "prior_stages_closed",
+        "detail": [],
+        "passed": true
+       },
+       {
+        "check": "criteria_present",
+        "detail": 2,
+        "passed": true
+       },
+       {
+        "check": "criteria_met_with_evidence",
+        "detail": [],
+        "passed": true
+       },
+       {
+        "check": "evidence_references_exist",
+        "detail": [],
+        "passed": true
+       },
+       {
+        "check": "criteria_have_own_evidence",
+        "detail": [
+         "criteria[0]: cites no evidence of its own (every cited ID is also cited by another criterion)"
+        ],
+        "passed": false
+       }
+      ],
+      "current_stage": "VERIFICATION",
+      "evidence_count": 2,
+      "guidance": "Verification failed: call rigorx_reenter to return to an earlier stage and fix the gaps.",
+      "last_verification": {
+       "checks": [
+        {
+         "check": "prior_stages_closed",
+         "detail": [],
+         "passed": true
+        },
+        {
+         "check": "criteria_present",
+         "detail": 2,
+         "passed": true
+        },
+        {
+         "check": "criteria_met_with_evidence",
+         "detail": [],
+         "passed": true
+        },
+        {
+         "check": "evidence_references_exist",
+         "detail": [],
+         "passed": true
+        },
+        {
+         "check": "criteria_have_own_evidence",
+         "detail": [
+          "criteria[0]: cites no evidence of its own (every cited ID is also cited by another criterion)"
+         ],
+         "passed": false
+        }
+       ],
+       "criteria": [
+        {
+         "criterion_sha256": "da0898bb54eff26435f9996025d4aa32a480f2423cf1749bb73a5cfdbe094487",
+         "evidence_ids": [
+          "ev-8"
+         ],
+         "passed": true
+        },
+        {
+         "criterion_sha256": "b38ab3f8f6520600478d6627d5a43fa7776bdb6a3428a16f43ad44c88bc3b7a6",
+         "evidence_ids": [
+          "ev-8",
+          "ev-9"
+         ],
+         "passed": true
+        }
+       ],
+       "gate_version": "1.0.0",
+       "passed": false
+      },
+      "passed": false,
+      "reentries": {
+       "max": 6,
+       "used": 1
+      },
+      "route": {
+       "intent": "TECHNICAL",
+       "level": "L02_STANDARD",
+       "modes": [
+        "COMPARATIVE"
+       ]
+      },
+      "run_id": "$RUN",
+      "stage_status": {
+       "CONTEXT": "COMPLETED",
+       "DECISION": "NOT_STARTED",
+       "EVIDENCE": "COMPLETED",
+       "EXECUTION": "SKIPPED_WITH_REASON",
+       "FEEDBACK": "NOT_STARTED",
+       "INTENT": "COMPLETED",
+       "KNOWLEDGE": "SKIPPED_WITH_REASON",
+       "REASONING": "COMPLETED",
+       "RESEARCH": "COMPLETED",
+       "ROUTING": "COMPLETED",
+       "VERIFICATION": "FAILED"
+      },
+      "status": "VERIFICATION_FAILED",
+      "verified": false,
+      "wording": "not verified"
+     }
+    },
+    {
+     "ok": true,
+     "result": {
+      "actions": [],
+      "current_stage": "EVIDENCE",
+      "evidence_count": 2,
+      "guidance": "Make sure every claim the answer depends on has recorded evidence. Record anything still missing.",
+      "last_verification": {
+       "checks": [
+        {
+         "check": "prior_stages_closed",
+         "detail": [],
+         "passed": true
+        },
+        {
+         "check": "criteria_present",
+         "detail": 2,
+         "passed": true
+        },
+        {
+         "check": "criteria_met_with_evidence",
+         "detail": [],
+         "passed": true
+        },
+        {
+         "check": "evidence_references_exist",
+         "detail": [],
+         "passed": true
+        },
+        {
+         "check": "criteria_have_own_evidence",
+         "detail": [
+          "criteria[0]: cites no evidence of its own (every cited ID is also cited by another criterion)"
+         ],
+         "passed": false
+        }
+       ],
+       "criteria": [
+        {
+         "criterion_sha256": "da0898bb54eff26435f9996025d4aa32a480f2423cf1749bb73a5cfdbe094487",
+         "evidence_ids": [
+          "ev-8"
+         ],
+         "passed": true
+        },
+        {
+         "criterion_sha256": "b38ab3f8f6520600478d6627d5a43fa7776bdb6a3428a16f43ad44c88bc3b7a6",
+         "evidence_ids": [
+          "ev-8",
+          "ev-9"
+         ],
+         "passed": true
+        }
+       ],
+       "gate_version": "1.0.0",
+       "passed": false
+      },
+      "reentries": {
+       "max": 6,
+       "used": 2
+      },
+      "route": {
+       "intent": "TECHNICAL",
+       "level": "L02_STANDARD",
+       "modes": [
+        "COMPARATIVE"
+       ]
+      },
+      "run_id": "$RUN",
+      "stage_status": {
+       "CONTEXT": "COMPLETED",
+       "DECISION": "NOT_STARTED",
+       "EVIDENCE": "IN_PROGRESS",
+       "EXECUTION": "SKIPPED_WITH_REASON",
+       "FEEDBACK": "NOT_STARTED",
+       "INTENT": "COMPLETED",
+       "KNOWLEDGE": "SKIPPED_WITH_REASON",
+       "REASONING": "COMPLETED",
+       "RESEARCH": "COMPLETED",
+       "ROUTING": "COMPLETED",
+       "VERIFICATION": "NOT_STARTED"
+      },
+      "status": "IN_PROGRESS",
+      "verified": false
+     }
+    },
+    {
+     "ok": true,
+     "result": {
+      "actions": [],
+      "current_stage": "VERIFICATION",
+      "evidence_count": 2,
+      "guidance": "Call rigorx_verify with your success criteria. Each passed criterion must cite evidence IDs. Submitting this stage directly is not allowed.",
+      "last_verification": {
+       "checks": [
+        {
+         "check": "prior_stages_closed",
+         "detail": [],
+         "passed": true
+        },
+        {
+         "check": "criteria_present",
+         "detail": 2,
+         "passed": true
+        },
+        {
+         "check": "criteria_met_with_evidence",
+         "detail": [],
+         "passed": true
+        },
+        {
+         "check": "evidence_references_exist",
+         "detail": [],
+         "passed": true
+        },
+        {
+         "check": "criteria_have_own_evidence",
+         "detail": [
+          "criteria[0]: cites no evidence of its own (every cited ID is also cited by another criterion)"
+         ],
+         "passed": false
+        }
+       ],
+       "criteria": [
+        {
+         "criterion_sha256": "da0898bb54eff26435f9996025d4aa32a480f2423cf1749bb73a5cfdbe094487",
+         "evidence_ids": [
+          "ev-8"
+         ],
+         "passed": true
+        },
+        {
+         "criterion_sha256": "b38ab3f8f6520600478d6627d5a43fa7776bdb6a3428a16f43ad44c88bc3b7a6",
+         "evidence_ids": [
+          "ev-8",
+          "ev-9"
+         ],
+         "passed": true
+        }
+       ],
+       "gate_version": "1.0.0",
+       "passed": false
+      },
+      "reentries": {
+       "max": 6,
+       "used": 2
+      },
+      "route": {
+       "intent": "TECHNICAL",
+       "level": "L02_STANDARD",
+       "modes": [
+        "COMPARATIVE"
+       ]
+      },
+      "run_id": "$RUN",
+      "stage_status": {
+       "CONTEXT": "COMPLETED",
+       "DECISION": "NOT_STARTED",
+       "EVIDENCE": "COMPLETED",
+       "EXECUTION": "SKIPPED_WITH_REASON",
+       "FEEDBACK": "NOT_STARTED",
+       "INTENT": "COMPLETED",
+       "KNOWLEDGE": "SKIPPED_WITH_REASON",
+       "REASONING": "COMPLETED",
+       "RESEARCH": "COMPLETED",
+       "ROUTING": "COMPLETED",
+       "VERIFICATION": "IN_PROGRESS"
+      },
+      "status": "IN_PROGRESS",
+      "verified": false
+     }
+    },
+    {
+     "ok": true,
+     "result": {
+      "actions": [],
+      "checks": [
+       {
+        "check": "prior_stages_closed",
+        "detail": [],
+        "passed": true
+       },
+       {
+        "check": "criteria_present",
+        "detail": 2,
+        "passed": true
+       },
+       {
+        "check": "criteria_met_with_evidence",
+        "detail": [],
+        "passed": true
+       },
+       {
+        "check": "evidence_references_exist",
+        "detail": [],
+        "passed": true
+       },
+       {
+        "check": "criteria_have_own_evidence",
+        "detail": [],
+        "passed": true
+       }
+      ],
+      "current_stage": "DECISION",
+      "evidence_count": 2,
+      "guidance": "Decide the final result using only verified material. State remaining limitations.",
+      "last_verification": {
+       "checks": [
+        {
+         "check": "prior_stages_closed",
+         "detail": [],
+         "passed": true
+        },
+        {
+         "check": "criteria_present",
+         "detail": 2,
+         "passed": true
+        },
+        {
+         "check": "criteria_met_with_evidence",
+         "detail": [],
+         "passed": true
+        },
+        {
+         "check": "evidence_references_exist",
+         "detail": [],
+         "passed": true
+        },
+        {
+         "check": "criteria_have_own_evidence",
+         "detail": [],
+         "passed": true
+        }
+       ],
+       "criteria": [
+        {
+         "criterion_sha256": "da0898bb54eff26435f9996025d4aa32a480f2423cf1749bb73a5cfdbe094487",
+         "evidence_ids": [
+          "ev-8"
+         ],
+         "passed": true
+        },
+        {
+         "criterion_sha256": "b38ab3f8f6520600478d6627d5a43fa7776bdb6a3428a16f43ad44c88bc3b7a6",
+         "evidence_ids": [
+          "ev-9"
+         ],
+         "passed": true
+        }
+       ],
+       "gate_version": "1.0.0",
+       "passed": true
+      },
+      "passed": true,
+      "reentries": {
+       "max": 6,
+       "used": 2
+      },
+      "route": {
+       "intent": "TECHNICAL",
+       "level": "L02_STANDARD",
+       "modes": [
+        "COMPARATIVE"
+       ]
+      },
+      "run_id": "$RUN",
+      "stage_status": {
+       "CONTEXT": "COMPLETED",
+       "DECISION": "IN_PROGRESS",
+       "EVIDENCE": "COMPLETED",
+       "EXECUTION": "SKIPPED_WITH_REASON",
+       "FEEDBACK": "NOT_STARTED",
+       "INTENT": "COMPLETED",
+       "KNOWLEDGE": "SKIPPED_WITH_REASON",
+       "REASONING": "COMPLETED",
+       "RESEARCH": "COMPLETED",
+       "ROUTING": "COMPLETED",
+       "VERIFICATION": "COMPLETED"
+      },
+      "status": "IN_PROGRESS",
+      "verified": true,
+      "wording": "structurally verified"
+     }
+    }
+   ],
+   "steps": [
+    [
+     "start_run",
+     {
+      "task": "Compare two database designs for a service"
+     }
+    ],
+    [
+     "submit_stage",
+     {
+      "outcome": "completed",
+      "run_id": "$RUN",
+      "stage": "CONTEXT",
+      "summary": "ctx"
+     }
+    ],
+    [
+     "submit_stage",
+     {
+      "outcome": "completed",
+      "run_id": "$RUN",
+      "stage": "CONTEXT",
+      "summary": "The user wants two database designs compared for one small service."
+     }
+    ],
+    [
+     "submit_stage",
+     {
+      "outcome": "completed",
+      "run_id": "$RUN",
+      "stage": "INTENT",
+      "summary": "the user wants two DATABASE designs compared for one small   service."
+     }
+    ],
+    [
+     "submit_stage",
+     {
+      "outcome": "completed",
+      "run_id": "$RUN",
+      "stage": "INTENT",
+      "summary": "Deliver a recommendation with storage, latency and migration cost criteria."
+     }
+    ],
+    [
+     "submit_stage",
+     {
+      "outcome": "skipped",
+      "reason": "n/a",
+      "run_id": "$RUN",
+      "stage": "KNOWLEDGE",
+      "summary": "skipped"
+     }
+    ],
+    [
+     "submit_stage",
+     {
+      "outcome": "skipped",
+      "reason": "domain facts come from the research sources",
+      "run_id": "$RUN",
+      "stage": "KNOWLEDGE",
+      "summary": "skipped"
+     }
+    ],
+    [
+     "record_evidence",
+     {
+      "claim": "c",
+      "run_id": "$RUN",
+      "source_ref": "https://example.org/x"
+     }
+    ],
+    [
+     "record_evidence",
+     {
+      "claim": "Design A stores up to ten gigabytes per tenant",
+      "run_id": "$RUN",
+      "source_ref": "https://example.org/storage"
+     }
+    ],
+    [
+     "record_evidence",
+     {
+      "claim": "Design B adds one network hop per query",
+      "run_id": "$RUN",
+      "source_ref": "https://example.org/latency"
+     }
+    ],
+    [
+     "submit_stage",
+     {
+      "outcome": "completed",
+      "run_id": "$RUN",
+      "stage": "RESEARCH",
+      "summary": "Two sources recorded: tenant storage limits of A and query latency of B."
+     }
+    ],
+    [
+     "submit_stage",
+     {
+      "outcome": "completed",
+      "run_id": "$RUN",
+      "stage": "ROUTING",
+      "summary": "Comparative technical analysis at standard depth, no external actions needed."
+     }
+    ],
+    [
+     "submit_stage",
+     {
+      "outcome": "completed",
+      "run_id": "$RUN",
+      "stage": "REASONING",
+      "summary": "A fits per-tenant isolation; B costs latency but eases cross-tenant reporting."
+     }
+    ],
+    [
+     "submit_stage",
+     {
+      "outcome": "skipped",
+      "reason": "a recommendation needs no actions",
+      "run_id": "$RUN",
+      "stage": "EXECUTION",
+      "summary": "skipped"
+     }
+    ],
+    [
+     "submit_stage",
+     {
+      "outcome": "completed",
+      "run_id": "$RUN",
+      "stage": "EVIDENCE",
+      "summary": "Each comparison point is backed by one recorded source of its own."
+     }
+    ],
+    [
+     "verify",
+     {
+      "criteria": [
+       {
+        "criterion": "ok",
+        "evidence_ids": [
+         "ev-8"
+        ],
+        "passed": true
+       }
+      ],
+      "run_id": "$RUN"
+     }
+    ],
+    [
+     "verify",
+     {
+      "criteria": [
+       {
+        "criterion": "Storage limits are identified",
+        "evidence_ids": [
+         "ev-8"
+        ],
+        "passed": true
+       },
+       {
+        "criterion": "Latency trade-off is identified",
+        "evidence_ids": [
+         "ev-8"
+        ],
+        "passed": true
+       }
+      ],
+      "run_id": "$RUN"
+     }
+    ],
+    [
+     "reenter",
+     {
+      "reason": "each criterion needs its own source",
+      "run_id": "$RUN",
+      "target_stage": "EVIDENCE",
+      "trigger": "gate_failed"
+     }
+    ],
+    [
+     "submit_stage",
+     {
+      "outcome": "completed",
+      "run_id": "$RUN",
+      "stage": "EVIDENCE",
+      "summary": "Re-checked: storage cites the storage source, latency the latency source."
+     }
+    ],
+    [
+     "verify",
+     {
+      "criteria": [
+       {
+        "criterion": "Storage limits are identified",
+        "evidence_ids": [
+         "ev-8"
+        ],
+        "passed": true
+       },
+       {
+        "criterion": "Latency trade-off is identified",
+        "evidence_ids": [
+         "ev-8",
+         "ev-9"
+        ],
+        "passed": true
+       }
+      ],
+      "run_id": "$RUN"
+     }
+    ],
+    [
+     "reenter",
+     {
+      "reason": "storage criterion shares its only source",
+      "run_id": "$RUN",
+      "target_stage": "EVIDENCE",
+      "trigger": "gate_failed"
+     }
+    ],
+    [
+     "submit_stage",
+     {
+      "outcome": "completed",
+      "run_id": "$RUN",
+      "stage": "EVIDENCE",
+      "summary": "Final check: storage and latency criteria each cite a distinct source now."
+     }
+    ],
+    [
+     "verify",
+     {
+      "criteria": [
+       {
+        "criterion": "Storage limits are identified",
+        "evidence_ids": [
+         "ev-8"
+        ],
+        "passed": true
+       },
+       {
+        "criterion": "Latency trade-off is identified",
+        "evidence_ids": [
+         "ev-9"
+        ],
+        "passed": true
+       }
+      ],
+      "run_id": "$RUN"
+     }
+    ]
+   ],
+   "text_policy": "default"
   }
  }
 }

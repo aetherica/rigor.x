@@ -66,11 +66,11 @@ async def main(options: argparse.Namespace) -> None:
 
             run = show("start run", await client.call_tool("rigorx_start_run", {"task": "What is gravity?"}))
             run_id = run["run_id"]
-            show("CONTEXT", await client.call_tool("rigorx_submit_stage", {"run_id": run_id, "stage": "CONTEXT", "outcome": "completed", "summary": "Physics question"}))
-            evidence = show("record evidence", await client.call_tool("rigorx_record_evidence", {"run_id": run_id, "source_ref": "https://en.wikipedia.org/wiki/Gravity", "claim": "Masses attract each other"}))
+            show("CONTEXT", await client.call_tool("rigorx_submit_stage", {"run_id": run_id, "stage": "CONTEXT", "outcome": "completed", "summary": "A physics question about gravity; one encyclopedia source is available."}))
+            evidence = show("record evidence", await client.call_tool("rigorx_record_evidence", {"run_id": run_id, "source_ref": "https://en.wikipedia.org/wiki/Gravity", "claim": "Masses attract each other through gravity"}))
             for stage in STAGES:
                 skip = stage in {"RESEARCH", "EXECUTION"}
-                arguments = {"run_id": run_id, "stage": stage, "outcome": "skipped" if skip else "completed", "summary": "done"}
+                arguments = {"run_id": run_id, "stage": stage, "outcome": "skipped" if skip else "completed", "summary": f"{stage}: work for this stage was done and checked against the question."}
                 if skip:
                     arguments["reason"] = "not needed for this question"
                 show(stage + (" (skipped)" if skip else ""), await client.call_tool("rigorx_submit_stage", arguments))
@@ -78,10 +78,10 @@ async def main(options: argparse.Namespace) -> None:
             bad = await client.call_tool("rigorx_verify", {"run_id": "rx_" + "x" * 32, "criteria": []})
             print(f"  ✓ unknown run rejected: {bad.content[0].text}" if bad.is_error else "  ✗ unknown run was accepted")
 
-            verdict = show("verify", await client.call_tool("rigorx_verify", {"run_id": run_id, "criteria": [{"criterion": "Answer cites a source", "passed": True, "evidence_ids": [evidence["evidence_id"]]}]}))
+            verdict = show("verify", await client.call_tool("rigorx_verify", {"run_id": run_id, "criteria": [{"criterion": "The answer cites a source", "passed": True, "evidence_ids": [evidence["evidence_id"]]}]}))
             print(f"    {verdict['wording']}")
-            show("DECISION", await client.call_tool("rigorx_submit_stage", {"run_id": run_id, "stage": "DECISION", "outcome": "completed", "summary": "Gravity is mutual attraction"}))
-            done = show("FEEDBACK", await client.call_tool("rigorx_submit_stage", {"run_id": run_id, "stage": "FEEDBACK", "outcome": "completed", "summary": "none"}))
+            show("DECISION", await client.call_tool("rigorx_submit_stage", {"run_id": run_id, "stage": "DECISION", "outcome": "completed", "summary": "Answer: gravity is the mutual attraction between masses, per the cited source."}))
+            done = show("FEEDBACK", await client.call_tool("rigorx_submit_stage", {"run_id": run_id, "stage": "FEEDBACK", "outcome": "completed", "summary": "Feedback: one source was enough; research and execution were rightly skipped."}))
             print(f"\nRun status: {done['status']}")
 
 

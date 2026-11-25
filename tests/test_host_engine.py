@@ -5,6 +5,7 @@ import unittest
 from pathlib import Path
 
 from rigorx.host_engine import (
+    RELAXED_TEXT_POLICY,
     EngineError,
     HostEngine,
     InvalidRequest,
@@ -24,7 +25,7 @@ BEFORE_VERIFY = [s.value for s in STAGE_ORDER[: STAGE_ORDER.index(Stage.VERIFICA
 class HostEngineTests(unittest.TestCase):
     def setUp(self):
         self.store = SQLiteRunStore(":memory:")
-        self.engine = HostEngine(self.store)
+        self.engine = HostEngine(self.store, text_policy=RELAXED_TEXT_POLICY)
 
     def tearDown(self):
         self.store.close()
@@ -178,7 +179,7 @@ class HostEngineTests(unittest.TestCase):
             self.engine.submit_stage(ALICE, run_id, stage="VERIFICATION", outcome="skipped", summary="x", reason="r")
 
     def test_reentry_budget_is_bounded(self):
-        engine = HostEngine(self.store, max_reentries=1)
+        engine = HostEngine(self.store, max_reentries=1, text_policy=RELAXED_TEXT_POLICY)
         run_id = engine.start_run(ALICE, "Explain gravity")["run_id"]
         engine.submit_stage(ALICE, run_id, stage="CONTEXT", outcome="completed", summary="s")
         engine.reenter(ALICE, run_id, target_stage="CONTEXT", trigger="t", reason="r")
@@ -198,7 +199,7 @@ class HostEngineTests(unittest.TestCase):
             self.engine.delete_run(ALICE, run_id)
 
     def test_limits(self):
-        engine = HostEngine(self.store, max_evidence_per_run=2, max_text_chars=10)
+        engine = HostEngine(self.store, max_evidence_per_run=2, max_text_chars=10, text_policy=RELAXED_TEXT_POLICY)
         run_id = engine.start_run(ALICE, "short")["run_id"]
         with self.assertRaises(LimitExceeded):
             engine.submit_stage(ALICE, run_id, stage="CONTEXT", outcome="completed", summary="x" * 11)
@@ -217,21 +218,101 @@ class HostEngineTests(unittest.TestCase):
             "id": "SLC-0001", "name": "/short", "description": "Keep it brief", "classification": "MACRO",
             "group_id": "g", "lifecycle_status": "x", "runtime_status": "y",
         }], expected_count=1)
-        resolved = HostEngine(self.store, command_catalog=catalog).resolve_commands("/short hello")
+        resolved = HostEngine(self.store, command_catalog=catalog, text_policy=RELAXED_TEXT_POLICY).resolve_commands("/short hello")
         self.assertEqual(len(resolved["applied_modifiers"]), 1)
 
     def test_revision_conflict_and_persistence_across_reopen(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "host.sqlite"
             with SQLiteRunStore(path) as store:
-                engine = HostEngine(store)
+                engine = HostEngine(store, text_policy=RELAXED_TEXT_POLICY)
                 run_id = engine.start_run(ALICE, "Explain gravity")["run_id"]
                 stale = store.load(ALICE, run_id)
                 engine.submit_stage(ALICE, run_id, stage="CONTEXT", outcome="completed", summary="s")
                 with self.assertRaises(RevisionConflict):
                     store.save(ALICE, stale.run, stale.meta, expected_revision=stale.revision)
             with SQLiteRunStore(path) as store:
-                self.assertEqual(HostEngine(store).get_run(ALICE, run_id)["current_stage"], "INTENT")
+                self.assertEqual(HostEngine(store, text_policy=RELAXED_TEXT_POLICY).get_run(ALICE, run_id)["current_stage"], "INTENT")
+
+
+def substantial_summary(stage: str) -> str:
+    return f"Work for the {stage} stage was done and checked against the task requirements."
+
+
+class StrictTextPolicyTests(unittest.TestCase):
+    """The default policy: substantive summaries, reasons, claims and criteria; own evidence per criterion."""
+
+    def setUp(self):
+        self.store = SQLiteRunStore(":memory:")
+        self.engine = HostEngine(self.store)
+        self.run_id = self.engine.start_run(ALICE, "Compare two database designs")["run_id"]
+
+    def tearDown(self):
+        self.store.close()
+
+    def submit(self, stage, summary=None, **kw):
+        return self.engine.submit_stage(ALICE, self.run_id, stage=stage, outcome=kw.pop("outcome", "completed"),
+                                        summary=summary or substantial_summary(stage), **kw)
+
+    def evidence(self, n):
+        return self.engine.record_evidence(ALICE, self.run_id, source_ref=f"https://example.org/{n}",
+                                           claim=f"Source number {n} supports one comparison point")["evidence_id"]
+
+    def to_verification(self):
+        for stage in BEFORE_VERIFY:
+            self.submit(stage)
+
+    def test_short_or_thin_summary_is_rejected(self):
+        for summary in ("done", "x" * 60, "ok ok ok ok ok", "   ctx   "):
+            with self.assertRaisesRegex(InvalidRequest, "summary is too short"):
+                self.submit("CONTEXT", summary)
+        self.assertEqual(self.submit("CONTEXT")["current_stage"], "INTENT")
+
+    def test_words_count_in_any_script(self):
+        bengali = "ব্যবহারকারী দুটি ডেটাবেস ডিজাইন তুলনা করতে চান এবং সীমাবদ্ধতা জানা আছে"
+        self.assertEqual(self.submit("CONTEXT", bengali)["current_stage"], "INTENT")
+
+    def test_summary_may_not_repeat_another_stage(self):
+        self.submit("CONTEXT", "The user wants a comparison of two database designs for one service.")
+        with self.assertRaisesRegex(InvalidRequest, "repeats the CONTEXT summary"):
+            self.submit("INTENT", "  the USER wants a comparison of two database   designs for one service. ")
+
+    def test_same_stage_may_restate_its_summary_after_reentry(self):
+        text = "The user wants a comparison of two database designs for one service."
+        self.submit("CONTEXT", text)
+        self.engine.reenter(ALICE, self.run_id, target_stage="CONTEXT", trigger="new_info", reason="user added a constraint")
+        self.assertEqual(self.submit("CONTEXT", text)["current_stage"], "INTENT")
+
+    def test_reasons_claims_and_criteria_need_substance(self):
+        self.submit("CONTEXT")
+        with self.assertRaisesRegex(InvalidRequest, "reason is too short"):
+            self.submit("INTENT", outcome="skipped", reason="n/a")
+        with self.assertRaisesRegex(InvalidRequest, "claim is too short"):
+            self.engine.record_evidence(ALICE, self.run_id, source_ref="https://example.org", claim="c")
+        ev = self.evidence(1)
+        self.submit("INTENT")
+        for stage in BEFORE_VERIFY[2:]:
+            self.submit(stage)
+        with self.assertRaisesRegex(InvalidRequest, r"criteria\[0\]\.criterion is too short"):
+            self.engine.verify(ALICE, self.run_id, criteria=[{"criterion": "ok", "passed": True, "evidence_ids": [ev]}])
+
+    def test_one_record_cannot_support_every_criterion(self):
+        ev1, ev2, ev3 = self.evidence(1), self.evidence(2), self.evidence(3)
+        self.to_verification()
+        reused = self.engine.verify(ALICE, self.run_id, criteria=[
+            {"criterion": "Storage limits are identified", "passed": True, "evidence_ids": [ev1]},
+            {"criterion": "Latency trade-off is identified", "passed": True, "evidence_ids": [ev1]},
+        ])
+        self.assertFalse(reused["passed"])
+        check = next(c for c in reused["checks"] if c["check"] == "criteria_have_own_evidence")
+        self.assertEqual(len(check["detail"]), 2)
+        self.engine.reenter(ALICE, self.run_id, target_stage="EVIDENCE", trigger="gate_failed", reason="each criterion needs its own source")
+        self.submit("EVIDENCE", "Re-checked sources: storage and latency now each have their own record.")
+        shared_plus_own = self.engine.verify(ALICE, self.run_id, criteria=[
+            {"criterion": "Storage limits are identified", "passed": True, "evidence_ids": [ev1, ev3]},
+            {"criterion": "Latency trade-off is identified", "passed": True, "evidence_ids": [ev1, ev2]},
+        ])
+        self.assertTrue(shared_plus_own["passed"], shared_plus_own["checks"])
 
 
 if __name__ == "__main__":

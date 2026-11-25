@@ -14,6 +14,7 @@ from __future__ import annotations
 import re
 import secrets
 from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
 from hashlib import sha256
 from typing import Any
 
@@ -81,6 +82,40 @@ def _digest(text: str) -> str:
     return sha256(text.encode("utf-8")).hexdigest()
 
 
+@dataclass(frozen=True)
+class TextPolicy:
+    """Minimum substance for host-submitted text (counted after trimming; words contain a letter or digit).
+
+    Summaries describe completed stages; notes are reasons, evidence claims and verification
+    criteria. With ``distinct_summaries`` a completed stage may not repeat another stage's summary
+    (compared case- and whitespace-insensitively). This is a structural check of effort, not of truth.
+    """
+
+    min_summary_chars: int = 40
+    min_summary_words: int = 6
+    min_note_chars: int = 15
+    min_note_words: int = 3
+    distinct_summaries: bool = True
+
+
+#: No minimums and no duplicate check; for tests of unrelated behaviour.
+RELAXED_TEXT_POLICY = TextPolicy(0, 0, 0, 0, False)
+
+
+def _words(text: str) -> int:
+    return sum(1 for token in text.split() if any(ch.isalnum() for ch in token))
+
+
+def _normalized(text: str) -> str:
+    return " ".join(text.lower().split())
+
+
+def _substantial(name: str, text: str, min_chars: int, min_words: int, hint: str) -> None:
+    trimmed = text.strip()
+    if len(trimmed) < min_chars or _words(trimmed) < min_words:
+        raise InvalidRequest(f"{name} is too short: use at least {min_chars} characters and {min_words} words ({hint})")
+
+
 def _text(name: str, value: Any, *, max_chars: int, required: bool = True) -> str:
     if value is None and not required:
         return ""
@@ -107,6 +142,7 @@ class HostEngine:
         max_text_chars: int = 20_000,
         max_ref_chars: int = 2_048,
         max_criteria: int = 50,
+        text_policy: TextPolicy | None = None,
     ) -> None:
         for name, value in (
             ("max_evidence_per_run", max_evidence_per_run),
@@ -126,6 +162,7 @@ class HostEngine:
         self.max_text_chars = max_text_chars
         self.max_ref_chars = max_ref_chars
         self.max_criteria = max_criteria
+        self.text_policy = text_policy or TextPolicy()
 
     # ------------------------------------------------------------------ stateless tools
 
@@ -190,18 +227,20 @@ class HostEngine:
             raise StageConflict(f"Current stage is {run.current_stage.value}, not {target.value}")
         if target is Stage.VERIFICATION:
             raise StageConflict("VERIFICATION is completed only through rigorx_verify")
-        result_ref = f"summary:sha256:{_digest(summary)}:chars:{len(summary)}"
+        normalized = _digest(_normalized(summary))
+        result_ref = f"summary:sha256:{_digest(summary)}:norm:{normalized}:chars:{len(summary)}"
         try:
             if outcome == "completed":
+                self._check_summary(run, target, summary, normalized)
                 run.complete_stage(result_ref=result_ref)
             elif outcome == "skipped":
                 if target in _NO_SKIP:
                     raise StageConflict(f"{target.value} cannot be skipped")
-                run.skip_stage(reason=_text("reason", reason, max_chars=self.max_ref_chars))
+                run.skip_stage(reason=self._note("reason", reason))
             elif outcome == "partial":
-                run.mark_partial(reason=_text("reason", reason, max_chars=self.max_ref_chars))
+                run.mark_partial(reason=self._note("reason", reason))
             else:
-                run.mark_blocked(reason=_text("reason", reason, max_chars=self.max_ref_chars))
+                run.mark_blocked(reason=self._note("reason", reason))
         except InvalidTransition as exc:
             raise StageConflict(str(exc)) from None
         self._advance(run)
@@ -221,6 +260,8 @@ class HostEngine:
         run, meta = stored.run, stored.meta
         source_ref = _text("source_ref", source_ref, max_chars=self.max_ref_chars)
         claim = _text("claim", claim, max_chars=self.max_text_chars)
+        policy = self.text_policy
+        _substantial("claim", claim, policy.min_note_chars, policy.min_note_words, "state what this source supports")
         evidence_type = _text("evidence_type", evidence_type, max_chars=64)
         if not re.fullmatch(r"[A-Z][A-Z0-9_]{0,63}", evidence_type) or evidence_type == ACTION_EVIDENCE_TYPE:
             raise InvalidRequest("evidence_type must be an upper-case identifier and not HOST_REPORTED_ACTION")
@@ -333,10 +374,11 @@ class HostEngine:
         recorded: list[dict[str, Any]] = []
         problems: list[str] = []
         dangling: list[str] = []
+        cited: list[tuple[int, set[str]]] = []
         for index, item in enumerate(criteria):
             if not isinstance(item, Mapping):
                 raise InvalidRequest(f"criteria[{index}] must be an object")
-            text = _text(f"criteria[{index}].criterion", item.get("criterion"), max_chars=self.max_ref_chars)
+            text = self._note(f"criteria[{index}].criterion", item.get("criterion"), hint="state what must be true")
             passed = item.get("passed")
             refs = item.get("evidence_ids", [])
             if not isinstance(passed, bool):
@@ -347,6 +389,8 @@ class HostEngine:
                 continue
             if passed and not refs:
                 problems.append(f"criteria[{index}]: a passed criterion must cite evidence")
+            if passed and refs:
+                cited.append((index, set(refs)))
             if not passed:
                 problems.append(f"criteria[{index}]: criterion reported as not met")
             dangling.extend(ref for ref in refs if ref not in all_ids)
@@ -354,9 +398,33 @@ class HostEngine:
         checks.append({"check": "criteria_present", "passed": bool(criteria), "detail": len(criteria)})
         checks.append({"check": "criteria_met_with_evidence", "passed": not problems, "detail": problems})
         checks.append({"check": "evidence_references_exist", "passed": not dangling, "detail": sorted(set(dangling))})
+        # One source may support several criteria, but each passed criterion needs at least one
+        # evidence ID of its own: citing the same record for everything does not pass the gate.
+        shared = []
+        for index, refs in cited:
+            others = set().union(*(other for i, other in cited if i != index))
+            if not refs - others:
+                shared.append(f"criteria[{index}]: cites no evidence of its own (every cited ID is also cited by another criterion)")
+        checks.append({"check": "criteria_have_own_evidence", "passed": not shared, "detail": shared})
         return checks, recorded
 
     # ------------------------------------------------------------------ helpers
+
+    def _note(self, name: str, value: Any, *, hint: str = "explain why") -> str:
+        text = _text(name, value, max_chars=self.max_ref_chars)
+        policy = self.text_policy
+        _substantial(name, text, policy.min_note_chars, policy.min_note_words, hint)
+        return text
+
+    def _check_summary(self, run: PipelineRun, target: Stage, summary: str, normalized: str) -> None:
+        policy = self.text_policy
+        _substantial("summary", summary, policy.min_summary_chars, policy.min_summary_words, "describe what was done in this stage")
+        if not policy.distinct_summaries:
+            return
+        marker = f":norm:{normalized}:"
+        for event in run.events:
+            if event.event_type == "STAGE_COMPLETED" and event.stage is not target and marker in str(event.details.get("result_ref", "")):
+                raise InvalidRequest(f"summary repeats the {event.stage.value} summary: describe this stage's own work")
 
     def _owner(self, owner_id: str) -> str:
         if not isinstance(owner_id, str) or not owner_id.strip() or len(owner_id) > 256:

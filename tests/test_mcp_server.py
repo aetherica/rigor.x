@@ -57,24 +57,43 @@ class McpServerTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(profile.meta, {"openai/profile": True})
 
     async def test_full_run_over_mcp(self):
+        summaries = {
+            "CONTEXT": "The user asks about gravity; no prior decisions, one web source is available.",
+            "INTENT": "Explain what gravity is in two sentences, citing one reliable source.",
+            "KNOWLEDGE": "Physics domain: Newtonian gravitation is enough; relativity is out of scope here.",
+            "ROUTING": "Factual explanation at standard depth; no tools beyond the recorded source.",
+            "REASONING": "Masses attract each other; the force grows with mass and falls with distance squared.",
+            "EVIDENCE": "One source recorded and checked against the explanation; nothing contradicts it.",
+            "DECISION": "Answer: gravity is the mutual attraction between masses, as the cited source states.",
+            "FEEDBACK": "The run needed only one source; research and execution were rightly skipped.",
+        }
         async with self.client:
             started = await self.call("rigorx_start_run", task="What is gravity?")
             self.assertFalse(started.is_error)
             run_id = started.structured_content["run_id"]
-            await self.call("rigorx_submit_stage", run_id=run_id, stage="CONTEXT", outcome="completed", summary="ctx")
-            evidence = await self.call("rigorx_record_evidence", run_id=run_id, source_ref="https://example.org", claim="Masses attract")
+            short = await self.call("rigorx_submit_stage", run_id=run_id, stage="CONTEXT", outcome="completed", summary="ctx")
+            self.assertTrue(short.is_error)
+            self.assertIn("INVALID_REQUEST: summary is too short", short.content[0].text)
+            await self.call("rigorx_submit_stage", run_id=run_id, stage="CONTEXT", outcome="completed", summary=summaries["CONTEXT"])
+            evidence = await self.call(
+                "rigorx_record_evidence", run_id=run_id, source_ref="https://example.org",
+                claim="Masses attract each other in proportion to their mass",
+            )
             ev = evidence.structured_content["evidence_id"]
             for stage in ["INTENT", "KNOWLEDGE", "RESEARCH", "ROUTING", "REASONING", "EXECUTION", "EVIDENCE"]:
                 skip = stage in {"RESEARCH", "EXECUTION"}
                 result = await self.call(
                     "rigorx_submit_stage", run_id=run_id, stage=stage, outcome="skipped" if skip else "completed",
-                    summary="s", reason="not needed" if skip else None,
+                    summary=summaries.get(stage, "skipped"), reason="not needed for this question" if skip else None,
                 )
                 self.assertFalse(result.is_error, result.content)
-            verified = await self.call("rigorx_verify", run_id=run_id, criteria=[{"criterion": "cited", "passed": True, "evidence_ids": [ev]}])
+            verified = await self.call(
+                "rigorx_verify", run_id=run_id,
+                criteria=[{"criterion": "The answer cites a source", "passed": True, "evidence_ids": [ev]}],
+            )
             self.assertTrue(verified.structured_content["passed"])
-            await self.call("rigorx_submit_stage", run_id=run_id, stage="DECISION", outcome="completed", summary="final")
-            done = await self.call("rigorx_submit_stage", run_id=run_id, stage="FEEDBACK", outcome="completed", summary="none")
+            await self.call("rigorx_submit_stage", run_id=run_id, stage="DECISION", outcome="completed", summary=summaries["DECISION"])
+            done = await self.call("rigorx_submit_stage", run_id=run_id, stage="FEEDBACK", outcome="completed", summary=summaries["FEEDBACK"])
             self.assertEqual(done.structured_content["status"], "COMPLETED")
 
     async def test_engine_errors_become_tool_errors_with_codes(self):

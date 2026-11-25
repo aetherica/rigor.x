@@ -121,12 +121,12 @@ def build_server(
 
     @server.tool(name="rigorx_submit_stage", title="Submit stage result", annotations=additive)
     async def rigorx_submit_stage(run_id: str, stage: str, outcome: str, summary: str, reason: str | None = None) -> dict[str, Any]:
-        """Submit the result of the current stage. outcome: completed, partial, blocked or skipped (partial, blocked and skipped need a reason). VERIFICATION is passed only with rigorx_verify."""
+        """Submit the result of the current stage. outcome: completed, partial, blocked or skipped (partial, blocked and skipped need a reason of at least 15 characters and 3 words). A completed stage needs a summary of what was done in it: at least 40 characters and 6 words, not a repeat of another stage's summary. VERIFICATION is passed only with rigorx_verify."""
         return await call(lambda: engine.submit_stage(owner(), run_id, stage=stage, outcome=outcome, summary=summary, reason=reason))
 
     @server.tool(name="rigorx_record_evidence", title="Record evidence", annotations=additive)
     async def rigorx_record_evidence(run_id: str, source_ref: str, claim: str, evidence_type: str = "SOURCE") -> dict[str, Any]:
-        """Record a source (URL, document ID, receipt) and the claim it supports. Returns an evidence_id (ev-N) to cite in rigorx_verify."""
+        """Record a source (URL, document ID, receipt) and the claim it supports (at least 15 characters and 3 words). Returns an evidence_id (ev-N) to cite in rigorx_verify. IDs are ledger sequence numbers, so they are not consecutive."""
         return await call(lambda: engine.record_evidence(owner(), run_id, source_ref=source_ref, claim=claim, evidence_type=evidence_type))
 
     @server.tool(name="rigorx_report_action", title="Report a host action", annotations=additive)
@@ -138,7 +138,7 @@ def build_server(
 
     @server.tool(name="rigorx_verify", title="Run verification gate", annotations=additive)
     async def rigorx_verify(run_id: str, criteria: list[dict[str, Any]]) -> dict[str, Any]:
-        """Run the deterministic gate. criteria: list of {criterion, passed, evidence_ids}; every passed criterion must cite evidence IDs. Result is 'structurally verified' at most, never a truth guarantee."""
+        """Run the deterministic gate. criteria: list of {criterion, passed, evidence_ids}; each criterion at least 15 characters and 3 words. Every passed criterion must cite evidence IDs, including at least one that no other criterion cites. Result is 'structurally verified' at most, never a truth guarantee."""
         return await call(lambda: engine.verify(owner(), run_id, criteria=criteria))
 
     @server.tool(name="rigorx_reenter", title="Return to an earlier stage", annotations=additive)

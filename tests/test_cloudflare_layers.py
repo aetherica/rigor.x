@@ -9,7 +9,7 @@ import unittest
 
 from rigorx.do_store import DurableObjectRunStore
 from rigorx.engine_rpc import RUN_OPERATIONS, RemoteEngine, RemoteEngineError, dispatch
-from rigorx.host_engine import HostEngine
+from rigorx.host_engine import RELAXED_TEXT_POLICY, HostEngine
 from rigorx.run_store import EventIntegrityError, RevisionConflict, RunNotFound
 
 HAS_MCP = importlib.util.find_spec("mcp") is not None and importlib.util.find_spec("mcp_types") is not None
@@ -52,7 +52,7 @@ class DurableObjectStoreTests(unittest.TestCase):
     def setUp(self):
         self.sql = FakeDurableObjectSql()
         self.store = DurableObjectRunStore(self.sql)
-        self.engine = HostEngine(self.store)
+        self.engine = HostEngine(self.store, text_policy=RELAXED_TEXT_POLICY)
 
     def test_full_run_through_engine(self):
         run_id = self.engine.start_run(ALICE, "What is gravity?")["run_id"]
@@ -85,20 +85,20 @@ class DurableObjectStoreTests(unittest.TestCase):
 
     def test_store_reopens_on_existing_storage(self):
         run_id = self.engine.start_run(ALICE, "Explain gravity")["run_id"]
-        reopened = HostEngine(DurableObjectRunStore(self.sql))
+        reopened = HostEngine(DurableObjectRunStore(self.sql), text_policy=RELAXED_TEXT_POLICY)
         self.assertEqual(reopened.get_run(ALICE, run_id)["current_stage"], "CONTEXT")
 
 
 class EngineRpcTests(unittest.TestCase):
     def setUp(self):
-        self.host = HostEngine(DurableObjectRunStore(FakeDurableObjectSql()))
+        self.host = HostEngine(DurableObjectRunStore(FakeDurableObjectSql()), text_policy=RELAXED_TEXT_POLICY)
         self.calls = []
 
         async def transport(owner_id, operation, payload_json):
             self.calls.append((owner_id, operation))
             return dispatch(self.host, owner_id, operation, payload_json)
 
-        self.remote = RemoteEngine(transport, local=HostEngine(DurableObjectRunStore(FakeDurableObjectSql())))
+        self.remote = RemoteEngine(transport, local=HostEngine(DurableObjectRunStore(FakeDurableObjectSql()), text_policy=RELAXED_TEXT_POLICY))
 
     def run_async(self, coro):
         return asyncio.run(coro)
@@ -136,7 +136,7 @@ class RemoteEngineOverMcpTests(unittest.IsolatedAsyncioTestCase):
 
         from rigorx.mcp_server import build_server
 
-        host = HostEngine(DurableObjectRunStore(FakeDurableObjectSql()))
+        host = HostEngine(DurableObjectRunStore(FakeDurableObjectSql()), text_policy=RELAXED_TEXT_POLICY)
 
         async def transport(owner_id, operation, payload_json):
             return dispatch(host, owner_id, operation, payload_json)

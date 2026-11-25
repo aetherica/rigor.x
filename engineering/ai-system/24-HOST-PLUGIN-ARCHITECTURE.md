@@ -209,6 +209,11 @@ Rationale:
 - The spike token stays as an external token (`resolveExternalToken`) for Claude Code and the smoke test.
 - Verified 2026-11-25: Google sign-in from a Claude custom connector; with that OAuth token `rigorx_profile` returned a Google-derived owner ID (not the spike owner's), and start/get/delete run worked against the owner's Durable Object. Pending: ChatGPT sign-in.
 
+**Gate hardening after the ChatGPT acceptance test (2026-11-25).** A scripted test from ChatGPT (traps for stage order, skipping the gate, uncited claims and cross-owner access) passed, and exposed two weaknesses, both now closed in the Python and TypeScript engines (parity scenario `strict_text_policy`):
+- **One record could support every criterion.** New gate check `criteria_have_own_evidence`: each passed criterion must cite at least one evidence ID that no other criterion cites. Sources may still be shared.
+- **Summaries were not checked.** `TextPolicy` (default): a completed stage's summary needs at least 40 characters and 6 words and may not repeat another stage's summary (case- and whitespace-insensitive; a re-entered stage may restate its own); reasons, evidence claims and criteria need at least 15 characters and 3 words. Words are tokens containing a letter or digit in any script. `RELAXED_TEXT_POLICY` exists for tests of unrelated behaviour.
+- Still structural: RIGOR-X cannot tell whether a source supports a claim or a summary is true.
+
 Local use with Claude Desktop (`claude_desktop_config.json`):
 ```json
 {"mcpServers": {"rigor-x": {"command": "rigorx-mcp", "args": ["--catalog", "/path/to/rigor.x/library/slash-commands/commands.json"]}}}

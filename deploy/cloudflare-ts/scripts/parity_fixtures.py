@@ -16,7 +16,7 @@ from pathlib import Path
 
 from rigorx.adaptive_router import AdaptiveRouter
 from rigorx.engine_rpc import dispatch
-from rigorx.host_engine import HostEngine
+from rigorx.host_engine import RELAXED_TEXT_POLICY, HostEngine
 from rigorx.run_store import SQLiteRunStore
 
 OUT = Path(__file__).resolve().parents[1] / "test" / "fixtures" / "parity.json"
@@ -131,6 +131,46 @@ SCENARIOS = {
 }
 
 
+# Scenarios run with the default (strict) text policy; all others with the relaxed policy, because
+# they exercise stage order, ownership and the gate rather than text substance.
+STRICT = "$RUN"
+SCENARIOS["strict_text_policy"] = [
+    ["start_run", {"task": "Compare two database designs for a service"}],
+    ["submit_stage", {"run_id": STRICT, "stage": "CONTEXT", "outcome": "completed", "summary": "ctx"}],
+    ["submit_stage", {"run_id": STRICT, "stage": "CONTEXT", "outcome": "completed", "summary": "The user wants two database designs compared for one small service."}],
+    ["submit_stage", {"run_id": STRICT, "stage": "INTENT", "outcome": "completed", "summary": "the user wants two DATABASE designs compared for one small   service."}],
+    ["submit_stage", {"run_id": STRICT, "stage": "INTENT", "outcome": "completed", "summary": "Deliver a recommendation with storage, latency and migration cost criteria."}],
+    ["submit_stage", {"run_id": STRICT, "stage": "KNOWLEDGE", "outcome": "skipped", "summary": "skipped", "reason": "n/a"}],
+    ["submit_stage", {"run_id": STRICT, "stage": "KNOWLEDGE", "outcome": "skipped", "summary": "skipped", "reason": "domain facts come from the research sources"}],
+    ["record_evidence", {"run_id": STRICT, "source_ref": "https://example.org/x", "claim": "c"}],
+    ["record_evidence", {"run_id": STRICT, "source_ref": "https://example.org/storage", "claim": "Design A stores up to ten gigabytes per tenant"}],
+    ["record_evidence", {"run_id": STRICT, "source_ref": "https://example.org/latency", "claim": "Design B adds one network hop per query"}],
+    ["submit_stage", {"run_id": STRICT, "stage": "RESEARCH", "outcome": "completed", "summary": "Two sources recorded: tenant storage limits of A and query latency of B."}],
+    ["submit_stage", {"run_id": STRICT, "stage": "ROUTING", "outcome": "completed", "summary": "Comparative technical analysis at standard depth, no external actions needed."}],
+    ["submit_stage", {"run_id": STRICT, "stage": "REASONING", "outcome": "completed", "summary": "A fits per-tenant isolation; B costs latency but eases cross-tenant reporting."}],
+    ["submit_stage", {"run_id": STRICT, "stage": "EXECUTION", "outcome": "skipped", "summary": "skipped", "reason": "a recommendation needs no actions"}],
+    ["submit_stage", {"run_id": STRICT, "stage": "EVIDENCE", "outcome": "completed", "summary": "Each comparison point is backed by one recorded source of its own."}],
+    ["verify", {"run_id": STRICT, "criteria": [{"criterion": "ok", "passed": True, "evidence_ids": ["ev-8"]}]}],
+    ["verify", {"run_id": STRICT, "criteria": [
+        {"criterion": "Storage limits are identified", "passed": True, "evidence_ids": ["ev-8"]},
+        {"criterion": "Latency trade-off is identified", "passed": True, "evidence_ids": ["ev-8"]},
+    ]}],
+    ["reenter", {"run_id": STRICT, "target_stage": "EVIDENCE", "trigger": "gate_failed", "reason": "each criterion needs its own source"}],
+    ["submit_stage", {"run_id": STRICT, "stage": "EVIDENCE", "outcome": "completed", "summary": "Re-checked: storage cites the storage source, latency the latency source."}],
+    ["verify", {"run_id": STRICT, "criteria": [
+        {"criterion": "Storage limits are identified", "passed": True, "evidence_ids": ["ev-8"]},
+        {"criterion": "Latency trade-off is identified", "passed": True, "evidence_ids": ["ev-8", "ev-9"]},
+    ]}],
+    ["reenter", {"run_id": STRICT, "target_stage": "EVIDENCE", "trigger": "gate_failed", "reason": "storage criterion shares its only source"}],
+    ["submit_stage", {"run_id": STRICT, "stage": "EVIDENCE", "outcome": "completed", "summary": "Final check: storage and latency criteria each cite a distinct source now."}],
+    ["verify", {"run_id": STRICT, "criteria": [
+        {"criterion": "Storage limits are identified", "passed": True, "evidence_ids": ["ev-8"]},
+        {"criterion": "Latency trade-off is identified", "passed": True, "evidence_ids": ["ev-9"]},
+    ]}],
+]
+STRICT_SCENARIOS = {"strict_text_policy"}
+
+
 def normalize(envelope: dict, run_id: str | None) -> dict:
     """Errors compare by code only (messages are formatted per language); results replace the run ID."""
     if not envelope.get("ok"):
@@ -145,7 +185,8 @@ def run_scenarios() -> dict:
     results = {}
     for name, steps in SCENARIOS.items():
         store = SQLiteRunStore(":memory:")
-        engine = HostEngine(store)
+        strict = name in STRICT_SCENARIOS
+        engine = HostEngine(store) if strict else HostEngine(store, text_policy=RELAXED_TEXT_POLICY)
         run_id = None
         outputs = []
         for step in steps:
@@ -157,7 +198,7 @@ def run_scenarios() -> dict:
                 run_id = envelope["result"]["run_id"]
             outputs.append(normalize(envelope, run_id))
         store.close()
-        results[name] = {"steps": steps, "expected": outputs}
+        results[name] = {"steps": steps, "expected": outputs, "text_policy": "default" if strict else "relaxed"}
     return results
 
 
