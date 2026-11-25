@@ -2,7 +2,13 @@ from __future__ import annotations
 
 import unittest
 
-from rigorx.agent_runtime import AgentRuntime, ModelTurn, ToolCall, ToolDefinition, ToolRegistry
+from rigorx.agent_runtime import (
+    AgentRuntime,
+    ModelTurn,
+    ToolCall,
+    ToolDefinition,
+    ToolRegistry,
+)
 from rigorx.pipeline import RunStatus, StageStatus
 from rigorx.pipeline_agent import AgentPipeline
 from rigorx.storage import SQLitePipelineStore
