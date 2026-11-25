@@ -122,3 +122,11 @@
 - CI actions pinned to immutable commit SHAs.
 - CI builds wheel and source distribution, installs wheel, `pip check`, version CLI and agent CLI smoke.
 - Exact-head CI [run #45575436952 — SUCCESS](https://github.com/aetherica/rigor.x/actions/runs/45575436952), commit `6dba3bec89a165f5d44391ca24d7cc6b86af39ab`: **123 tests PASS** on Python 3.13/3.15; Ruff PASS; package build + installed-wheel smoke PASS.
+
+
+## WS25 — Knowledge Domain Activation
+- Historical 36-name domain inventory is stored with provenance and pending-ratification status.
+- `DomainCatalog` validates exact KD-01..KD-36 census; `DomainRouter` performs bounded contextual keyword activation.
+- AgentRuntime and CLI can accept the optional catalogue/router. Activation records preserve source/canonical status.
+- CI pending exact-head commit `98ceaa5b9d0314e06decc5e367a52e791df749fa`.
+- Limit: heuristic matching only; owner ratification and semantic activation evaluation remain open.

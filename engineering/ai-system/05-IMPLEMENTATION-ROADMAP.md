@@ -78,3 +78,8 @@ Known limit: this is a deterministic heuristic baseline, not a semantic classifi
 ## WS24 — Release Build & Model Transport Hardening
 
 The OpenAI-compatible transport rejects remote HTTP, endpoint credentials/query/fragment, non-finite timeouts, invalid token/response limits and oversized model response bodies. CI now pins GitHub Actions by full commit SHA, tests both supported Python versions, builds wheel+sdist, installs the wheel, checks dependencies and smoke-tests both CLI entry points. Exact-head CI #45575436952: 123 tests PASS, Ruff PASS, source/wheel build PASS and installed-wheel checks PASS on 3.13 and 3.15.
+
+
+## WS25 — Knowledge Domain Activation (provisional historical inventory)
+
+`library/knowledge-domains/domains.json` stores the recovered 36 ordered domain names with `source_status=HISTORICAL_ASSISTANT_RECORD` and `canonical_status=PENDING_OWNER_RATIFICATION`. `src/rigorx/domain_router.py` provides bounded keyword activation; results carry provenance status. AgentRuntime can receive an optional DomainRouter and include activated domains in context and result receipts. No domain names are silently promoted to canonical. CI exact-head acceptance is pending.
