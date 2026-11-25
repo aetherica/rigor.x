@@ -68,7 +68,7 @@
 - Fixture benchmark: `tests/semantic_loop_benchmark.py` and `tests/test_semantic_loop_benchmark.py` (8 hand-authored pairs).
 - Specification: `engineering/ai-system/13-REASONING-MONITOR-CONTROLLER-WS19.md`.
 - Isolated local tests: **14 controller tests + 1 benchmark test passed**.
-- At lexical Jaccard 0.88: TP=2, FP=0, TN=3, FN=3; precision=1.00, recall=0.40, false-positive rate=0.00. Tiny fixture only; not production evidence.
+- At lexical Jaccard 0.88: TP=2, FP=0, TN=4, FN=2; precision=1.00, recall=0.50, false-positive rate=0.00. Tiny fixture only; not production evidence.
 - CI: verified.
 - Limits: lexical heuristic; not pipeline-integrated, no model/tool execution or hidden-state control.
 
