@@ -1,6 +1,6 @@
 # Reasoning Experiment Test Plan
 
-Initial regression suite tests normalized fingerprints, repeat warning/stop, hard budget, stall window, progress improvement, non-finite rejection and distinct-state counting.
+Regression coverage includes normalized fingerprints, repeat warning/stop, exact hard-step ceiling, terminal latching/reset, stall window, progress improvement, non-finite rejection, distinct-state counting, strict task profiles, capability-unavailable plans, semantic monitor window/index and explicit opt-in/ablation.
 
 Metrics: exact-loop detection; false-stop rate; stall detection latency; budget compliance; adversarial Unicode/punctuation/paraphrase; future evidence coverage, source independence, contradiction recall; memory provenance/scope/conflict integrity.
 
