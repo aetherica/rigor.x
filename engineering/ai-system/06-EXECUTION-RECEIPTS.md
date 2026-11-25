@@ -169,3 +169,14 @@
 - Safe CLI error handling for configuration, filesystem, SQLite and pipeline storage errors; no traceback/secret details emitted.
 - Regression test for invalid database target.
 - Exact-head CI [run #45578932498 — SUCCESS](https://github.com/aetherica/rigor.x/actions/runs/45578932498), commit `f420832d20655e7971f3b382de60b3a2b5d3b6bc`: **137 tests PASS**, Ruff PASS, Python 3.13/3.15, wheel/sdist and installed-wheel validation PASS.
+
+
+## Public-release engineering cleanup (2026-11-25)
+- Active workflows hardened on canonical `main`: immutable SHA pins for checkout v5 and setup-python v7.1.0; explicit read-only `contents` permission; concurrency cancellation; deterministic Python 3.15 slash/crosswalk validation; bounded jsonschema dependency; broader pipeline triggers covering workflow, docs, governance and catalogue changes.
+- Added `SECURITY.md`, `CONTRIBUTING.md`, root `CHANGELOG.md`, YAML bug/feature issue forms and issue-template config.
+- Package metadata now includes README, project URLs, alpha status and Python classifiers; test dependency range is bounded. License is intentionally not selected without owner decision.
+- README and public-release checklist updated to avoid overstating maturity and record blockers.
+- Local syntax sanity check on the updated workflow YAML and TOML was performed using reconstructed content: PASS. This is **not** a substitute for repository CI execution.
+- Current branch audit: `main` plus one stale branch, `dependabot/github_actions/actions/setup-python-7`. Its equivalent workflow change is on main; branch deletion tool unavailable.
+- Exact HEAD CI remains **UNVERIFIED**: combined commit status API returned no status records; connector has no Actions dispatch or all-push-runs listing. Full repository tests were not run locally because repository archive/clone access is unavailable in this session.
+- Public exposure gates still blocked by owner license decision, full history secret scan, branch cleanup, visibility change and branch protection configuration.
