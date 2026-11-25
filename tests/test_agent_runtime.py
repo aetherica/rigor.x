@@ -12,6 +12,7 @@ from rigorx.agent_runtime import (
     ToolRegistry,
     ToolStatus,
 )
+from rigorx.domain_router import DomainCatalog, DomainRouter
 from rigorx.slash_commands import SlashCommandCatalog
 
 
@@ -140,6 +141,17 @@ class AgentRuntimeTests(unittest.TestCase):
         result = AgentRuntime(backend, ToolRegistry()).run("Research the latest and verify sources", run_id="r-adaptive")
         self.assertEqual(result.adaptive_profile.level.value, "L03_DEEP")
         self.assertEqual(result.adaptive_profile.intent.value, "RESEARCH")
+
+    def test_knowledge_domains_activate_and_are_reported(self):
+        from pathlib import Path
+        catalog_path = Path(__file__).resolve().parents[1] / "library" / "knowledge-domains" / "domains.json"
+        router = DomainRouter(DomainCatalog.from_file(catalog_path))
+        backend = ScriptedBackend([ModelTurn(text="Analysis ready")])
+        result = AgentRuntime(backend, ToolRegistry(), domain_router=router).run("Analyze RMG finance and supply chain", run_id="r-domain")
+        names = [domain.name for domain in result.domain_activations]
+        self.assertTrue(any("Finance" in name for name in names))
+        self.assertTrue(any("Resources" in name for name in names))
+        self.assertEqual(len(result.to_dict()["domain_activations"]), len(result.domain_activations))
 
     def test_context_rejects_tool_role(self):
         backend = ScriptedBackend([ModelTurn(text="ok")])

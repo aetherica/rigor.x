@@ -1,0 +1,378 @@
+{
+  "schema_version": "1.0.0",
+  "inventory_count": 36,
+  "source_status": "HISTORICAL_ASSISTANT_RECORD",
+  "canonical_status": "PENDING_OWNER_RATIFICATION",
+  "activation_method": "KEYWORD_HEURISTIC_ONLY",
+  "domains": [
+    {
+      "id": "KD-01",
+      "name": "Psychology / Human Nature",
+      "keywords": [
+        "psychology",
+        "human nature",
+        "motivation",
+        "emotion",
+        "cognition"
+      ]
+    },
+    {
+      "id": "KD-02",
+      "name": "Behavioral Psychology",
+      "keywords": [
+        "behavior",
+        "behaviour",
+        "bias",
+        "habit",
+        "behavioral",
+        "behavioural"
+      ]
+    },
+    {
+      "id": "KD-03",
+      "name": "Power / Authority",
+      "keywords": [
+        "power",
+        "authority",
+        "control",
+        "influence hierarchy"
+      ]
+    },
+    {
+      "id": "KD-04",
+      "name": "Positioning / Strategic Advantage",
+      "keywords": [
+        "positioning",
+        "advantage",
+        "leverage",
+        "strategic position"
+      ]
+    },
+    {
+      "id": "KD-05",
+      "name": "Influence / Persuasion",
+      "keywords": [
+        "influence",
+        "persuasion",
+        "persuasive",
+        "conversion"
+      ]
+    },
+    {
+      "id": "KD-06",
+      "name": "Political Strategy / Statecraft",
+      "keywords": [
+        "political",
+        "politics",
+        "statecraft",
+        "policy strategy"
+      ]
+    },
+    {
+      "id": "KD-07",
+      "name": "Military / Warfare",
+      "keywords": [
+        "military",
+        "warfare",
+        "combat",
+        "defense strategy"
+      ]
+    },
+    {
+      "id": "KD-08",
+      "name": "Geopolitics / International Relations",
+      "keywords": [
+        "geopolitics",
+        "international relations",
+        "foreign policy",
+        "global affairs"
+      ]
+    },
+    {
+      "id": "KD-09",
+      "name": "Economics / Political Economy",
+      "keywords": [
+        "economics",
+        "economic",
+        "political economy",
+        "market structure"
+      ]
+    },
+    {
+      "id": "KD-10",
+      "name": "Finance / Wealth",
+      "keywords": [
+        "finance",
+        "financial",
+        "wealth",
+        "investment",
+        "banking",
+        "cash flow"
+      ]
+    },
+    {
+      "id": "KD-11",
+      "name": "Negotiation",
+      "keywords": [
+        "negotiation",
+        "negotiate",
+        "bargain",
+        "deal making"
+      ]
+    },
+    {
+      "id": "KD-12",
+      "name": "Intelligence / Information",
+      "keywords": [
+        "intelligence",
+        "information asymmetry",
+        "information analysis",
+        "signals"
+      ]
+    },
+    {
+      "id": "KD-13",
+      "name": "Deception",
+      "keywords": [
+        "deception",
+        "misinformation",
+        "disinformation",
+        "fraud",
+        "misleading"
+      ]
+    },
+    {
+      "id": "KD-14",
+      "name": "Leadership / Command",
+      "keywords": [
+        "leadership",
+        "leader",
+        "command",
+        "management leadership"
+      ]
+    },
+    {
+      "id": "KD-15",
+      "name": "Organizational Strategy",
+      "keywords": [
+        "organization",
+        "organizational",
+        "corporate strategy",
+        "structure"
+      ]
+    },
+    {
+      "id": "KD-16",
+      "name": "Governance / Administration",
+      "keywords": [
+        "governance",
+        "administration",
+        "institutional",
+        "governing"
+      ]
+    },
+    {
+      "id": "KD-17",
+      "name": "Sociology / Social Structure",
+      "keywords": [
+        "sociology",
+        "social structure",
+        "class",
+        "community"
+      ]
+    },
+    {
+      "id": "KD-18",
+      "name": "Mass Psychology / Ideology",
+      "keywords": [
+        "mass psychology",
+        "ideology",
+        "public opinion",
+        "propaganda"
+      ]
+    },
+    {
+      "id": "KD-19",
+      "name": "Communication / Rhetoric",
+      "keywords": [
+        "communication",
+        "rhetoric",
+        "messaging",
+        "discourse"
+      ]
+    },
+    {
+      "id": "KD-20",
+      "name": "Competition / Game Theory",
+      "keywords": [
+        "competition",
+        "competitive",
+        "game theory",
+        "competitor"
+      ]
+    },
+    {
+      "id": "KD-21",
+      "name": "Strategy / Planning",
+      "keywords": [
+        "strategy",
+        "strategic",
+        "planning",
+        "plan"
+      ]
+    },
+    {
+      "id": "KD-22",
+      "name": "Decision Science / Judgment",
+      "keywords": [
+        "decision",
+        "judgment",
+        "choice",
+        "decision science"
+      ]
+    },
+    {
+      "id": "KD-23",
+      "name": "Risk / Survival",
+      "keywords": [
+        "risk",
+        "survival",
+        "resilience risk",
+        "failure risk"
+      ]
+    },
+    {
+      "id": "KD-24",
+      "name": "Conflict Management",
+      "keywords": [
+        "conflict",
+        "dispute",
+        "mediation",
+        "crisis"
+      ]
+    },
+    {
+      "id": "KD-25",
+      "name": "Ethics",
+      "keywords": [
+        "ethics",
+        "ethical",
+        "morality",
+        "moral"
+      ]
+    },
+    {
+      "id": "KD-26",
+      "name": "Law / Rules",
+      "keywords": [
+        "law",
+        "legal",
+        "regulation",
+        "compliance",
+        "rules"
+      ]
+    },
+    {
+      "id": "KD-27",
+      "name": "History / Civilizational Dynamics",
+      "keywords": [
+        "history",
+        "historical",
+        "civilization",
+        "civilizational"
+      ]
+    },
+    {
+      "id": "KD-28",
+      "name": "Education / Knowledge Acquisition",
+      "keywords": [
+        "education",
+        "learning",
+        "knowledge acquisition",
+        "teaching"
+      ]
+    },
+    {
+      "id": "KD-29",
+      "name": "Personal Strategy / Self-Mastery",
+      "keywords": [
+        "personal strategy",
+        "self mastery",
+        "self-mastery",
+        "personal development"
+      ]
+    },
+    {
+      "id": "KD-30",
+      "name": "Operations / Execution",
+      "keywords": [
+        "operations",
+        "operational",
+        "execution",
+        "implementation",
+        "workflow"
+      ]
+    },
+    {
+      "id": "KD-31",
+      "name": "Resources / Dependency",
+      "keywords": [
+        "resources",
+        "dependency",
+        "dependencies",
+        "supply chain",
+        "resource allocation"
+      ]
+    },
+    {
+      "id": "KD-32",
+      "name": "Innovation / Adaptation",
+      "keywords": [
+        "innovation",
+        "adaptation",
+        "adaptive",
+        "change"
+      ]
+    },
+    {
+      "id": "KD-33",
+      "name": "Psychological Resilience",
+      "keywords": [
+        "psychological resilience",
+        "mental resilience",
+        "resilience"
+      ]
+    },
+    {
+      "id": "KD-34",
+      "name": "Human Relationships / Social Dynamics",
+      "keywords": [
+        "relationships",
+        "social dynamics",
+        "interpersonal",
+        "network"
+      ]
+    },
+    {
+      "id": "KD-35",
+      "name": "Strategic Models / Frameworks",
+      "keywords": [
+        "strategic model",
+        "framework",
+        "modeling",
+        "modelling",
+        "systems model"
+      ]
+    },
+    {
+      "id": "KD-36",
+      "name": "Culture / Identity / Symbolic Systems",
+      "keywords": [
+        "culture",
+        "identity",
+        "symbolic",
+        "cultural"
+      ]
+    }
+  ]
+}
