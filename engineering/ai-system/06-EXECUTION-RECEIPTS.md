@@ -71,3 +71,5 @@
 - At lexical Jaccard 0.88: TP=2, FP=0, TN=3, FN=3; precision=1.00, recall=0.40, false-positive rate=0.00. Tiny fixture only; not production evidence.
 - CI: pending.
 - Limits: lexical heuristic; not pipeline-integrated, no model/tool execution or hidden-state control.
+
+- Corrective CI attempt [Run #45565392858](https://github.com/aetherica/rigor.x/actions/runs/45565392858): Ruff PASS; 62/63 tests passed; benchmark fixture expected class totals were incorrect (actual 4 loop-positive/4 negative); corrected in subsequent commit. This run is not a pass.
