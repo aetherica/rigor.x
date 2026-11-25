@@ -63,6 +63,7 @@ MCP plugin server (development, single user; see [WS31 Host Plugin Architecture]
 python -m pip install -e '.[mcp]'
 rigorx-mcp --catalog library/slash-commands/commands.json            # stdio, for Claude Desktop / Claude Code
 rigorx-mcp --transport streamable-http --port 8000                    # http://127.0.0.1:8000/mcp (loopback only until sign-in exists)
+python examples/mcp_smoke.py                                          # end-to-end check: one task through all 11 stages
 ```
 
 Python support: `>=3.13`; CI tests 3.13 and 3.15.
