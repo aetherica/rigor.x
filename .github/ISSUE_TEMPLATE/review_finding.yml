@@ -1,0 +1,51 @@
+name: Review finding / improvement
+description: Suggest a design, documentation, testing, or usability improvement
+title: "[Review]: "
+labels: ["review"]
+body:
+  - type: markdown
+    attributes:
+      value: "Use this form for non-sensitive review feedback. Do not post secrets, private data, or security exploit details."
+  - type: dropdown
+    id: area
+    attributes:
+      label: Review area
+      options:
+        - Architecture / design
+        - Runtime safety / reliability
+        - Model and tool integration
+        - Tests / validation
+        - Security / supply chain (non-sensitive only)
+        - Documentation / traceability
+        - Developer experience
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: commit
+    attributes:
+      label: Commit SHA
+      description: Exact commit reviewed.
+    validations:
+      required: true
+  - type: textarea
+    id: finding
+    attributes:
+      label: Finding or proposal
+      description: State the issue, evidence, and proposed improvement.
+    validations:
+      required: true
+  - type: textarea
+    id: rationale
+    attributes:
+      label: Rationale / impact
+      description: Explain the consequence, risk, or expected benefit.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence or references
+      description: File paths, tests, examples, or public references.
+    validations:
+      required: false
