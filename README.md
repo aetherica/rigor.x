@@ -6,7 +6,7 @@ RIGOR-X is a deterministic control-plane and live model/tool orchestration frame
 
 ## Proprietary licensing status
 
-**RIGOR-X is proprietary, source-available commercial software — NOT Open Source.** Source visibility or repository access does not grant permission to use, copy, modify, redistribute, sublicense, host, or commercially deploy the software.
+**RIGOR-X is proprietary, source-available commercial software — NOT Open Source.** Source visibility or repository access does not grant a general software license to modify, redistribute, sublicense, host, or commercially deploy the software; limited rights arising under the hosting platform's terms remain applicable.
 
 Commercial deployment, integration into a commercial product or service, hosted provision to third parties, OEM/embedded distribution, and white-label use require contractual authorization under the **RIGOR-X Commercial Subscription License (CSL)** and the applicable executed Order Form and addenda. No fixed public prices are offered; subscription and usage terms are negotiated for the authorized deployment.
 
@@ -27,7 +27,7 @@ RIGOR-X may include or interoperate with third-party software, models, datasets,
 
 This repository is published for **source review of a development baseline**, not as a stable `0.4.0` release or a production-readiness claim. Review scope, known limitations, feedback channels, and security-reporting instructions are documented in [PUBLIC-REVIEW.md](PUBLIC-REVIEW.md). The package remains `0.4.0.dev0`.
 
-A public GitHub repository is subject to GitHub's [Terms of Service](https://docs.github.com/en/site-policy/github-terms/github-terms-of-service), including other users' rights to view and fork repository content through GitHub. The proprietary CSL is not an Open Source license and does not remove those platform-level rights. Public visibility is not a promise that source copies or forks can be recalled later. Do not publish secrets, personal data, third-party materials without sufficient rights, or confidential information.
+A public GitHub repository is subject to GitHub's [Terms of Service](https://docs.github.com/en/site-policy/github-terms/github-terms-of-service). These terms allow other users to view and fork content through GitHub; they also grant GitHub and its affiliates rights to use public content to develop, train, and improve AI/ML models and technologies. The proprietary CSL does not remove those platform-level rights. Public visibility is not a promise that source copies or forks can be recalled later. Do not publish secrets, personal data, third-party materials without sufficient rights, or confidential information.
 
 ## Implemented components
 - 11-stage pipeline state machine with explicit transitions, verification gate and bounded re-entry.
