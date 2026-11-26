@@ -31,6 +31,9 @@ This project is in pre-release development. Entries summarize notable changes; t
 - Topic memory: atomic operations (storage transactions), merge preflight, move-collision check, whole-word short-token recall, scoped supersession, run_validated bound to a validated claim by SHA-256.
 - Router risk floor for explicit low levels and a multilingual risk lexicon; compute exponents validated (no runtime exceptions); MCP request limits (1 MiB, depth 32, string/integer IDs).
 
+### Portable Node runtime (2026-11-26)
+- `deploy/node`: the same application (MCP, OAuth, approvals, quotas, engine) on `node:http` for staging or backup hosting: one SQLite file per owner (the Durable Object boundary), a SQLite KV with Workers KV TTL semantics for OAuth, a connection-time SSRF address check, startup validation, graceful shutdown, Dockerfile and `.env.example`. `src/app.ts` holds the platform-neutral application; `src/index.ts` binds it to Cloudflare (production unchanged). CI runs the Worker's auth probe and the official MCP SDK client against the Node runtime with real OAuth tokens and builds the container.
+
 ### Aetherica sign-in (2026-11-26)
 - Sign-in, approval, privacy, terms and home pages carry the Aetherica brand in one card design (light/dark, phone-first): "Allow <app> to use Aetherica?", Cancel/Continue, a one-line Terms/Privacy notice; the redirect host stays visible. Pages send CSP, `frame-ancestors none` and X-Frame-Options DENY. MCP serverInfo title is "Aetherica"; tool names keep the `rigorx_` prefix.
 

@@ -1,0 +1,9 @@
+# Build context allowlist for deploy/node/Dockerfile (context: repository root).
+*
+!deploy/cloudflare-ts/package.json
+!deploy/cloudflare-ts/package-lock.json
+!deploy/cloudflare-ts/src/**
+!deploy/cloudflare-ts/public/**
+!deploy/node/package.json
+!deploy/node/*.ts
+!deploy/node/*.mjs
