@@ -267,7 +267,7 @@ export function inferDomain(c: CanonicalRef, ref: string): DomainId | null {
 	if (c.kind === "post" || SOCIAL_SITES.has(site) || /^mastodon\./.test(host)) return "D06";
 	if (SPECIALIST_SITES.has(site) || host.endsWith(".nih.gov") || /\.(ac|edu)(\.[a-z]{2})?$/.test(host)) return "D02";
 	if (MEDIA_SITES.has(site)) return "D07";
-	if (ADVOCACY_SITES.has(site) || /\.(ngo|ong)$/.test(host) || site.endsWith("substack.com")) return "D08";
+	if (ADVOCACY_SITES.has(site) || /\.(ngo|ong)$/.test(host) || site === "substack.com" || site.endsWith(".substack.com")) return "D08";
 	return "D01";
 }
 

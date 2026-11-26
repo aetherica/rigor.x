@@ -211,3 +211,10 @@ test("source check budget: a body larger than 1 MiB is truncated, and the deadli
 	const slow = await checkSource("https://example.com/slow", (async (_: unknown, init?: RequestInit) => { throw Object.assign(new Error("aborted"), { name: "TimeoutError" }); }) as typeof fetch, undefined, { resolver: publicDns });
 	assert.match(slow.error!, /no answer before the deadline/);
 });
+
+test("domain classification matches whole host labels (CodeQL: a look-alike host is not substack.com)", () => {
+	const d = (ref: string) => inferDomain(canonicalRef(ref), ref);
+	assert.equal(d("https://alice.substack.com/p/post"), "D08");
+	assert.equal(d("https://evilsubstack.com/p/post"), "D01");
+	assert.equal(d("https://substack.com.evil.example/p"), "D01");
+});
