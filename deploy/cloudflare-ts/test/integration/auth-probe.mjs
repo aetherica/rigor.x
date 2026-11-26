@@ -74,8 +74,9 @@ try {
 		const consent = await fetch(`${base}/authorize?${q}`, { headers: { "sec-fetch-mode": "navigate", "sec-fetch-dest": "document" } });
 		assert.equal(consent.status, 200);
 		const html = await consent.text();
-		assert.match(html, /Continue with Google/);
-		assert.match(html, /<img class="emblem" src="\/icon-192\.png"/);
+		assert.match(html, /<h1>Allow ci-probe to use Aetherica\?<\/h1>/);
+		assert.match(html, /Continue with your Google account/);
+		assert.match(html, /<img class="mark" src="\/icon-192\.png"/);
 		assert.match(html, /<link rel="icon" href="\/favicon\.ico"/);
 		const csp = consent.headers.get("content-security-policy") ?? "";
 		assert.ok(!/img-src[^;]*'none'/.test(csp) && !/default-src[^;]*'none'/.test(csp) || /img-src[^;]*'self'/.test(csp), `CSP blocks the emblem: ${csp}`);
