@@ -29,6 +29,12 @@ jobs:
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: "24"
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.13"
+      - name: Install Python MCP conformance client
+        run: python -m pip install '.[mcp]'
       - name: Install locked Worker dependencies
         working-directory: deploy/cloudflare-ts
         run: npm ci --no-audit --no-fund
@@ -41,8 +47,28 @@ jobs:
       - name: Unit and parity tests
         working-directory: deploy/cloudflare-ts
         run: npm test
+      - name: Mutation-test security guards
+        working-directory: deploy/cloudflare-ts
+        run: python3 scripts/mutation_test.py
       - name: Validate generated command catalogue
         run: python deploy/cloudflare-ts/scripts/build_commands.py --check
+      - name: Differential compute test
+        run: |
+          python -m pip install 'pint==0.26.2'
+          python deploy/cloudflare-ts/scripts/compute_differential.py
+      - name: Auth path integration (OAuth only; static token rejected)
+        working-directory: deploy/cloudflare-ts
+        run: node test/integration/auth-probe.mjs
+      - name: Durable Object integration (workerd)
+        working-directory: deploy/cloudflare-ts
+        run: node test/integration/run.mjs
+      - name: MCP SDK protocol conformance
+        run: |
+          node --no-warnings --experimental-strip-types deploy/cloudflare-ts/scripts/dev-server.ts 8787 ci-token &
+          sleep 3
+          python examples/mcp_smoke.py --url http://127.0.0.1:8787/mcp --token ci-token --mode auto --expect-version 2026-07-28
+          python examples/mcp_smoke.py --url http://127.0.0.1:8787/mcp --token ci-token --mode legacy --expect-version 2025-11-25
+          python examples/mcp_smoke.py --url http://127.0.0.1:8787/mcp --token ci-token --mode 2026-07-28 --expect-version 2026-07-28
       - name: Validate Cloudflare deploy credentials
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
