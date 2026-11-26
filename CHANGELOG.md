@@ -31,8 +31,9 @@ This project is in pre-release development. Entries summarize notable changes; t
 - Topic memory: atomic operations (storage transactions), merge preflight, move-collision check, whole-word short-token recall, scoped supersession, run_validated bound to a validated claim by SHA-256.
 - Router risk floor for explicit low levels and a multilingual risk lexicon; compute exponents validated (no runtime exceptions); MCP request limits (1 MiB, depth 32, string/integer IDs).
 
-### Release hardening (2026-11-27)
+### Release hardening (2026-11-26)
 - Resilience policy (retries, deadlines, circuit breakers, bulkhead), DNS-verified source fetches, idempotency keys, engine-verified user approvals (`rigorx_request_approval`), account data deletion, suspension, source-check quota, OIDC azp/iat/nonce, `/version` and `/health`, structured logs, commit-tagged deploys, discovery gap register; rollback-compatible storage; mutation test in CI.
+- Router: a destructive action with no risk vocabulary ("/l01 delete production database") was routable at L01; it now has an L05 floor (L03 for one broad term such as "format"), found by post-deploy verification.
 
 ### Fixed (2026-11-26 connector test)
 - `data.level` at CLASSIFY and ASSESS_COMPLEXITY accepts the short codes `L01`–`L06` (any case) and normalizes them to the full level name; the stage guidance lists the full names.

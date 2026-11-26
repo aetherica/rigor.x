@@ -90,6 +90,9 @@ const DESTRUCTIVE_TERMS = [
 const SPACELESS_TERM = /[\u3040-\u30ff\u3400-\u9fff]/u;
 /** Terms of `list` found in `text`: one combined pre-check, then per-term tests only when it matches. */
 const combined = new Map<readonly string[], RegExp>();
+// Verbs that destroy data whatever the context; critical even when the intent is unclear ("wipe the server").
+const STRONG_DESTRUCTIVE = new Set(["delet", "drop", "wipe", "erase", "destroy", "truncate", "rm -rf", "মুছে", "মুছ", "ডিলিট", "हटा", "डिलीट",
+	"elimin", "borra", "supprim", "efface", "lösch", "apag", "удал", "حذف", "删除", "削除"]);
 function hits(list: readonly string[], text: string): string[] {
 	let any = combined.get(list);
 	if (!any) {
@@ -172,8 +175,12 @@ export function route(prompt: string, overrideLevel?: AdaptiveLevel): AdaptivePr
 	signals.push(...riskHits.map((p) => `RISK:${p}`));
 	const destructive = hits(DESTRUCTIVE_TERMS, text);
 	signals.push(...destructive.map((t) => `ACTION:${t}`));
-	const riskFloor: AdaptiveLevel = riskScore === 0 ? "L01_BASIC"
-		: riskScore >= 3 || destructive.length > 0 || intent === "EXECUTION" ? "L05_CRITICAL" : "L03_DEEP";
+	// A destructive action is critical on its own: "delete production database" names no risk term, yet it
+	// must not be routable at L01. One broad term alone ("format a date") only raises the floor to L03.
+	const destructiveCritical = destructive.length > 0
+		&& (intent === "EXECUTION" || destructive.length >= 2 || riskScore > 0 || destructive.some((t) => STRONG_DESTRUCTIVE.has(t)));
+	const riskFloor: AdaptiveLevel = riskScore >= 3 || destructiveCritical || (riskScore > 0 && intent === "EXECUTION") ? "L05_CRITICAL"
+		: riskScore > 0 || destructive.length > 0 ? "L03_DEEP" : "L01_BASIC";
 
 	let complexHits = 0;
 	if (words(text) > 120) { complexHits += 1; signals.push("COMPLEX:long-input"); }
@@ -188,7 +195,7 @@ export function route(prompt: string, overrideLevel?: AdaptiveLevel): AdaptivePr
 	let level: AdaptiveLevel;
 	if (tokenOverride) level = tokenOverride;
 	else if (hyper) level = "L06_HYPER_RIGOROUS";
-	else if (riskScore >= 1) level = "L05_CRITICAL";
+	else if (riskScore >= 1 || destructiveCritical) level = "L05_CRITICAL";
 	else if ((intent === "TECHNICAL" || intent === "EXECUTION") && complexHits >= 1) level = "L04_COMPLEX";
 	else if (intent === "RESEARCH" || intent === "ANALYSIS" || intent === "DECISION" || complexHits >= 1) level = "L03_DEEP";
 	else if (intent === "UNKNOWN") level = "L02_STANDARD";
