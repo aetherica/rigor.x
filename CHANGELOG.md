@@ -41,6 +41,10 @@ This project is in pre-release development. Entries summarize notable changes; t
 - Resilience policy (retries, deadlines, circuit breakers, bulkhead), DNS-verified source fetches, idempotency keys, engine-verified user approvals (`rigorx_request_approval`), account data deletion, suspension, source-check quota, OIDC azp/iat/nonce, `/version` and `/health`, structured logs, commit-tagged deploys, discovery gap register; rollback-compatible storage; mutation test in CI.
 - Router: a destructive action with no risk vocabulary ("/l01 delete production database") was routable at L01; it now has an L05 floor (L03 for one broad term such as "format"), found by post-deploy verification.
 
+### Changed (2026-11-27 user-facing surface)
+- MCP tools reduced from 24 to 19, with plain titles ("Start a structured task", "Check the work", "Remember a note", …); tool names are unchanged. Removed from MCP: `rigorx_usage`, `rigorx_delete_run`, `rigorx_memory_delete`, `rigorx_delete_account_data` (now on the account page) and `rigorx_humor_policy` (internal helper). `rigorx_memory_topic` no longer deletes topics and is no longer marked destructive.
+- New `/account` page: the user signs in with Google (15-minute session, HttpOnly cookie scoped to `/account`, CSRF token on every form) to see today's usage and delete a task, a topic with its notes, or all data (typed confirmation). Privacy policy and the plugin skill point there.
+
 ### Added (2026-11-26 audit, scope C)
 - Owner-authored command set `library/rigorx-commands/` (48 candidate entries `RXC-001`…`RXC-048`: 42 MACRO task modifiers, 6 UI/MENU host commands) with its own validator in CI. It stays separate from the fixed 999-entry research corpus and may not repeat any corpus name or alias. The Worker bundle now holds both (1,047 entries, corpus first); the frozen Python resolver reads the corpus only.
 

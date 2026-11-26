@@ -41,9 +41,9 @@ test("styles: never humiliating or at the user's expense; audience and feedback 
 	assert.equal(decide(["debugging"], { user_preference: "light", last_reaction: "negative" }).decision, "suppress");
 });
 
-test("rigorx_humor_policy over MCP: stateless, validates context names", async () => {
-	const ok = await handleMessage({ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "rigorx_humor_policy", arguments: { contexts: ["security_incident"] } } }, localBackend(), null);
-	assert.equal((ok!.result as any).structuredContent.decision, "suppress");
-	const bad = await handleMessage({ jsonrpc: "2.0", id: 2, method: "tools/call", params: { name: "rigorx_humor_policy", arguments: { contexts: ["party"] } } }, localBackend(), null);
-	assert.match((bad!.result as any).content[0].text, /Unknown context "party"/);
+test("the humor helper is internal: it is not an MCP tool", async () => {
+	const r = await handleMessage({ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "rigorx_humor_policy", arguments: { contexts: ["casual"] } } }, localBackend(), null);
+	assert.equal((r as any).error?.code ?? (r as any).result?.isError, (r as any).error ? (r as any).error.code : true);
+	const list = await handleMessage({ jsonrpc: "2.0", id: 2, method: "tools/list" }, localBackend(), null);
+	assert.ok(!((list!.result as any).tools as any[]).some((t) => t.name === "rigorx_humor_policy"));
 });

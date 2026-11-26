@@ -31,7 +31,10 @@ import {
 	googleAuthorizeUrl,
 	googleTokenRequestBody,
 	approvalPage,
+	accountPage,
+	ACCOUNT_DELETE_CONFIRMATION,
 	messagePage,
+	type AccountView,
 	ownerFromGoogle,
 	parseGoogleIdToken,
 	randomVerifier,
@@ -55,6 +58,10 @@ export type OwnerCall = (env: AuthEnv, owner: string, operation: string, args: R
 export type ExtraRoutes = (request: Request, env: AuthEnv) => Promise<Response | null>;
 
 const APPROVAL_STATE_PREFIX = "apv.";
+const ACCOUNT_STATE_PREFIX = "acc.";
+const ACCOUNT_TTL_S = 900;
+const ACCOUNT_COOKIE = "rx_acc";
+
 const APPROVAL_TTL_S = 600;
 const COOKIE = "rx_apv";
 
@@ -140,13 +147,123 @@ async function approvePost(request: Request, env: AuthEnv, id: string, call: Own
 	}
 }
 
+// ---------------------------------------------------------------- account page (/account)
+// The user manages their own data here, signed in with Google: usage, deleting a task or a topic,
+// deleting everything. The assistant has no tool for these (2026-11-27). Short KV session (15 min),
+// HttpOnly cookie scoped to /account, CSRF token on every POST, owner taken only from the session.
+
+interface AccountSession { owner: string; csrf: string }
+
+async function accountSession(request: Request, env: AuthEnv): Promise<{ sid: string; session: AccountSession } | null> {
+	const sid = cookieValue(request, ACCOUNT_COOKIE);
+	const session = sid ? await env.OAUTH_KV.get<AccountSession>(`acc:sess:${sid}`, "json") : null;
+	return sid && session ? { sid, session } : null;
+}
+
+async function accountView(env: AuthEnv, owner: string, call: OwnerCall, notice?: string): Promise<AccountView> {
+	const [usage, runs, topics] = await Promise.all([
+		call(env, owner, "usage", {}),
+		call(env, owner, "list_runs", { limit: 50 }),
+		call(env, owner, "memory_topic", { action: "list" }),
+	]);
+	return {
+		usage, runs: (runs.runs as Record<string, unknown>[]) ?? [], more_runs: runs.next_cursor !== null && runs.next_cursor !== undefined,
+		topics: (topics.topics as Record<string, unknown>[]) ?? [], confirmation: ACCOUNT_DELETE_CONFIRMATION, notice,
+	};
+}
+
+/** GET /account: the page for a signed-in owner, otherwise a Google sign-in first. */
+async function accountGet(request: Request, env: AuthEnv, origin: string, call: OwnerCall): Promise<Response> {
+	const found = await accountSession(request, env);
+	if (found) {
+		const notice = new URL(request.url).searchParams.get("done") ?? undefined;
+		return html(accountPage(await accountView(env, found.session.owner, call, notice ? ACCOUNT_NOTICES[notice] : undefined), found.session.csrf));
+	}
+	if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET) return html(messagePage("Sign-in is not configured", "The server has no Google client yet."), 503);
+	const state = ACCOUNT_STATE_PREFIX + randomToken();
+	const verifier = randomVerifier();
+	const nonce = randomToken(16);
+	await env.OAUTH_KV.put(`acc:state:${state}`, JSON.stringify({ verifier, nonce }), { expirationTtl: 600 });
+	return redirect(googleAuthorizeUrl({ clientId: env.GOOGLE_CLIENT_ID, redirectUri: origin + GOOGLE_CALLBACK_PATH, state, codeChallenge: await s256(verifier), nonce }));
+}
+
+const ACCOUNT_NOTICES: Record<string, string> = { run: "Task deleted.", topic: "Topic and its notes deleted." };
+
+/** Google callback for an account sign-in (state "acc.…"). */
+async function accountCallback(request: Request, env: AuthEnv, origin: string): Promise<Response> {
+	const params = new URL(request.url).searchParams;
+	const state = params.get("state") ?? "";
+	const saved = await env.OAUTH_KV.get<{ verifier: string; nonce: string }>(`acc:state:${state}`, "json");
+	if (!saved) return html(messagePage("Sign-in expired", "Open your account page again."), 400);
+	await env.OAUTH_KV.delete(`acc:state:${state}`); // single use
+	const code = params.get("code");
+	if (params.get("error") || !code || !env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET) return html(messagePage("Sign-in did not complete", "You are not signed in."), 400);
+	const tokenResponse = await fetch(GOOGLE_TOKEN_URL, {
+		method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded", Accept: "application/json" },
+		body: googleTokenRequestBody({ code, clientId: env.GOOGLE_CLIENT_ID, clientSecret: env.GOOGLE_CLIENT_SECRET, redirectUri: origin + GOOGLE_CALLBACK_PATH, verifier: saved.verifier }),
+	});
+	const tokens = (await tokenResponse.json().catch(() => ({}))) as { id_token?: string };
+	if (!tokenResponse.ok || !tokens.id_token) return html(messagePage("Sign-in failed", "You are not signed in."), 502);
+	let sub: string;
+	try {
+		sub = parseGoogleIdToken(tokens.id_token, env.GOOGLE_CLIENT_ID, Math.floor(Date.now() / 1000), saved.nonce).sub;
+	} catch (e) {
+		console.log(JSON.stringify({ evt: "rigorx_security", kind: "account_signin_rejected", reason: e instanceof Error ? e.message : "error" }));
+		return html(messagePage("Sign-in rejected", "You are not signed in."), 400);
+	}
+	const sid = randomToken();
+	await env.OAUTH_KV.put(`acc:sess:${sid}`, JSON.stringify({ owner: ownerFromGoogle(sub), csrf: randomToken() } satisfies AccountSession), { expirationTtl: ACCOUNT_TTL_S });
+	const h = new Headers();
+	h.append("Set-Cookie", `${ACCOUNT_COOKIE}=${sid}; Path=/account; Max-Age=${ACCOUNT_TTL_S}; HttpOnly; Secure; SameSite=Lax`);
+	return redirect("/account", h);
+}
+
+/** POST /account: one action by the signed-in owner (session cookie + CSRF token). */
+async function accountPost(request: Request, env: AuthEnv, call: OwnerCall): Promise<Response> {
+	const found = await accountSession(request, env);
+	const form = await request.formData();
+	if (!found || form.get("csrf") !== found.session.csrf) {
+		console.log(JSON.stringify({ evt: "rigorx_security", kind: "account_session_rejected" }));
+		return html(messagePage("Session expired", "Open your account page again. Nothing was changed."), 403);
+	}
+	const { sid, session } = found;
+	const action = String(form.get("action") ?? "");
+	try {
+		if (action === "sign_out") {
+			await env.OAUTH_KV.delete(`acc:sess:${sid}`);
+			const h = new Headers();
+			h.append("Set-Cookie", `${ACCOUNT_COOKIE}=; Path=/account; Max-Age=0; HttpOnly; Secure; SameSite=Lax`);
+			return html(messagePage("Signed out", "You are signed out of your account page."), 200, h);
+		}
+		if (action === "delete_run") {
+			await call(env, session.owner, "delete_run", { run_id: String(form.get("run_id") ?? "") });
+			return redirect("/account?done=run");
+		}
+		if (action === "delete_topic") {
+			await call(env, session.owner, "memory_topic", { action: "delete", topic_id: String(form.get("topic_id") ?? ""), decided_by: "user" });
+			return redirect("/account?done=topic");
+		}
+		if (action === "delete_all") {
+			if (String(form.get("confirm") ?? "").trim() !== ACCOUNT_DELETE_CONFIRMATION) {
+				return html(messagePage("Not deleted", `Type ${ACCOUNT_DELETE_CONFIRMATION} exactly to delete all of your data. Nothing was changed.`), 400);
+			}
+			const r = await call(env, session.owner, "delete_account_data", { confirm: ACCOUNT_DELETE_CONFIRMATION, decided_by: "user" });
+			await env.OAUTH_KV.delete(`acc:sess:${sid}`);
+			return html(messagePage("All data deleted", `Deleted ${r.runs ?? 0} tasks and ${r.memory_items ?? 0} notes. To stop your assistant from connecting again, remove the connector in that app.`));
+		}
+		return html(messagePage("Unknown action", "Nothing was changed."), 400);
+	} catch (e) {
+		return html(messagePage("Not done", e instanceof Error ? e.message : "The action could not be completed."), 409);
+	}
+}
+
 /** What every authenticated /mcp request carries in ctx.props. */
 export interface AuthProps {
 	owner: string;
 }
 
 
-const html = (body: string, status = 200, headers?: Headers) => {
+const html = (body: string, status = 200, headers?: Headers): Response => {
 	const h = new Headers(headers);
 	h.set("Content-Type", "text/html; charset=utf-8");
 	h.set("Cache-Control", "no-store");
@@ -194,7 +311,9 @@ async function authorizePost(request: Request, env: AuthEnv, origin: string): Pr
 }
 
 async function googleCallback(request: Request, env: AuthEnv, origin: string): Promise<Response> {
-	if ((new URL(request.url).searchParams.get("state") ?? "").startsWith(APPROVAL_STATE_PREFIX)) return approveCallback(request, env, origin);
+	const upstreamState = new URL(request.url).searchParams.get("state") ?? "";
+	if (upstreamState.startsWith(APPROVAL_STATE_PREFIX)) return approveCallback(request, env, origin);
+	if (upstreamState.startsWith(ACCOUNT_STATE_PREFIX)) return accountCallback(request, env, origin);
 	const oauth = env.OAUTH_PROVIDER;
 	const { request: original, data, headers } = await oauth.finishUpstream<{ verifier: string }>(request);
 	const params = new URL(request.url).searchParams;
@@ -248,6 +367,8 @@ function defaultHandler(origin: string, call: OwnerCall | null, extra: ExtraRout
 				const approve = /^\/approve\/(apv_[0-9a-f]{32})$/.exec(pathname);
 				if (approve && call && request.method === "GET") return await approveGet(request, env, origin, approve[1]!, call);
 				if (approve && call && request.method === "POST") return await approvePost(request, env, approve[1]!, call);
+				if (pathname === "/account" && call && request.method === "GET") return await accountGet(request, env, origin, call);
+				if (pathname === "/account" && call && request.method === "POST") return await accountPost(request, env, call);
 				const handled = extra ? await extra(request, env) : null;
 				if (handled) return handled;
 				if (pathname === "/" && request.method === "GET") return html(HOME_PAGE);

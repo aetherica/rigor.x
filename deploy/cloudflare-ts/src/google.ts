@@ -123,7 +123,9 @@ button.primary:hover{filter:brightness(1.08)}button:focus-visible,a:focus-visibl
 dl{margin:0 0 14px;padding:14px 16px;border:1px solid var(--line);border-radius:16px;font-size:14px}dt{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.04em}dd{margin:0 0 10px;word-break:break-word}dd:last-child{margin:0}
 ul{padding-left:20px}li{margin:0 0 8px}code{font-size:13px;padding:1px 5px;border-radius:6px;background:var(--chip)}
 footer{position:absolute;left:0;right:0;bottom:16px;display:flex;gap:20px;justify-content:center;font-size:12px;color:var(--muted)}footer a{color:var(--muted)}
-.doc{max-width:680px}`;
+.doc{max-width:680px}
+.rows{list-style:none;padding:0;margin:0 0 14px}.rows li{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
+form.inline button{flex:0 0 auto;padding:6px 14px;font-size:14px}.field{width:100%;font:inherit;padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:transparent;color:var(--text)}`;
 
 /** Wraps page content in the shared layout: head, top bar with the emblem, card and footer links. */
 function page(title: string, body: string, wide = false): string {
@@ -171,8 +173,8 @@ export const PRIVACY_PAGE = page(`${BRAND} privacy policy`, `${MARK}
 <li>Sign-in records (registered apps, grants, tokens): stored hashed or encrypted.</li>
 </ul>
 <p>Each account's data lives in separate storage on Cloudflare. ${BRAND} does not sell data, show ads or use your data to train models, and does not call any AI model itself. It fetches a web page only when your assistant asks it to check that source.</p>
-<h2>Deleting your data</h2>
-<p>Ask your assistant to delete a run (tool <code>rigorx_delete_run</code>) or all of your data (tool <code>rigorx_delete_account_data</code>). For anything else, open an issue at <a href="${REPO_URL}">${REPO_URL}</a>.</p>`, true);
+<h2>Managing and deleting your data</h2>
+<p>Open <a href="/account">your account page</a> and sign in with the same Google account: it shows your usage and lets you delete a task, a topic with its notes, or all of your data. Deletion is done by you, not by your assistant. For anything else, open an issue at <a href="${REPO_URL}">${REPO_URL}</a>.</p>`, true);
 
 export const TERMS_PAGE = page(`${BRAND} terms of service`, `${MARK}
 <h1>Terms of service</h1>
@@ -204,4 +206,47 @@ export function messagePage(title: string, message: string): string {
 export const HOME_PAGE = page(BRAND, `${MARK}
 <h1>${BRAND}</h1>
 <p class="muted">Rigorous, verifiable multi-step work for AI assistants. Connect ${BRAND} in Claude or ChatGPT as a connector; you sign in with your Google account.</p>
-<p class="legal">Connector address: <code>/mcp</code> on this host.</p>`);
+<p class="legal">Connector address: <code>/mcp</code> on this host. <a href="/account">Manage your account</a>.</p>`);
+
+/** Typed by the user to delete everything; must equal engine.ts ACCOUNT_DELETE_CONFIRMATION (tested). */
+export const ACCOUNT_DELETE_CONFIRMATION = "DELETE ALL MY RIGOR-X DATA";
+
+/** What the account page shows; values come from the signed-in owner's own engine calls. */
+export interface AccountView {
+	usage: Record<string, unknown>;
+	runs: Record<string, unknown>[];
+	more_runs: boolean;
+	topics: Record<string, unknown>[];
+	confirmation: string;
+	notice?: string;
+}
+
+/** The signed-in account page: usage, tasks and topics, each deletable by the user (POST with CSRF). */
+export function accountPage(v: AccountView, csrf: string): string {
+	const e = (x: unknown) => escapeHtml(x === null || x === undefined ? "—" : String(x));
+	const pair = (k: string) => {
+		const u = v.usage[k] as { used?: unknown; limit?: unknown } | undefined;
+		return u ? `${e(u.used)} of ${e(u.limit)}` : "—";
+	};
+	const form = (action: string, fields: string, label: string) =>
+		`<form method="post" class="inline"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><input type="hidden" name="action" value="${action}">${fields}<button>${label}</button></form>`;
+	const runs = v.runs.length
+		? `<ul class="rows">${v.runs.map((r) => `<li><span><strong>${e(r.intent)}</strong> · ${e(r.status)}<br><span class="muted">${e(r.updated_at)}</span></span>${form("delete_run", `<input type="hidden" name="run_id" value="${e(r.run_id)}">`, "Delete")}</li>`).join("")}</ul>${v.more_runs ? '<p class="muted">Showing your 50 most recent tasks.</p>' : ""}`
+		: '<p class="muted">No tasks.</p>';
+	const topics = v.topics.length
+		? `<ul class="rows">${v.topics.map((t) => `<li><span><strong>${e(t.name)}</strong><br><span class="muted">${e(t.items)} notes</span></span>${form("delete_topic", `<input type="hidden" name="topic_id" value="${e(t.id)}">`, "Delete")}</li>`).join("")}</ul>`
+		: '<p class="muted">No saved topics.</p>';
+	return page(`Your account — ${BRAND}`, `${MARK}
+<h1>Your account</h1>
+${v.notice ? `<p class="chip">${e(v.notice)}</p>` : ""}
+<h2>Today's usage</h2>
+<dl><dt>Requests</dt><dd>${pair("calls")}</dd><dt>New tasks</dt><dd>${pair("runs_started")}</dd><dt>Stored tasks</dt><dd>${pair("stored_runs")}</dd><dt>Resets</dt><dd>${e(v.usage.resets_at)}</dd></dl>
+<h2>Tasks</h2>${runs}
+<h2>Saved topics</h2>${topics}
+<h2>Delete everything</h2>
+<p class="muted">Permanently deletes every task, topic, note and usage record of this account. Type <code>${e(v.confirmation)}</code> to confirm.</p>
+<form method="post"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><input type="hidden" name="action" value="delete_all">
+<input name="confirm" autocomplete="off" aria-label="Confirmation text" class="field">
+<div class="actions"><button class="primary">Delete all my data</button></div></form>
+<form method="post"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><input type="hidden" name="action" value="sign_out"><div class="actions"><button>Sign out</button></div></form>`, true);
+}

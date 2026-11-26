@@ -73,8 +73,28 @@ test("every public page carries the Aetherica brand, the legal links and no RIGO
 	}
 });
 
-test("privacy and terms pages are static and name the deletion tool", async () => {
+test("privacy and terms pages are static and send deletion to the account page", async () => {
 	const { PRIVACY_PAGE, TERMS_PAGE } = await import("../src/google.ts");
-	assert.ok(PRIVACY_PAGE.includes("rigorx_delete_run"));
+	assert.ok(PRIVACY_PAGE.includes('href="/account"'));
+	assert.ok(!PRIVACY_PAGE.includes("rigorx_delete"));
 	assert.ok(PRIVACY_PAGE.startsWith("<!doctype html>") && TERMS_PAGE.startsWith("<!doctype html>"));
+});
+
+test("account page: plain usage, deletable tasks and topics, escaped values, CSRF on every form", async () => {
+	const g = await import("../src/google.ts");
+	const shown = g.ACCOUNT_DELETE_CONFIRMATION;
+	const { ACCOUNT_DELETE_CONFIRMATION: checked } = await import("../src/engine.ts");
+	assert.equal(shown, checked); // the page shows exactly what the engine requires
+	const html = g.accountPage({
+		usage: { calls: { used: 3, limit: 2000 }, runs_started: { used: 1, limit: 100 }, stored_runs: { used: 1, limit: 500 }, resets_at: "2026-11-28T00:00:00Z" },
+		runs: [{ run_id: "rx_1", intent: "<b>ANALYSIS</b>", status: "COMPLETED", updated_at: "2026-11-27T00:00:00Z" }], more_runs: false,
+		topics: [{ id: "tp_1", name: "Market", items: 4 }], confirmation: shown, notice: "Task deleted.",
+	}, "csrf&1");
+	assert.ok(html.startsWith("<!doctype html>") && html.includes("Sign in with <b>Aetherica</b>"));
+	assert.ok(html.includes("3 of 2000") && html.includes("Task deleted."));
+	assert.ok(html.includes("&#60;b&#62;ANALYSIS") && !html.includes("<b>ANALYSIS"));
+	const forms = html.match(/<form method="post"/g)!.length;
+	assert.equal(html.match(/name="csrf" value="csrf&#38;1"/g)!.length, forms);
+	for (const action of ["delete_run", "delete_topic", "delete_all", "sign_out"]) assert.ok(html.includes(`value="${action}"`), action);
+	assert.doesNotMatch(html, /RIGOR-X(?! DATA)|workers\.dev|humou?r/);
 });

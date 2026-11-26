@@ -49,7 +49,7 @@ The six levels are `L01_BASIC` through `L06_HYPER_RIGOROUS`. The engine determin
 
 ## Destructive operations
 
-Do not call `rigorx_cancel_run`, `rigorx_delete_run`, or topic-memory merge/delete operations unless the user explicitly requests that exact action. Explain that deleting a run permanently removes its run ledger. Never infer deletion consent from a request to stop discussing a topic.
+Do not call `rigorx_cancel_run` or merge topics unless the user explicitly requests that exact action. Deleting tasks, topics, notes or all data is not a tool: send the user to the account page (`/account` on the connector's site), where they sign in with Google and delete it themselves. Never infer deletion consent from a request to stop discussing a topic.
 
 ## Completion report
 
