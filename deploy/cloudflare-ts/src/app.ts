@@ -21,6 +21,7 @@ import { PROTOCOL_VERSION } from "./protocol.ts";
 import { GATE_VERSION } from "./gate.ts";
 import type { JsonObject } from "./text.ts";
 import { isSuspended } from "./index-helpers.ts";
+import { MARKETPLACE_WEBHOOK_PATH, handleMarketplaceWebhook } from "./marketplace.ts";
 
 /** Release identity of the running code. */
 export interface VersionInfo {
@@ -119,10 +120,11 @@ export function createApp<Env extends AppEnv>(platform: Platform<Env>) {
 		return out;
 	}
 
-	/** Public, non-sensitive routes: version (release traceability) and health. */
+	/** Public routes: version (release traceability), health and the GitHub Marketplace webhook. */
 	async function extraRoutes(request: Request, env: AuthEnv): Promise<Response | null> {
 		const e = env as Env;
 		const { pathname } = new URL(request.url);
+		if (pathname === MARKETPLACE_WEBHOOK_PATH) return handleMarketplaceWebhook(request, typeof e.GITHUB_MARKETPLACE_WEBHOOK_SECRET === "string" ? e.GITHUB_MARKETPLACE_WEBHOOK_SECRET : undefined);
 		if (request.method !== "GET") return null;
 		if (pathname === "/version") {
 			const { policy, rejected } = policyFromEnv(e);
