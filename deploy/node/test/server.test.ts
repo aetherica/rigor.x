@@ -87,11 +87,10 @@ test("MCP with a real access token: initialize, tools/list, a tool call stored i
 	assert.equal(stolen.body.result.isError, true);
 	assert.equal(readdirSync(join(srv.config.dataDir, "owners")).filter((f) => f.endsWith(".sqlite")).length, 2);
 
-	// Account deletion removes alice's data (the confirmation phrase is required).
-	const refused = await mcp(base, token, "tools/call", { name: "rigorx_delete_account_data", arguments: { confirm: "yes", decided_by: "user" } });
-	assert.equal(refused.body.result.isError, true);
-	await tool(base, token, "rigorx_delete_account_data", { confirm: "DELETE ALL MY RIGOR-X DATA", decided_by: "user" });
-	assert.equal((await tool(base, token, "rigorx_list_runs")).runs.length, 0);
+	// Account deletion is not an assistant tool: the user deletes data on /account.
+	const refused = await mcp(base, token, "tools/call", { name: "rigorx_delete_account_data", arguments: { confirm: "DELETE ALL MY RIGOR-X DATA", decided_by: "user" } });
+	assert.ok(refused.body.error !== undefined || refused.body.result?.isError === true);
+	assert.equal((await tool(base, token, "rigorx_list_runs")).runs.length, 1);
 });
 
 test("absolute-form request targets are refused (the origin is fixed by configuration)", async () => {
