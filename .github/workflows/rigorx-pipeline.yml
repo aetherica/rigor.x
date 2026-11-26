@@ -110,6 +110,8 @@ jobs:
       - name: TypeScript unit and parity tests
         working-directory: deploy/cloudflare-ts
         run: npm test
+      - name: Bundled slash-command catalogue matches the library
+        run: python deploy/cloudflare-ts/scripts/build_commands.py --check
       - name: rigorx_compute against an independent units library (pint, CODATA 2022)
         run: |
           python -m pip install 'pint==0.26.2'

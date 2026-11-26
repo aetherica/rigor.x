@@ -8,6 +8,7 @@ import {
 	PROTOCOL_VERSION, STAGES, STAGE_GUIDANCE, STAKES_FLOOR, isMandatory, isStage, mandatoryStages, type Level, type Stage,
 } from "./protocol.ts";
 import { route } from "./router.ts";
+import { resolvePrompt } from "./commands.ts";
 import { RunNotFound, type RunStore } from "./store.ts";
 import {
 	DEFAULT_TEXT_POLICY, EngineError, chars, conflict, digest, invalid, jsonish, limit, normalized, notFound, object, quota,
@@ -127,8 +128,7 @@ export class HostEngine {
 	}
 
 	resolveCommands(value: unknown): JsonObject {
-		text("text", value, this.maxTextChars);
-		throw new EngineError("Slash-command catalogue is not loaded on this server");
+		return resolvePrompt(text("text", value, this.maxTextChars)) as unknown as JsonObject;
 	}
 
 	// ---------------------------------------------------------------- run lifecycle
