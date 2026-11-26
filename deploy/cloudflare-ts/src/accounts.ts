@@ -122,6 +122,30 @@ export class AccountRegistry {
 		]);
 	}
 
+	/** Whether this identity already belongs to an account. */
+	async exists(provider: ProviderId, subject: string): Promise<boolean> {
+		if (!this.db) return false;
+		return (await this.db.prepare("SELECT 1 AS x FROM identities WHERE provider = ? AND subject = ?").bind(provider, subject).first()) !== null;
+	}
+
+	/**
+	 * Whether this identity's account has accepted terms version `version`. A new identity has not.
+	 * Without the registry nothing can be recorded, so acceptance is asked at every sign-in.
+	 */
+	async termsAccepted(provider: ProviderId, subject: string, version: string): Promise<boolean> {
+		if (!this.db) return false;
+		const row = await this.db
+			.prepare("SELECT a.terms_version AS v FROM identities i JOIN accounts a ON a.id = i.account_id WHERE i.provider = ? AND i.subject = ?")
+			.bind(provider, subject).first<{ v: string | null }>();
+		return row?.v === version;
+	}
+
+	/** Records that the account behind `owner` accepted terms version `version` now. */
+	async acceptTerms(owner: string, version: string): Promise<void> {
+		if (!this.db) return;
+		await this.db.prepare("UPDATE accounts SET terms_version = ?, terms_accepted_at = ? WHERE owner_key = ?").bind(version, this.now(), owner).run();
+	}
+
 	/** Whether the account is exempt from usage limits (set by the operator only). */
 	async unlimited(owner: string): Promise<boolean> {
 		if (!this.db) return false;

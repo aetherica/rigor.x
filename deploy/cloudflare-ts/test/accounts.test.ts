@@ -11,7 +11,7 @@ import { consentPage, signInChoicePage, accountPage } from "../src/google.ts";
 function d1(): SqlDatabase {
 	const db = new DatabaseSync(":memory:");
 	db.exec("PRAGMA foreign_keys = ON");
-	db.exec(readFileSync(new URL("../migrations/accounts/0001_accounts.sql", import.meta.url), "utf8"));
+	for (const m of ["0001_accounts.sql", "0002_terms.sql"]) db.exec(readFileSync(new URL(`../migrations/accounts/${m}`, import.meta.url), "utf8"));
 	const stmt = (sql: string, values: unknown[] = []): SqlStatement & { exec(): void } => ({
 		bind: (...v: unknown[]) => stmt(sql, v),
 		first: async <T>() => (db.prepare(sql).get(...(values as never[])) as T) ?? null,
@@ -149,4 +149,29 @@ test("pages: one button per enabled sign-in method, a chooser, and sign-in metho
 	assert.ok(acct.includes('value="link"') && acct.includes("Add sign-in with ChatGPT"));
 	const single = accountPage({ usage: {}, runs: [], more_runs: false, topics: [], confirmation: "X", identities: [{ provider: "google", label: "Google", since: "" }], linkable: [], linking: true }, "c");
 	assert.ok(!single.includes('value="unlink"')); // the only sign-in cannot be removed
+});
+
+test("terms: a new identity has not accepted; acceptance is recorded per version", async () => {
+	const reg = new AccountRegistry(d1(), () => "2026-11-27T00:00:00.000Z");
+	assert.equal(await reg.exists("github", "5"), false);
+	assert.equal(await reg.termsAccepted("github", "5", "2026-11-27"), false);
+	const owner = await reg.signIn("github", "5");
+	assert.equal(await reg.termsAccepted("github", "5", "2026-11-27"), false); // created, not yet accepted
+	await reg.acceptTerms(owner, "2026-11-27");
+	assert.equal(await reg.termsAccepted("github", "5", "2026-11-27"), true);
+	assert.equal(await reg.termsAccepted("github", "5", "2027-01-01"), false); // new version asks again
+	await reg.link(owner, "google", "g5");
+	assert.equal(await reg.termsAccepted("google", "g5", "2026-11-27"), true); // per account, not per sign-in
+	assert.equal(await new AccountRegistry(null).termsAccepted("github", "5", "2026-11-27"), false);
+});
+
+test("terms page: required checkbox, versioned links, token in the form, decline without validation", async () => {
+	const { termsPage, TERMS_VERSION } = await import("../src/google.ts");
+	const page = termsPage({ token: 't"1', providerLabel: "GitHub", isNew: true });
+	assert.ok(page.includes("Create your Aetherica account") && page.includes("You signed in with GitHub"));
+	assert.ok(page.includes('name="agree" value="yes" required'));
+	assert.ok(page.includes('href="/terms"') && page.includes('href="/privacy"') && page.includes(`version ${TERMS_VERSION}`));
+	assert.ok(page.includes('value="t&#34;1"') && page.includes('action="/signup"'));
+	assert.ok(page.includes('value="decline" formnovalidate'));
+	assert.ok(termsPage({ token: "t", providerLabel: "Google", isNew: false }).includes("Review the updated terms"));
 });

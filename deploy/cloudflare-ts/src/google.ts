@@ -136,7 +136,7 @@ ul{padding-left:20px}li{margin:0 0 8px}code{font-size:13px;padding:1px 5px;borde
 footer{position:absolute;left:0;right:0;bottom:16px;display:flex;gap:20px;justify-content:center;font-size:12px;color:var(--muted)}footer a{color:var(--muted)}
 .doc{max-width:680px}
 .rows{list-style:none;padding:0;margin:0 0 14px}.rows li{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
-form.inline button{flex:0 0 auto;padding:6px 14px;font-size:14px}.stack{display:flex;flex-direction:column;gap:10px;margin:22px 0 6px}
+form.inline button{flex:0 0 auto;padding:6px 14px;font-size:14px}.agree{display:flex;gap:10px;align-items:flex-start;margin:18px 0 4px;font-size:14px}.agree input{width:18px;height:18px;margin-top:2px;flex:none;accent-color:var(--accent)}.stack{display:flex;flex-direction:column;gap:10px;margin:22px 0 6px}
 .small{font-size:13px;margin-top:18px}
 .signin{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;flex:none;height:44px;padding:0 16px;border-radius:999px;font:500 15px/1 Roboto,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;letter-spacing:.01em;text-decoration:none;cursor:pointer;transition:background-color .15s,box-shadow .15s}
 .signin:hover{text-decoration:none;filter:none}.signin svg{flex:none;width:20px;height:20px}
@@ -210,7 +210,7 @@ export const PRIVACY_PAGE = page(`${BRAND} privacy policy`, `${MARK}
 <h1>Privacy policy</h1>
 <p class="muted">${BRAND} is a service that AI assistants (such as ChatGPT and Claude) call to structure, track and verify multi-step work. This page describes what it stores. Status: early development.</p>
 <h2>Sign-in</h2>
-<p>You sign in with Google, GitHub or ChatGPT (OpenAI). ${BRAND} asks each only for your stable account ID (Google and OpenAI: the <code>openid</code> scope; GitHub: no scope, the public numeric user ID), not your name or e-mail address. Your ${BRAND} account records which of these sign-ins belong to it (provider, account ID and dates, nothing else); your work is stored under the account.</p>
+<p>You sign in with Google, GitHub or ChatGPT (OpenAI). ${BRAND} asks each only for your stable account ID (Google and OpenAI: the <code>openid</code> scope; GitHub: no scope, the public numeric user ID), not your name or e-mail address. Your ${BRAND} account records which of these sign-ins belong to it (provider, account ID and dates), and which version of the terms you accepted and when, nothing else; your work is stored under the account.</p>
 <h2>What is stored</h2>
 <ul>
 <li>Task text, stage summaries, objectives, requirement and claim texts, assumptions, scenarios and evidence claims: stored only as SHA-256 digests and lengths, not as text.</li>
@@ -222,8 +222,31 @@ export const PRIVACY_PAGE = page(`${BRAND} privacy policy`, `${MARK}
 <h2>Managing and deleting your data</h2>
 <p>Open <a href="/account">your account page</a> and sign in with any sign-in method of your account: it shows your usage and lets you delete a task, a topic with its notes, or all of your data. Deleting everything also deletes the account and its sign-in methods. Deletion is done by you, not by your assistant. For anything else, open an issue at <a href="${REPO_URL}">${REPO_URL}</a>.</p>`, true);
 
+/** Version of the Terms of Service and Privacy Policy that accounts accept explicitly (the date of the text). */
+export const TERMS_VERSION = "2026-11-27";
+
+/** Explicit acceptance before an account is created (or continued after the terms changed). */
+export function termsPage(o: { token: string; providerLabel: string; isNew: boolean }): string {
+	const title = o.isNew ? `Create your ${BRAND} account` : "Review the updated terms";
+	return page(`${title} — ${BRAND}`, `${MARK}
+<h1>${escapeHtml(title)}</h1>
+<p class="muted">${o.isNew ? `You signed in with ${escapeHtml(o.providerLabel)}. Before your account is created, please read and accept:` : `Please read and accept the current terms to continue with ${escapeHtml(o.providerLabel)}:`}</p>
+<ul>
+<li>${BRAND} is an early-stage service, provided as is, without warranty or guaranteed availability.</li>
+<li>"Structurally verified" means every requirement had its own recorded evidence. It does not guarantee that claims are true.</li>
+<li>Only your account ID at ${escapeHtml(o.providerLabel)} is stored, not your name or e-mail address. Task text is stored as digests.</li>
+<li>You can delete your tasks, topics or your whole account yourself at any time on your account page.</li>
+</ul>
+<form method="post" action="/signup"><input type="hidden" name="token" value="${escapeHtml(o.token)}">
+<label class="agree"><input type="checkbox" name="agree" value="yes" required> I have read and accept the <a href="/terms" target="_blank" rel="noopener">Terms of Service</a> and the <a href="/privacy" target="_blank" rel="noopener">Privacy Policy</a> (version ${TERMS_VERSION}).</label>
+<div class="actions"><button name="decision" value="decline" formnovalidate>Decline</button><button class="primary" name="decision" value="accept">${o.isNew ? "Create account" : "Accept and continue"}</button></div>
+</form>`);
+}
+
 export const TERMS_PAGE = page(`${BRAND} terms of service`, `${MARK}
 <h1>Terms of service</h1>
+<p class="muted">Version ${TERMS_VERSION}.</p>
+<p>You create an ${BRAND} account by signing in with Google, GitHub or ChatGPT and accepting these terms and the <a href="/privacy">privacy policy</a>. The version you accepted and when are recorded with your account. If these terms change, you are asked to accept the new version at your next sign-in.</p>
 <p>${BRAND} is an early-stage development service, provided as is, without warranty and without guaranteed availability. It may change or stop at any time, and stored work may be deleted.</p>
 <p>Verification results are structural checks of what your assistant submitted ("structurally verified"); they do not guarantee that any claim is correct or true.</p>
 <p>Do not use ${BRAND} for unlawful purposes or to attack the service. Source code and license: <a href="${REPO_URL}">${REPO_URL}</a>. See also the <a href="/privacy">privacy policy</a>.</p>`, true);
@@ -266,7 +289,7 @@ export interface AccountView {
 	confirmation: string;
 	notice?: string;
 	/** Sign-in methods linked to this account, and those that can still be added. */
-	identities?: { provider: string; label: string; since: string }[];
+	identities?: { provider: string; label: string; since: string; last?: string }[];
 	linkable?: SignInOption[];
 	linking?: boolean;
 }
@@ -296,12 +319,12 @@ export function accountPage(v: AccountView, csrf: string): string {
 		? `<ul class="rows">${v.topics.map((t) => `<li><span><strong>${e(t.name)}</strong><br><span class="muted">${e(t.items)} notes</span></span>${form("delete_topic", `<input type="hidden" name="topic_id" value="${e(t.id)}">`, "Delete")}</li>`).join("")}</ul>`
 		: '<p class="muted">No saved topics.</p>';
 	const ids = v.identities ?? [];
-	const methods = `<ul class="rows">${ids.map((i) => `<li><span><strong>${e(i.label)}</strong>${i.since ? `<br><span class="muted">since ${e(String(friendlyUtc(i.since)).replace(/, \d\d:\d\d UTC$/, ""))}</span>` : ""}</span>${v.linking && ids.length > 1 ? form("unlink", `<input type="hidden" name="provider" value="${e(i.provider)}">`, "Remove") : ""}</li>`).join("")}</ul>`
+	const methods = `<ul class="rows">${ids.map((i) => `<li><span><strong>${e(i.label)}</strong>${i.since ? `<br><span class="muted">since ${e(String(friendlyUtc(i.since)).replace(/, \d\d:\d\d UTC$/, ""))}${i.last ? ` · last sign-in ${e(friendlyUtc(i.last))}` : ""}</span>` : ""}</span>${v.linking && ids.length > 1 ? form("unlink", `<input type="hidden" name="provider" value="${e(i.provider)}">`, "Remove") : ""}</li>`).join("")}</ul>`
 		+ (v.linking && v.linkable?.length ? `<p class="muted">Add another way to sign in to this same account:</p><div class="stack">${v.linkable.map((o) => `<form method="post"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><input type="hidden" name="action" value="link"><input type="hidden" name="provider" value="${e(o.id)}"><button class="signin ${providerClass(o.id)}">${optionLabel(o, "Add sign-in")}</button></form>`).join("")}</div>` : "");
 	return page(`Your account — ${BRAND}`, `${MARK}
 <h1>Your account</h1>
 ${v.notice ? `<p class="chip">${e(v.notice)}</p>` : ""}
-<h2>Sign-in methods</h2>${methods}
+<h2>Sign-in methods</h2>${methods}<p class="muted small">If you see a sign-in you do not recognise, remove that method and sign out of it at the provider.</p>
 <h2>Today's usage</h2>
 <dl><dt>Requests</dt><dd>${pair("calls")}</dd><dt>New tasks</dt><dd>${pair("runs_started")}</dd><dt>Stored tasks</dt><dd>${pair("stored_runs")}</dd><dt>Resets</dt><dd>${e(friendlyUtc(v.usage.resets_at))}</dd></dl>
 <h2>Tasks</h2>${runs}

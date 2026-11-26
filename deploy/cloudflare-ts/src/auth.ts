@@ -30,6 +30,8 @@ import {
 	approvalPage,
 	accountPage,
 	signInChoicePage,
+	termsPage,
+	TERMS_VERSION,
 	ACCOUNT_DELETE_CONFIRMATION,
 	messagePage,
 	type AccountView,
@@ -141,9 +143,17 @@ async function pageCallback(request: Request, env: AuthEnv, origin: string, prov
 			return html(messagePage("Not added", e instanceof AccountError ? e.message : "The sign-in method could not be added."), 409);
 		}
 	}
-	const owner = await registry(env).signIn(identity.provider, identity.subject);
+	if (!(await registry(env).termsAccepted(identity.provider, identity.subject, TERMS_VERSION))) {
+		return askTerms(env, { kind: "page", purpose, provider: identity.provider, subject: identity.subject });
+	}
+	return finishPageSignIn(env, purpose, await registry(env).signIn(identity.provider, identity.subject));
+}
+
+/** Opens the session a page sign-in was for (account or approval page). */
+async function finishPageSignIn(env: AuthEnv, purpose: PagePurpose, owner: string, headers?: Headers): Promise<Response> {
 	const sid = randomToken();
-	const h = new Headers();
+	const h = new Headers(headers);
+	if (purpose.kind === "link") return redirect("/account", h);
 	if (purpose.kind === "approval") {
 		await env.OAUTH_KV.put(`apv:sess:${sid}`, JSON.stringify({ owner, approval_id: purpose.approval_id, csrf: randomToken() }), { expirationTtl: APPROVAL_TTL_S });
 		h.append("Set-Cookie", `${COOKIE}=${sid}; Path=/approve; Max-Age=${APPROVAL_TTL_S}; HttpOnly; Secure; SameSite=Lax`);
@@ -218,7 +228,7 @@ async function accountView(env: AuthEnv, owner: string, call: OwnerCall, notice?
 	return {
 		usage, runs: (runs.runs as Record<string, unknown>[]) ?? [], more_runs: runs.next_cursor !== null && runs.next_cursor !== undefined,
 		topics: (topics.topics as Record<string, unknown>[]) ?? [], confirmation: ACCOUNT_DELETE_CONFIRMATION, notice,
-		identities: linked.filter((i) => isProviderId(i.provider)).map((i) => ({ provider: i.provider, label: PROVIDERS[i.provider].label, since: i.created_at })),
+		identities: linked.filter((i) => isProviderId(i.provider)).map((i) => ({ provider: i.provider, label: PROVIDERS[i.provider].label, since: i.created_at, last: i.last_login_at })),
 		linkable: options(enabledProviders(env).filter((p) => !have.has(p))),
 		linking: reg.linkingAvailable,
 	};
@@ -362,9 +372,18 @@ async function providerCallback(request: Request, env: AuthEnv, origin: string, 
 		console.error("RIGORX_AUTH sign-in rejected", provider, e instanceof Error ? e.message : String(e));
 		return redirect(authorizationErrorRedirect(original, "server_error"), headers);
 	}
-	const owner = await registry(env).signIn(identity.provider, identity.subject);
+	if (!(await registry(env).termsAccepted(identity.provider, identity.subject, TERMS_VERSION))) {
+		return askTerms(env, { kind: "grant", original, provider: identity.provider, subject: identity.subject }, headers);
+	}
+	return finishGrant(env, original, await registry(env).signIn(identity.provider, identity.subject), headers);
+}
+
+type AuthRequestOf = Awaited<ReturnType<OAuthHelpers["parseAuthRequest"]>>;
+
+/** Issues the MCP grant to the signed-in owner and returns to the client. */
+async function finishGrant(env: AuthEnv, original: AuthRequestOf, owner: string, headers?: Headers): Promise<Response> {
 	const props: AuthProps = { owner };
-	const { redirectTo } = await oauth.completeAuthorization({
+	const { redirectTo } = await env.OAUTH_PROVIDER.completeAuthorization({
 		request: original,
 		// The OAuth library's user ID must not contain ':'.
 		userId: owner.replace(/:/g, "-"),
@@ -373,6 +392,54 @@ async function providerCallback(request: Request, env: AuthEnv, origin: string, 
 		props,
 	});
 	return redirect(redirectTo, headers);
+}
+
+// ---------------------------------------------------------------- terms acceptance (/signup)
+// A new account, or one that has not accepted the current terms version, is created or continued
+// only after the user explicitly accepts the Terms of Service and Privacy Policy (checkbox + button).
+// The verified identity waits in KV (15 min) under a random token that is both in an HttpOnly cookie
+// scoped to /signup and in the form, so the page cannot be completed from another browser or site.
+
+type PendingSignup =
+	| { kind: "page"; purpose: PagePurpose; provider: ProviderId; subject: string }
+	| { kind: "grant"; original: AuthRequestOf; provider: ProviderId; subject: string };
+const SIGNUP_COOKIE = "rx_signup";
+const SIGNUP_TTL_S = 900;
+
+async function askTerms(env: AuthEnv, pending: PendingSignup, headers?: Headers): Promise<Response> {
+	const token = randomToken();
+	await env.OAUTH_KV.put(`acc:signup:${token}`, JSON.stringify(pending), { expirationTtl: SIGNUP_TTL_S });
+	const isNew = !(await registry(env).exists(pending.provider, pending.subject));
+	const h = new Headers(headers);
+	h.append("Set-Cookie", `${SIGNUP_COOKIE}=${token}; Path=/signup; Max-Age=${SIGNUP_TTL_S}; HttpOnly; Secure; SameSite=Lax`);
+	return html(termsPage({ token, providerLabel: PROVIDERS[pending.provider].label, isNew }), 200, h);
+}
+
+/** POST /signup: accept (checkbox required) or decline. */
+async function signupPost(request: Request, env: AuthEnv): Promise<Response> {
+	const form = await request.formData();
+	const token = String(form.get("token") ?? "");
+	const cookie = cookieValue(request, SIGNUP_COOKIE);
+	const pending = token && cookie === token ? await env.OAUTH_KV.get<PendingSignup>(`acc:signup:${token}`, "json") : null;
+	if (!pending) {
+		console.log(JSON.stringify({ evt: "rigorx_security", kind: "signup_session_rejected" }));
+		return html(messagePage("Sign-up expired", "Start signing in again. No account was created or changed."), 403);
+	}
+	await env.OAUTH_KV.delete(`acc:signup:${token}`); // single use
+	const h = new Headers();
+	h.append("Set-Cookie", `${SIGNUP_COOKIE}=; Path=/signup; Max-Age=0; HttpOnly; Secure; SameSite=Lax`);
+	const accepted = form.get("decision") === "accept" && form.get("agree") === "yes";
+	if (!accepted) {
+		if (pending.kind === "grant") return redirect(authorizationErrorRedirect(pending.original, "access_denied"), h);
+		return html(messagePage("Not signed in", form.get("decision") === "accept"
+			? "Tick the box to accept the Terms of Service and Privacy Policy. No account was created or changed. Start signing in again."
+			: "You declined the Terms of Service and Privacy Policy. No account was created or changed."), 200, h);
+	}
+	const reg = registry(env);
+	const owner = await reg.signIn(pending.provider, pending.subject);
+	await reg.acceptTerms(owner, TERMS_VERSION);
+	console.log(JSON.stringify({ evt: "rigorx_account", kind: "terms_accepted", provider: pending.provider, version: TERMS_VERSION }));
+	return pending.kind === "grant" ? finishGrant(env, pending.original, owner, h) : finishPageSignIn(env, pending.purpose, owner, h);
 }
 
 function defaultHandler(origin: string, call: OwnerCall | null, extra: ExtraRoutes | null, fetcher: typeof fetch): ExportedHandler<AuthEnv> {
@@ -390,6 +457,7 @@ function defaultHandler(origin: string, call: OwnerCall | null, extra: ExtraRout
 				if (pathname === "/" && request.method === "GET") return html(HOME_PAGE);
 				if (pathname === "/privacy" && request.method === "GET") return html(PRIVACY_PAGE);
 				if (pathname === "/terms" && request.method === "GET") return html(TERMS_PAGE);
+				if (pathname === "/signup" && request.method === "POST") return await signupPost(request, env);
 				if (pathname === "/authorize" && request.method === "GET") return await authorizeGet(request, env);
 				if (pathname === "/authorize" && request.method === "POST") return await authorizePost(request, env, origin);
 				const callback = providerForCallbackPath(pathname);
