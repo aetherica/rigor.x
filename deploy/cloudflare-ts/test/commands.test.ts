@@ -2,9 +2,25 @@
 // the TypeScript port was also compared with the frozen Python resolver (13 prompts, no difference).
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { COMMAND_COUNT, resolvePrompt } from "../src/commands.ts";
+import { COMMAND_COUNT, COMMAND_SOURCES, resolvePrompt } from "../src/commands.ts";
 
-test("the bundled catalogue has all 999 commands", () => assert.equal(COMMAND_COUNT, 999));
+test("the bundle holds the 999-entry corpus and the 48 owner-authored commands, kept apart", () => {
+	assert.deepEqual(COMMAND_SOURCES, [
+		{ path: "library/slash-commands/commands.json", total: 999 },
+		{ path: "library/rigorx-commands/commands.json", total: 48 },
+	]);
+	assert.equal(COMMAND_COUNT, 1047);
+});
+
+test("owner-authored commands resolve: macros as modifiers, UI/MENU entries preserved for the host", () => {
+	const r = resolvePrompt("/deepthink /redflags /help assess the offer");
+	assert.deepEqual(r.applied_modifiers.map((m) => m.split(":")[0]), ["task modifier /deepthink", "task modifier /redflags"]);
+	assert.deepEqual(r.host_only_commands, ["/help"]);
+	assert.deepEqual(r.unknown_commands, []);
+	assert.match(r.effective_prompt, /User task:\nassess the offer$/);
+	assert.deepEqual(resolvePrompt("/BOOSTREASONING x").host_only_commands, ["/boostreasoning"]); // case-insensitive
+	assert.deepEqual(resolvePrompt("/stresstest x").applied_modifiers.map((m) => m.split(":")[0]), ["task modifier /stress"]); // alias
+});
 
 test("macros become user-level modifiers; native commands pass through; unknown stops resolution", () => {
 	const r = resolvePrompt("/eli5 explain gravity");

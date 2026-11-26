@@ -35,6 +35,12 @@ This project is in pre-release development. Entries summarize notable changes; t
 - Resilience policy (retries, deadlines, circuit breakers, bulkhead), DNS-verified source fetches, idempotency keys, engine-verified user approvals (`rigorx_request_approval`), account data deletion, suspension, source-check quota, OIDC azp/iat/nonce, `/version` and `/health`, structured logs, commit-tagged deploys, discovery gap register; rollback-compatible storage; mutation test in CI.
 - Router: a destructive action with no risk vocabulary ("/l01 delete production database") was routable at L01; it now has an L05 floor (L03 for one broad term such as "format"), found by post-deploy verification.
 
+### Added (2026-11-26 audit, scope C)
+- Owner-authored command set `library/rigorx-commands/` (48 candidate entries `RXC-001`…`RXC-048`: 42 MACRO task modifiers, 6 UI/MENU host commands) with its own validator in CI. It stays separate from the fixed 999-entry research corpus and may not repeat any corpus name or alias. The Worker bundle now holds both (1,047 entries, corpus first); the frozen Python resolver reads the corpus only.
+
+### Fixed (2026-11-26 audit, scope A)
+- README: the Worker is described as the canonical protocol-2 engine with 24 tools and one runtime dependency; the retired Python parity claim and "same tools" wording were removed, and the Python engine is labelled as the frozen protocol-1 reference (ADR-012).
+
 ### Fixed (2026-11-26 connector test)
 - `data.level` at CLASSIFY and ASSESS_COMPLEXITY accepts the short codes `L01`–`L06` (any case) and normalizes them to the full level name; the stage guidance lists the full names.
 - Finished runs return host-disclosed DELIVER limitations in `disclosed_limitations` (count, SHA-256 digests and lengths; the text is still not stored), next to the engine's own `limitations`.

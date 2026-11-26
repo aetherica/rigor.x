@@ -26,7 +26,7 @@ This repository is published for **source review of a development baseline**, no
 A public GitHub repository is subject to GitHub's [Terms of Service](https://docs.github.com/en/site-policy/github-terms/github-terms-of-service). The repository's Apache-2.0 license is a separate copyright license for the covered Work. Public visibility is not a promise that source copies or forks can be recalled later. Do not publish secrets, personal data, third-party materials without sufficient rights, or confidential information.
 
 ## Implemented components
-- 11-stage pipeline state machine with explicit transitions, verification gate and bounded re-entry.
+- Python reference engine (`src/rigorx`, frozen at engine protocol 1 by ADR-012): 11-stage pipeline state machine with explicit transitions, verification gate and bounded re-entry.
 - SQLite persistence with transactional snapshots/events, append-only integrity and optimistic revisions.
 - Registry structural validation/resolution; candidate status remains preserved.
 - Typed stage-artifact contracts.
@@ -34,12 +34,13 @@ A public GitHub repository is subject to GitHub's [Terms of Service](https://doc
 - Fail-closed command execution framework.
 - Live model/tool loop using injected backend and registered host callbacks; capability/approval gates, JSON argument validation, receipts and bounded budgets.
 - End-to-end 11-stage AgentPipeline with durable SQLite events/snapshots and fail-closed verification; CLI uses it by default.
-- Slash-command catalog integration: **909/999** macro/image entries can be applied as user-level prompt modifiers; **90/999** native/UI/platform entries require actual host adapters. Domain activation is optional and heuristic; historical names remain pending ratification.
+- Slash-command catalog integration: **909/999** macro/image entries of the research corpus can be applied as user-level prompt modifiers; **90/999** native/UI/platform entries require actual host adapters. Domain activation is optional and heuristic; historical names remain pending ratification.
+- Owner-authored command set (`library/rigorx-commands/`, 48 candidate entries, kept separate from the 999-entry corpus): 42 task modifiers and 6 host commands, resolved by the Worker only; the Python resolver reads the corpus alone.
 - OpenAI-compatible Chat Completions transport over HTTPS (loopback HTTP allowed), standard-library networking and environment credentials.
 - Package version CLI.
 - Runnable text-agent CLI `rigorx-agent` for a configured OpenAI-compatible endpoint (no tools unless host callbacks are wired).
-- Host plugin engine and MCP server (`rigorx-mcp`, official MCP SDK, optional extra `[mcp]`): 12 annotated tools, owner-scoped runs, deterministic verification gate. Local single-user mode.
-- Cloudflare plugin server (`deploy/cloudflare-ts/`): dependency-free TypeScript Worker with the same tools and engine behaviour (parity-tested against Python, conformance-tested with the official MCP SDK client), per-owner Durable Objects, OAuth sign-in with Google (no static or shared token). Live at `https://rigorx-mcp.aetherica.workers.dev/mcp`.
+- Local host plugin engine and MCP server (`rigorx-mcp`, official MCP SDK, optional extra `[mcp]`): 12 annotated tools on engine protocol 1, owner-scoped runs, deterministic verification gate. Local single-user mode; frozen reference (ADR-012).
+- Cloudflare plugin server (`deploy/cloudflare-ts/`, the canonical engine since ADR-012): TypeScript Worker with one runtime dependency (`@cloudflare/workers-oauth-provider`) running engine protocol 2 (twelve stages, six levels with level-dependent mandatory stages, pre-registered requirements, gate 2.1.0) and 24 tools: the 12 of the Python reference plus compute, source checks, topic memory, approvals, run management and account deletion. Checked by the hand-written conformance suite (`conformance/v2/`) and the official MCP SDK client; Python/TypeScript parity testing was retired with protocol 2. Per-owner Durable Objects, OAuth sign-in with Google (no static or shared token). Live at `https://rigorx-mcp.aetherica.workers.dev/mcp`.
 
 ## Owner requirements (scope, not implementation claims)
 18 Functional Groups; six adaptive intensity levels and 12 heuristic analysis modes; nine research acquisition channels; 999 slash-command corpus; separate 102 operational/interface registry; 30 formulas; 33 algorithms; 111 topics; 15 operators; 36 knowledge domains; host/GitHub/cloud memory and Web/Android/iOS architecture.

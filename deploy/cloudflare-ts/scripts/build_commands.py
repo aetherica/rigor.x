@@ -1,7 +1,9 @@
 """Build the compact slash-command catalogue bundled into the Worker (src/commands.json).
 
-Source of truth: library/slash-commands/commands.json (999 entries with provenance). The Worker
-needs only name, description, classification and aliases. Run from the repository root:
+Sources of truth: library/slash-commands/commands.json (the 999-entry research corpus) and
+library/rigorx-commands/commands.json (the owner-authored set, kept separate from the corpus).
+Corpus entries come first. The Worker needs only name, description, classification and aliases.
+Run from the repository root:
     python deploy/cloudflare-ts/scripts/build_commands.py          # write
     python deploy/cloudflare-ts/scripts/build_commands.py --check  # fail if out of date (CI)
 """
@@ -12,16 +14,27 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
-SOURCE = ROOT / "library" / "slash-commands" / "commands.json"
+SOURCES = (
+    ROOT / "library" / "slash-commands" / "commands.json",
+    ROOT / "library" / "rigorx-commands" / "commands.json",
+)
 TARGET = ROOT / "deploy" / "cloudflare-ts" / "src" / "commands.json"
 
 
 def build() -> str:
-    document = json.loads(SOURCE.read_text(encoding="utf-8"))
-    commands = [[c["name"], c["description"], c["classification"], c.get("aliases_or_equivalents", [])] for c in document["commands"]]
-    if document["manifest"]["total_entries"] != len(commands):
-        raise SystemExit("manifest count does not match the commands")
-    return json.dumps({"source": "library/slash-commands/commands.json", "total": len(commands), "commands": commands}, ensure_ascii=False, separators=(",", ":")) + "\n"
+    commands: list[list[object]] = []
+    sources: list[dict[str, object]] = []
+    for path in SOURCES:
+        document = json.loads(path.read_text(encoding="utf-8"))
+        part = [[c["name"], c["description"], c["classification"], c.get("aliases_or_equivalents", [])] for c in document["commands"]]
+        if document["manifest"]["total_entries"] != len(part):
+            raise SystemExit(f"{path.relative_to(ROOT)}: manifest count does not match the commands")
+        sources.append({"path": path.relative_to(ROOT).as_posix(), "total": len(part)})
+        commands.extend(part)
+    names = [str(c[0]).lower() for c in commands]
+    if len(set(names)) != len(names):
+        raise SystemExit("a command name appears in more than one source")
+    return json.dumps({"sources": sources, "total": len(commands), "commands": commands}, ensure_ascii=False, separators=(",", ":")) + "\n"
 
 
 def main() -> int:

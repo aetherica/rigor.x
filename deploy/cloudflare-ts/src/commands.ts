@@ -1,6 +1,6 @@
-// Slash-command resolver (closes audit item S3): the 999-entry catalogue from
-// library/slash-commands, bundled in compact form (src/commands.json, built by
-// scripts/build_commands.py), with the semantics of src/rigorx/slash_commands.py: leading slash
+// Slash-command resolver (closes audit item S3): the 999-entry research corpus from
+// library/slash-commands plus the owner-authored set from library/rigorx-commands, bundled in compact
+// form (src/commands.json, built by scripts/build_commands.py), with the semantics of src/rigorx/slash_commands.py: leading slash
 // tokens are resolved; only MACRO, MACRO ALIAS and IMAGE KEYWORD entries become user-level task
 // modifiers; native, UI and host commands are preserved but not executed; resolution stops at the
 // first unknown command, which is kept literally with all the text after it.
@@ -11,7 +11,8 @@ const MODIFIER = new Set(["MACRO", "MACRO ALIAS", "IMAGE KEYWORD"]);
 
 const records = new Map<string, Entry>();
 const aliases = new Map<string, string>();
-for (const e of (catalogue as unknown as { commands: Entry[] }).commands) records.set(e[0].toLowerCase(), e);
+const bundle = catalogue as unknown as { sources: { path: string; total: number }[]; commands: Entry[] };
+for (const e of bundle.commands) records.set(e[0].toLowerCase(), e);
 for (const e of records.values()) {
 	for (const a of e[3]) {
 		const n = (a.startsWith("/") ? a : `/${a}`).toLowerCase();
@@ -19,6 +20,8 @@ for (const e of records.values()) {
 	}
 }
 export const COMMAND_COUNT = records.size;
+/** Entries per bundled source, in bundle order (corpus first). */
+export const COMMAND_SOURCES = bundle.sources.map((s) => ({ ...s }));
 
 export interface Resolution {
 	applied_modifiers: string[];

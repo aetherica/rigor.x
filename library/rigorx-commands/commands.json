@@ -1,0 +1,844 @@
+{
+  "manifest": {
+    "name": "RIGOR-X owner-authored command set",
+    "version": "0.1.0",
+    "total_entries": 48,
+    "created": "2026-11-26",
+    "relationship": "Separate from the 999-entry research corpus in library/slash-commands; never counted into it. A name or alias here may not repeat any corpus name or alias.",
+    "runtime": "The Worker resolver applies MACRO and MACRO ALIAS entries as user-level task modifiers and preserves UI/MENU entries for the host without executing them."
+  },
+  "commands": [
+    {
+      "id": "RXC-001",
+      "ordinal": 1,
+      "name": "/beastmode",
+      "description": "Work at maximum rigor: escalate to the highest suitable level, decompose fully, verify every step and disclose every gap.",
+      "group_id": "general_purpose_ai_workflows",
+      "group": "General-purpose AI workflows",
+      "classification": "MACRO",
+      "aliases_or_equivalents": [
+        "/l06"
+      ],
+      "source": {
+        "source_id": "SRC-AETHERICA-OWNER-001",
+        "authored_by": "Aetherica (repository owner)",
+        "source_type": "owner_authored",
+        "verification_status": "owner_listed_descriptions_drafted_pending_ratification"
+      },
+      "lifecycle_status": "candidate"
+    },
+    {
+      "id": "RXC-002",
+      "ordinal": 2,
+      "name": "/stress",
+      "description": "Stress-test the answer or plan: list failure scenarios, test each against the requirements and report what breaks.",
+      "group_id": "reasoning_diagnosis_and_critical_analysis",
+      "group": "Reasoning, diagnosis & critical analysis",
+      "classification": "MACRO",
+      "aliases_or_equivalents": [
+        "/stresstest"
+      ],
+      "source": {
+        "source_id": "SRC-AETHERICA-OWNER-001",
+        "authored_by": "Aetherica (repository owner)",
+        "source_type": "owner_authored",
+        "verification_status": "owner_listed_descriptions_drafted_pending_ratification"
+      },
+      "lifecycle_status": "candidate"
+    },
+    {
+      "id": "RXC-003",
+      "ordinal": 3,
+      "name": "/deepthink",
+      "description": "Reason slowly and in depth before answering: explore alternatives, check assumptions and show the key steps.",
+      "group_id": "reasoning_diagnosis_and_critical_analysis",
+      "group": "Reasoning, diagnosis & critical analysis",
+      "classification": "MACRO",
+      "aliases_or_equivalents": [],
+      "source": {
+        "source_id": "SRC-AETHERICA-OWNER-001",
+        "authored_by": "Aetherica (repository owner)",
+        "source_type": "owner_authored",
+        "verification_status": "owner_listed_descriptions_drafted_pending_ratification"
+      },
+      "lifecycle_status": "candidate"
+    },
+    {
+      "id": "RXC-004",
+      "ordinal": 4,
+      "name": "/ultrathink",
+      "description": "Stronger form of /deepthink for hard problems: exhaustive exploration of approaches before committing to one.",
+      "group_id": "reasoning_diagnosis_and_critical_analysis",
+      "group": "Reasoning, diagnosis & critical analysis",
+      "classification": "MACRO ALIAS",
+      "aliases_or_equivalents": [],
+      "source": {
+        "source_id": "SRC-AETHERICA-OWNER-001",
+        "authored_by": "Aetherica (repository owner)",
+        "source_type": "owner_authored",
+        "verification_status": "owner_listed_descriptions_drafted_pending_ratification"
+      },
+      "lifecycle_status": "candidate"
+    },
+    {
+      "id": "RXC-005",
+      "ordinal": 5,
+      "name": "/thinkdifferent",
+      "description": "Generate unconventional framings and approaches before settling on the usual one; label which are speculative.",
+      "group_id": "reasoning_diagnosis_and_critical_analysis",
+      "group": "Reasoning, diagnosis & critical analysis",
+      "classification": "MACRO",
+      "aliases_or_equivalents": [],
+      "source": {
+        "source_id": "SRC-AETHERICA-OWNER-001",
+        "authored_by": "Aetherica (repository owner)",
+        "source_type": "owner_authored",
+        "verification_status": "owner_listed_descriptions_drafted_pending_ratification"
+      },
+      "lifecycle_status": "candidate"
+    },
+    {
+      "id": "RXC-006",
+      "ordinal": 6,
+      "name": "/zerobased",
+      "description": "Rebuild the answer from first principles, ignoring existing conventions, and justify every element that is kept.",
+      "group_id": "reasoning_diagnosis_and_critical_analysis",
+      "group": "Reasoning, diagnosis & critical analysis",
+      "classification": "MACRO",
+      "aliases_or_equivalents": [],
+      "source": {
+        "source_id": "SRC-AETHERICA-OWNER-001",
+        "authored_by": "Aetherica (repository owner)",
+        "source_type": "owner_authored",
+        "verification_status": "owner_listed_descriptions_drafted_pending_ratification"
+      },
+      "lifecycle_status": "candidate"
+    },
+    {
+      "id": "RXC-007",
+      "ordinal": 7,
+      "name": "/sanitycheck",
+      "description": "Quickly check that results, numbers and conclusions are plausible in order of magnitude, units and common sense.",
+      "group_id": "reasoning_diagnosis_and_critical_analysis",
+      "group": "Reasoning, diagnosis & critical analysis",
+      "classification": "MACRO",
+      "aliases_or_equivalents": [],
+      "source": {
+        "source_id": "SRC-AETHERICA-OWNER-001",
+        "authored_by": "Aetherica (repository owner)",
+        "source_type": "owner_authored",
+        "verification_status": "owner_listed_descriptions_drafted_pending_ratification"
+      },
+      "lifecycle_status": "candidate"
+    },
+    {
+      "id": "RXC-008",
+      "ordinal": 8,
+      "name": "/sourcecheck",
+      "description": "Check that each cited source exists, is reachable, is current and actually supports the claim it is cited for.",
+      "group_id": "research_discovery_and_source_verification",
+      "group": "Research, discovery & source verification",
+      "classification": "MACRO",
+      "aliases_or_equivalents": [],
+      "source": {
+        "source_id": "SRC-AETHERICA-OWNER-001",
+        "authored_by": "Aetherica (repository owner)",
+        "source_type": "owner_authored",
+        "verification_status": "owner_listed_descriptions_drafted_pending_ratification"
+      },
+      "lifecycle_status": "candidate"
+    },
+    {
+      "id": "RXC-009",
+      "ordinal": 9,
+      "name": "/citation",
+      "description": "Attach a verifiable citation to every factual claim and mark claims that have none.",
+      "group_id": "research_discovery_and_source_verification",
+      "group": "Research, discovery & source verification",
+      "classification": "MACRO",
+      "aliases_or_equivalents": [
+        "/cite"
+      ],
+      "source": {
+        "source_id": "SRC-AETHERICA-OWNER-001",
+        "authored_by": "Aetherica (repository owner)",
+        "source_type": "owner_authored",
+        "verification_status": "owner_listed_descriptions_drafted_pending_ratification"
+      },
+      "lifecycle_status": "candidate"
+    },
+    {
+      "id": "RXC-010",
+      "ordinal": 10,
+      "name": "/audit",
+      "description": "Audit the work against its requirements: completeness, correctness, evidence and undisclosed gaps, with a findings list.",
+      "group_id": "research_discovery_and_source_verification",
+      "group": "Research, discovery & source verification",
+      "classification": "MACRO",
+      "aliases_or_equivalents": [],
+      "source": {
+        "source_id": "SRC-AETHERICA-OWNER-001",
+        "authored_by": "Aetherica (repository owner)",
+        "source_type": "owner_authored",
+        "verification_status": "owner_listed_descriptions_drafted_pending_ratification"
+      },
+      "lifecycle_status": "candidate"
+    },
+    {
+      "id": "RXC-011",
+      "ordinal": 11,
+      "name": "/crypto",
+      "description": "Analyse a cryptocurrency or token: technology, tokenomics, on-chain data, market, regulation and specific risks.",
+      "group_id": "finance_business_and_investment",
+      "group": "Finance, business & investment",
+      "classification": "MACRO",
+      "aliases_or_equivalents": [],
+      "source": {
+        "source_id": "SRC-AETHERICA-OWNER-001",
+        "authored_by": "Aetherica (repository owner)",
+        "source_type": "owner_authored",
+        "verification_status": "owner_listed_descriptions_drafted_pending_ratification"
+      },
+      "lifecycle_status": "candidate"
+    },
+    {
+      "id": "RXC-012",
+      "ordinal": 12,
+      "name": "/monetary",
+      "description": "Analyse through monetary economics: interest rates, money supply, inflation, currency and central-bank policy effects.",
+      "group_id": "finance_business_and_investment",
+      "group": "Finance, business & investment",
+      "classification": "MACRO",
+      "aliases_or_equivalents": [],
+      "source": {
+        "source_id": "SRC-AETHERICA-OWNER-001",
+        "authored_by": "Aetherica (repository owner)",
+        "source_type": "owner_authored",
+        "verification_status": "owner_listed_descriptions_drafted_pending_ratification"
+      },
+      "lifecycle_status": "candidate"
+    },
+    {
+      "id": "RXC-013",
+      "ordinal": 13,
+      "name": "/finance",
+      "description": "Apply financial analysis: statements, ratios, cash flow, valuation and sensitivity, with stated assumptions.",
+      "group_id": "finance_business_and_investment",
+      "group": "Finance, business & investment",
+      "classification": "MACRO",
+      "aliases_or_equivalents": [],
+      "source": {
+        "source_id": "SRC-AETHERICA-OWNER-001",
+        "authored_by": "Aetherica (repository owner)",
+        "source_type": "owner_authored",
+        "verification_status": "owner_listed_descriptions_drafted_pending_ratification"
+      },
+      "lifecycle_status": "candidate"
+    },
+    {
+      "id": "RXC-014",
+      "ordinal": 14,
+      "name": "/businessmode",
+      "description": "Answer as a business operator: customers, revenue, costs, margins, competition and execution priorities.",
+      "group_id": "finance_business_and_investment",
+      "group": "Finance, business & investment",
+      "classification": "MACRO",
+      "aliases_or_equivalents": [
+        "/business"
+      ],
+      "source": {
+        "source_id": "SRC-AETHERICA-OWNER-001",
+        "authored_by": "Aetherica (repository owner)",
+        "source_type": "owner_authored",
+        "verification_status": "owner_listed_descriptions_drafted_pending_ratification"
+      },
+      "lifecycle_status": "candidate"
+    },
+    {
+      "id": "RXC-015",
+      "ordinal": 15,
+      "name": "/product",
+      "description": "Analyse as a product manager: user problem, value proposition, requirements, metrics and roadmap trade-offs.",
+      "group_id": "finance_business_and_investment",
+      "group": "Finance, business & investment",
+      "classification": "MACRO",
+      "aliases_or_equivalents": [],
+      "source": {
+        "source_id": "SRC-AETHERICA-OWNER-001",
+        "authored_by": "Aetherica (repository owner)",
+        "source_type": "owner_authored",
+        "verification_status": "owner_listed_descriptions_drafted_pending_ratification"
+      },
+      "lifecycle_status": "candidate"
+    },
+    {
+      "id": "RXC-016",
+      "ordinal": 16,
+      "name": "/execution",
+      "description": "Turn the goal into concrete executable steps with owners, order, dependencies and completion conditions.",
+      "group_id": "documents_projects_and_automation",
+      "group": "Documents, projects & automation",
+      "classification": "MACRO",
+      "aliases_or_equivalents": [],
+      "source": {
+        "source_id": "SRC-AETHERICA-OWNER-001",
+        "authored_by": "Aetherica (repository owner)",
+        "source_type": "owner_authored",
+        "verification_status": "owner_listed_descriptions_drafted_pending_ratification"
+      },
+      "lifecycle_status": "candidate"
+    },
+    {
+      "id": "RXC-017",
+      "ordinal": 17,
+      "name": "/failure",
+      "description": "Analyse how this could fail: failure modes, likelihood, impact, early warning signs and mitigations.",
+      "group_id": "reasoning_diagnosis_and_critical_analysis",
+      "group": "Reasoning, diagnosis & critical analysis",
+      "classification": "MACRO",
+      "aliases_or_equivalents": [],
+      "source": {
+        "source_id": "SRC-AETHERICA-OWNER-001",
+        "authored_by": "Aetherica (repository owner)",
+        "source_type": "owner_authored",
+        "verification_status": "owner_listed_descriptions_drafted_pending_ratification"
+      },
+      "lifecycle_status": "candidate"
+    },
+    {
+      "id": "RXC-018",
+      "ordinal": 18,
+      "name": "/decision",
+      "description": "Structure a decision: options, criteria, evidence, trade-offs, risks and a recommendation with its conditions.",
+      "group_id": "comparison_evaluation_and_decision_support",
+      "group": "Comparison, evaluation & decision support",
+      "classification": "MACRO",
+      "aliases_or_equivalents": [],
+      "source": {
+        "source_id": "SRC-AETHERICA-OWNER-001",
+        "authored_by": "Aetherica (repository owner)",
+        "source_type": "owner_authored",
+        "verification_status": "owner_listed_descriptions_drafted_pending_ratification"
+      },
+      "lifecycle_status": "candidate"
+    },
+    {
+      "id": "RXC-019",
+      "ordinal": 19,
+      "name": "/prioritize",
+      "description": "Rank items by impact, effort, urgency and dependencies, and explain the ranking.",
+      "group_id": "comparison_evaluation_and_decision_support",
+      "group": "Comparison, evaluation & decision support",
+      "classification": "MACRO",
+      "aliases_or_equivalents": [],
+      "source": {
+        "source_id": "SRC-AETHERICA-OWNER-001",
+        "authored_by": "Aetherica (repository owner)",
+        "source_type": "owner_authored",
+        "verification_status": "owner_listed_descriptions_drafted_pending_ratification"
+      },
+      "lifecycle_status": "candidate"
+    },
+    {
+      "id": "RXC-020",
+      "ordinal": 20,
+      "name": "/postmortem",
+      "description": "Blameless post-incident review: timeline, root causes, contributing factors, what worked and corrective actions.",
+      "group_id": "reasoning_diagnosis_and_critical_analysis",
+      "group": "Reasoning, diagnosis & critical analysis",
+      "classification": "MACRO",
+      "aliases_or_equivalents": [],
+      "source": {
+        "source_id": "SRC-AETHERICA-OWNER-001",
+        "authored_by": "Aetherica (repository owner)",
+        "source_type": "owner_authored",
+        "verification_status": "owner_listed_descriptions_drafted_pending_ratification"
+      },
+      "lifecycle_status": "candidate"
+    },
+    {
+      "id": "RXC-021",
+      "ordinal": 21,
+      "name": "/coding",
+      "description": "Write working, tested, idiomatic code for the task and state how it was checked.",
+      "group_id": "software_coding_and_technical_engineering",
+      "group": "Software, coding & technical engineering",
+      "classification": "MACRO",
+      "aliases_or_equivalents": [],
+      "source": {
+        "source_id": "SRC-AETHERICA-OWNER-001",
+        "authored_by": "Aetherica (repository owner)",
+        "source_type": "owner_authored",
+        "verification_status": "owner_listed_descriptions_drafted_pending_ratification"
+      },
+      "lifecycle_status": "candidate"
+    },
+    {
+      "id": "RXC-022",
+      "ordinal": 22,
+      "name": "/security",
+      "description": "Review for security: vulnerabilities, unsafe defaults, secrets, input handling and access control, with fixes.",
+      "group_id": "software_coding_and_technical_engineering",
+      "group": "Software, coding & technical engineering",
+      "classification": "MACRO",
+      "aliases_or_equivalents": [],
+      "source": {
+        "source_id": "SRC-AETHERICA-OWNER-001",
+        "authored_by": "Aetherica (repository owner)",
+        "source_type": "owner_authored",
+        "verification_status": "owner_listed_descriptions_drafted_pending_ratification"
+      },
+      "lifecycle_status": "candidate"
+    },
+    {
+      "id": "RXC-023",
+      "ordinal": 23,
+      "name": "/threatmodel",
+      "description": "Build a threat model: assets, trust boundaries, attackers, threats (for example STRIDE) and mitigations.",
+      "group_id": "software_coding_and_technical_engineering",
+      "group": "Software, coding & technical engineering",
+      "classification": "MACRO",
+      "aliases_or_equivalents": [],
+      "source": {
+        "source_id": "SRC-AETHERICA-OWNER-001",
+        "authored_by": "Aetherica (repository owner)",
+        "source_type": "owner_authored",
+        "verification_status": "owner_listed_descriptions_drafted_pending_ratification"
+      },
+      "lifecycle_status": "candidate"
+    },
+    {
+      "id": "RXC-024",
+      "ordinal": 24,
+      "name": "/smartcontract",
+      "description": "Analyse or write a smart contract with attention to reentrancy, access control, arithmetic, gas and upgrade risks.",
+      "group_id": "software_coding_and_technical_engineering",
+      "group": "Software, coding & technical engineering",
+      "classification": "MACRO",
+      "aliases_or_equivalents": [],
+      "source": {
+        "source_id": "SRC-AETHERICA-OWNER-001",
+        "authored_by": "Aetherica (repository owner)",
+        "source_type": "owner_authored",
+        "verification_status": "owner_listed_descriptions_drafted_pending_ratification"
+      },
+      "lifecycle_status": "candidate"
+    },
+    {
+      "id": "RXC-025",
+      "ordinal": 25,
+      "name": "/blockchain",
+      "description": "Explain or design blockchain systems: consensus, data structures, security, scalability and trade-offs.",
+      "group_id": "software_coding_and_technical_engineering",
+      "group": "Software, coding & technical engineering",
+      "classification": "MACRO",
+      "aliases_or_equivalents": [],
+      "source": {
+        "source_id": "SRC-AETHERICA-OWNER-001",
+        "authored_by": "Aetherica (repository owner)",
+        "source_type": "owner_authored",
+        "verification_status": "owner_listed_descriptions_drafted_pending_ratification"
+      },
+      "lifecycle_status": "candidate"
+    },
+    {
+      "id": "RXC-026",
+      "ordinal": 26,
+      "name": "/database",
+      "description": "Work on databases: schema design, queries, indexing, transactions, migrations and performance.",
+      "group_id": "software_coding_and_technical_engineering",
+      "group": "Software, coding & technical engineering",
+      "classification": "MACRO",
+      "aliases_or_equivalents": [
+        "/db"
+      ],
+      "source": {
+        "source_id": "SRC-AETHERICA-OWNER-001",
+        "authored_by": "Aetherica (repository owner)",
+        "source_type": "owner_authored",
+        "verification_status": "owner_listed_descriptions_drafted_pending_ratification"
+      },
+      "lifecycle_status": "candidate"
+    },
+    {
+      "id": "RXC-027",
+      "ordinal": 27,
+      "name": "/devops",
+      "description": "Address build, deployment, CI/CD, infrastructure, monitoring and reliability for the system.",
+      "group_id": "software_coding_and_technical_engineering",
+      "group": "Software, coding & technical engineering",
+      "classification": "MACRO",
+      "aliases_or_equivalents": [],
+      "source": {
+        "source_id": "SRC-AETHERICA-OWNER-001",
+        "authored_by": "Aetherica (repository owner)",
+        "source_type": "owner_authored",
+        "verification_status": "owner_listed_descriptions_drafted_pending_ratification"
+      },
+      "lifecycle_status": "candidate"
+    },
+    {
+      "id": "RXC-028",
+      "ordinal": 28,
+      "name": "/riskreward",
+      "description": "Weigh potential upside against downside, likelihood and reversibility for each option.",
+      "group_id": "comparison_evaluation_and_decision_support",
+      "group": "Comparison, evaluation & decision support",
+      "classification": "MACRO",
+      "aliases_or_equivalents": [],
+      "source": {
+        "source_id": "SRC-AETHERICA-OWNER-001",
+        "authored_by": "Aetherica (repository owner)",
+        "source_type": "owner_authored",
+        "verification_status": "owner_listed_descriptions_drafted_pending_ratification"
+      },
+      "lifecycle_status": "candidate"
+    },
+    {
+      "id": "RXC-029",
+      "ordinal": 29,
+      "name": "/whatif",
+      "description": "Explore what-if scenarios: change one assumption at a time and trace the consequences.",
+      "group_id": "reasoning_diagnosis_and_critical_analysis",
+      "group": "Reasoning, diagnosis & critical analysis",
+      "classification": "MACRO",
+      "aliases_or_equivalents": [],
+      "source": {
+        "source_id": "SRC-AETHERICA-OWNER-001",
+        "authored_by": "Aetherica (repository owner)",
+        "source_type": "owner_authored",
+        "verification_status": "owner_listed_descriptions_drafted_pending_ratification"
+      },
+      "lifecycle_status": "candidate"
+    },
+    {
+      "id": "RXC-030",
+      "ordinal": 30,
+      "name": "/redflags",
+      "description": "List warning signs and concerns, each with the evidence behind it and how serious it is.",
+      "group_id": "comparison_evaluation_and_decision_support",
+      "group": "Comparison, evaluation & decision support",
+      "classification": "MACRO",
+      "aliases_or_equivalents": [],
+      "source": {
+        "source_id": "SRC-AETHERICA-OWNER-001",
+        "authored_by": "Aetherica (repository owner)",
+        "source_type": "owner_authored",
+        "verification_status": "owner_listed_descriptions_drafted_pending_ratification"
+      },
+      "lifecycle_status": "candidate"
+    },
+    {
+      "id": "RXC-031",
+      "ordinal": 31,
+      "name": "/greenflags",
+      "description": "List positive signals and strengths, each with the evidence behind it.",
+      "group_id": "comparison_evaluation_and_decision_support",
+      "group": "Comparison, evaluation & decision support",
+      "classification": "MACRO",
+      "aliases_or_equivalents": [],
+      "source": {
+        "source_id": "SRC-AETHERICA-OWNER-001",
+        "authored_by": "Aetherica (repository owner)",
+        "source_type": "owner_authored",
+        "verification_status": "owner_listed_descriptions_drafted_pending_ratification"
+      },
+      "lifecycle_status": "candidate"
+    },
+    {
+      "id": "RXC-032",
+      "ordinal": 32,
+      "name": "/think",
+      "description": "Think step by step before answering and make the reasoning checkable.",
+      "group_id": "reasoning_diagnosis_and_critical_analysis",
+      "group": "Reasoning, diagnosis & critical analysis",
+      "classification": "MACRO",
+      "aliases_or_equivalents": [],
+      "source": {
+        "source_id": "SRC-AETHERICA-OWNER-001",
+        "authored_by": "Aetherica (repository owner)",
+        "source_type": "owner_authored",
+        "verification_status": "owner_listed_descriptions_drafted_pending_ratification"
+      },
+      "lifecycle_status": "candidate"
+    },
+    {
+      "id": "RXC-033",
+      "ordinal": 33,
+      "name": "/adversarial",
+      "description": "Attack the answer as a determined critic: strongest objections, counter-evidence and weakest assumptions.",
+      "group_id": "reasoning_diagnosis_and_critical_analysis",
+      "group": "Reasoning, diagnosis & critical analysis",
+      "classification": "MACRO",
+      "aliases_or_equivalents": [],
+      "source": {
+        "source_id": "SRC-AETHERICA-OWNER-001",
+        "authored_by": "Aetherica (repository owner)",
+        "source_type": "owner_authored",
+        "verification_status": "owner_listed_descriptions_drafted_pending_ratification"
+      },
+      "lifecycle_status": "candidate"
+    },
+    {
+      "id": "RXC-034",
+      "ordinal": 34,
+      "name": "/edge",
+      "description": "Find edge cases and boundary conditions that could break the answer, code or plan.",
+      "group_id": "reasoning_diagnosis_and_critical_analysis",
+      "group": "Reasoning, diagnosis & critical analysis",
+      "classification": "MACRO",
+      "aliases_or_equivalents": [],
+      "source": {
+        "source_id": "SRC-AETHERICA-OWNER-001",
+        "authored_by": "Aetherica (repository owner)",
+        "source_type": "owner_authored",
+        "verification_status": "owner_listed_descriptions_drafted_pending_ratification"
+      },
+      "lifecycle_status": "candidate"
+    },
+    {
+      "id": "RXC-035",
+      "ordinal": 35,
+      "name": "/constrain",
+      "description": "Apply the stated constraints strictly (scope, length, format, tools, budget) and flag any that conflict.",
+      "group_id": "output_format_and_response_control",
+      "group": "Output format & response control",
+      "classification": "MACRO",
+      "aliases_or_equivalents": [],
+      "source": {
+        "source_id": "SRC-AETHERICA-OWNER-001",
+        "authored_by": "Aetherica (repository owner)",
+        "source_type": "owner_authored",
+        "verification_status": "owner_listed_descriptions_drafted_pending_ratification"
+      },
+      "lifecycle_status": "candidate"
+    },
+    {
+      "id": "RXC-036",
+      "ordinal": 36,
+      "name": "/reflect",
+      "description": "Review your own answer before delivering it: errors, gaps, unsupported claims, and revise.",
+      "group_id": "reasoning_diagnosis_and_critical_analysis",
+      "group": "Reasoning, diagnosis & critical analysis",
+      "classification": "MACRO",
+      "aliases_or_equivalents": [
+        "/selfcheck"
+      ],
+      "source": {
+        "source_id": "SRC-AETHERICA-OWNER-001",
+        "authored_by": "Aetherica (repository owner)",
+        "source_type": "owner_authored",
+        "verification_status": "owner_listed_descriptions_drafted_pending_ratification"
+      },
+      "lifecycle_status": "candidate"
+    },
+    {
+      "id": "RXC-037",
+      "ordinal": 37,
+      "name": "/decompose",
+      "description": "Break the problem into smaller sub-problems with dependencies and solve them in order.",
+      "group_id": "reasoning_diagnosis_and_critical_analysis",
+      "group": "Reasoning, diagnosis & critical analysis",
+      "classification": "MACRO",
+      "aliases_or_equivalents": [],
+      "source": {
+        "source_id": "SRC-AETHERICA-OWNER-001",
+        "authored_by": "Aetherica (repository owner)",
+        "source_type": "owner_authored",
+        "verification_status": "owner_listed_descriptions_drafted_pending_ratification"
+      },
+      "lifecycle_status": "candidate"
+    },
+    {
+      "id": "RXC-038",
+      "ordinal": 38,
+      "name": "/synthesize",
+      "description": "Combine findings from several sources or analyses into one coherent conclusion, noting agreements and conflicts.",
+      "group_id": "information_extraction_and_knowledge_organization",
+      "group": "Information extraction & knowledge organization",
+      "classification": "MACRO",
+      "aliases_or_equivalents": [],
+      "source": {
+        "source_id": "SRC-AETHERICA-OWNER-001",
+        "authored_by": "Aetherica (repository owner)",
+        "source_type": "owner_authored",
+        "verification_status": "owner_listed_descriptions_drafted_pending_ratification"
+      },
+      "lifecycle_status": "candidate"
+    },
+    {
+      "id": "RXC-039",
+      "ordinal": 39,
+      "name": "/tdd",
+      "description": "Test-driven development: write failing tests first, then the minimal code to pass, then refactor.",
+      "group_id": "software_coding_and_technical_engineering",
+      "group": "Software, coding & technical engineering",
+      "classification": "MACRO",
+      "aliases_or_equivalents": [],
+      "source": {
+        "source_id": "SRC-AETHERICA-OWNER-001",
+        "authored_by": "Aetherica (repository owner)",
+        "source_type": "owner_authored",
+        "verification_status": "owner_listed_descriptions_drafted_pending_ratification"
+      },
+      "lifecycle_status": "candidate"
+    },
+    {
+      "id": "RXC-040",
+      "ordinal": 40,
+      "name": "/triage-issue",
+      "description": "Triage an issue: reproduce, classify severity and area, find the likely cause and propose next steps.",
+      "group_id": "software_coding_and_technical_engineering",
+      "group": "Software, coding & technical engineering",
+      "classification": "MACRO",
+      "aliases_or_equivalents": [
+        "/triage"
+      ],
+      "source": {
+        "source_id": "SRC-AETHERICA-OWNER-001",
+        "authored_by": "Aetherica (repository owner)",
+        "source_type": "owner_authored",
+        "verification_status": "owner_listed_descriptions_drafted_pending_ratification"
+      },
+      "lifecycle_status": "candidate"
+    },
+    {
+      "id": "RXC-041",
+      "ordinal": 41,
+      "name": "/bench",
+      "description": "Design or run a benchmark: workload, metrics, baseline, method and a reproducible result.",
+      "group_id": "software_coding_and_technical_engineering",
+      "group": "Software, coding & technical engineering",
+      "classification": "MACRO",
+      "aliases_or_equivalents": [],
+      "source": {
+        "source_id": "SRC-AETHERICA-OWNER-001",
+        "authored_by": "Aetherica (repository owner)",
+        "source_type": "owner_authored",
+        "verification_status": "owner_listed_descriptions_drafted_pending_ratification"
+      },
+      "lifecycle_status": "candidate"
+    },
+    {
+      "id": "RXC-042",
+      "ordinal": 42,
+      "name": "/migrate",
+      "description": "Plan a migration between versions, frameworks or systems: steps, compatibility, data, rollback and verification.",
+      "group_id": "software_coding_and_technical_engineering",
+      "group": "Software, coding & technical engineering",
+      "classification": "MACRO",
+      "aliases_or_equivalents": [
+        "/migration"
+      ],
+      "source": {
+        "source_id": "SRC-AETHERICA-OWNER-001",
+        "authored_by": "Aetherica (repository owner)",
+        "source_type": "owner_authored",
+        "verification_status": "owner_listed_descriptions_drafted_pending_ratification"
+      },
+      "lifecycle_status": "candidate"
+    },
+    {
+      "id": "RXC-043",
+      "ordinal": 43,
+      "name": "/ls",
+      "description": "List the user's runs, files or saved items in the host interface.",
+      "group_id": "platform_native_commands_and_interface_controls",
+      "group": "Platform-native commands & interface controls",
+      "classification": "UI/MENU",
+      "aliases_or_equivalents": [],
+      "source": {
+        "source_id": "SRC-AETHERICA-OWNER-001",
+        "authored_by": "Aetherica (repository owner)",
+        "source_type": "owner_authored",
+        "verification_status": "owner_listed_descriptions_drafted_pending_ratification"
+      },
+      "lifecycle_status": "candidate"
+    },
+    {
+      "id": "RXC-044",
+      "ordinal": 44,
+      "name": "/boostReasoning",
+      "description": "Raise the host's reasoning effort setting for the next responses, where the host supports it.",
+      "group_id": "platform_native_commands_and_interface_controls",
+      "group": "Platform-native commands & interface controls",
+      "classification": "UI/MENU",
+      "aliases_or_equivalents": [],
+      "source": {
+        "source_id": "SRC-AETHERICA-OWNER-001",
+        "authored_by": "Aetherica (repository owner)",
+        "source_type": "owner_authored",
+        "verification_status": "owner_listed_descriptions_drafted_pending_ratification"
+      },
+      "lifecycle_status": "candidate"
+    },
+    {
+      "id": "RXC-045",
+      "ordinal": 45,
+      "name": "/reset",
+      "description": "Reset the current session state in the host interface.",
+      "group_id": "platform_native_commands_and_interface_controls",
+      "group": "Platform-native commands & interface controls",
+      "classification": "UI/MENU",
+      "aliases_or_equivalents": [],
+      "source": {
+        "source_id": "SRC-AETHERICA-OWNER-001",
+        "authored_by": "Aetherica (repository owner)",
+        "source_type": "owner_authored",
+        "verification_status": "owner_listed_descriptions_drafted_pending_ratification"
+      },
+      "lifecycle_status": "candidate"
+    },
+    {
+      "id": "RXC-046",
+      "ordinal": 46,
+      "name": "/save",
+      "description": "Save the current session state or result in the host interface.",
+      "group_id": "platform_native_commands_and_interface_controls",
+      "group": "Platform-native commands & interface controls",
+      "classification": "UI/MENU",
+      "aliases_or_equivalents": [],
+      "source": {
+        "source_id": "SRC-AETHERICA-OWNER-001",
+        "authored_by": "Aetherica (repository owner)",
+        "source_type": "owner_authored",
+        "verification_status": "owner_listed_descriptions_drafted_pending_ratification"
+      },
+      "lifecycle_status": "candidate"
+    },
+    {
+      "id": "RXC-047",
+      "ordinal": 47,
+      "name": "/load",
+      "description": "Load a previously saved session state or result in the host interface.",
+      "group_id": "platform_native_commands_and_interface_controls",
+      "group": "Platform-native commands & interface controls",
+      "classification": "UI/MENU",
+      "aliases_or_equivalents": [],
+      "source": {
+        "source_id": "SRC-AETHERICA-OWNER-001",
+        "authored_by": "Aetherica (repository owner)",
+        "source_type": "owner_authored",
+        "verification_status": "owner_listed_descriptions_drafted_pending_ratification"
+      },
+      "lifecycle_status": "candidate"
+    },
+    {
+      "id": "RXC-048",
+      "ordinal": 48,
+      "name": "/help",
+      "description": "Show available commands and how to use them.",
+      "group_id": "platform_native_commands_and_interface_controls",
+      "group": "Platform-native commands & interface controls",
+      "classification": "UI/MENU",
+      "aliases_or_equivalents": [],
+      "source": {
+        "source_id": "SRC-AETHERICA-OWNER-001",
+        "authored_by": "Aetherica (repository owner)",
+        "source_type": "owner_authored",
+        "verification_status": "owner_listed_descriptions_drafted_pending_ratification"
+      },
+      "lifecycle_status": "candidate"
+    }
+  ]
+}
