@@ -83,7 +83,7 @@ try {
 		assert.equal(consent.status, 200);
 		const html = await consent.text();
 		assert.match(html, /<h1>Allow ci-probe to use Aetherica\?<\/h1>/);
-		assert.match(html, /Continue with your Google account/);
+		assert.match(html, /Continue with Google/);
 		assert.match(html, /<img class="mark" src="\/icon-192\.png"/);
 		assert.match(html, /<link rel="icon" href="\/favicon\.ico"/);
 		const csp = consent.headers.get("content-security-policy") ?? "";
@@ -124,7 +124,7 @@ try {
 		assert.equal(r.status, 302);
 		const loc = new URL(r.headers.get("location"));
 		assert.equal(loc.origin + loc.pathname, "https://accounts.google.com/o/oauth2/v2/auth");
-		assert.match(loc.searchParams.get("state"), /^apv\./);
+		assert.match(loc.searchParams.get("state"), /^acc\./); // page sign-ins share one KV-state prefix
 		assert.ok(loc.searchParams.get("nonce"));
 		assert.equal(loc.searchParams.get("code_challenge_method"), "S256");
 		assert.equal(loc.searchParams.get("redirect_uri"), `${base}/oauth/google/callback`); // the already registered callback
