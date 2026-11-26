@@ -71,8 +71,8 @@ test("MCP with a real access token: initialize, tools/list, a tool call stored i
 	const list = await mcp(base, token, "tools/list");
 	assert.equal(list.status, 200);
 	const names = list.body.result.tools.map((t: { name: string }) => t.name);
-	assert.equal(names.length, 24);
-	assert.ok(names.includes("rigorx_start_run") && names.includes("rigorx_delete_account_data"));
+	assert.equal(names.length, 19);
+	assert.ok(names.includes("rigorx_start_run") && !names.includes("rigorx_delete_account_data")); // deletion is on /account
 	const routed = await tool(base, token, "rigorx_route", { task: "/l01 delete production database and all backups" });
 	assert.equal(routed.profile.level, "L05_CRITICAL");
 	const run = await tool(base, token, "rigorx_start_run", { task: "Evaluate three caching strategies for an API" });

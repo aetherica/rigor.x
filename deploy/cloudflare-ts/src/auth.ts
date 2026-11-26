@@ -312,23 +312,6 @@ const redirect = (location: string, headers?: Headers) => {
 	return new Response(null, { status: 302, headers: h });
 };
 
-const html = (body: string, status = 200, headers?: Headers): Response => {
-	const h = new Headers(headers);
-	h.set("Content-Type", "text/html; charset=utf-8");
-	h.set("Cache-Control", "no-store");
-	// Pages carry no scripts; the sign-in and approval pages must not be framed (clickjacking).
-	h.set("Content-Security-Policy", "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'");
-	h.set("X-Frame-Options", "DENY");
-	h.set("Referrer-Policy", "no-referrer");
-	return new Response(body, { status, headers: h });
-};
-
-const redirect = (location: string, headers?: Headers) => {
-	const h = new Headers(headers);
-	h.set("Location", location);
-	return new Response(null, { status: 302, headers: h });
-};
-
 async function authorizeGet(request: Request, env: AuthEnv): Promise<Response> {
 	const oauth = env.OAUTH_PROVIDER;
 	const authRequest = await oauth.parseAuthRequest(request);

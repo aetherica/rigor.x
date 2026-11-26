@@ -69,7 +69,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): NodeConfig {
 
 	const appVars: Record<string, string> = {};
 	for (const [k, v] of Object.entries(env)) {
-		if (v !== undefined && (k === "GOOGLE_CLIENT_ID" || k === "GOOGLE_CLIENT_SECRET" || k.startsWith("RIGORX_"))) appVars[k] = v;
+		if (v !== undefined && (/^(GOOGLE|GITHUB|OPENAI)_CLIENT_(ID|SECRET)$/.test(k) || k.startsWith("RIGORX_"))) appVars[k] = v;
 	}
 	if (!appVars.GOOGLE_CLIENT_ID || !appVars.GOOGLE_CLIENT_SECRET) {
 		if (production) throw new ConfigError("GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET are required in production (sign-in would be impossible)");
