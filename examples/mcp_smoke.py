@@ -51,7 +51,11 @@ def _target(options: argparse.Namespace, tmp: str):
 
 async def main(options: argparse.Namespace) -> None:
     with tempfile.TemporaryDirectory() as tmp:
-        async with Client(_target(options, tmp)) as client:
+        async with Client(_target(options, tmp), mode=options.mode) as client:
+            print(f"Negotiated protocol version: {client.protocol_version} (mode={options.mode})")
+            if options.expect_version and client.protocol_version != options.expect_version:
+                print(f"  ✗ expected protocol version {options.expect_version}")
+                raise SystemExit(1)
             tools = (await client.list_tools()).tools
             print(f"Server tools ({len(tools)}): {', '.join(t.name for t in tools)}\n")
 
@@ -89,4 +93,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--url", help="Streamable HTTP endpoint of a running server (default: start a local stdio server)")
     parser.add_argument("--token", help="Bearer token for the server, if it requires one")
+    parser.add_argument("--mode", default="auto", help="MCP SDK connect mode: auto (default), legacy, or a version such as 2026-07-28")
+    parser.add_argument("--expect-version", help="Fail unless this protocol version is negotiated")
     asyncio.run(main(parser.parse_args()))

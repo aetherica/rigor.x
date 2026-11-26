@@ -1,16 +1,37 @@
-// Dependency-free MCP server over Streamable HTTP (handshake era, protocol 2025-11-25
-// and earlier). The first 12 tools match src/rigorx/mcp_server.py (frozen Python reference);
-// rigorx_list_runs and rigorx_usage are Worker-only (WS32). The server keeps no session: every
-// POST is answered with a single JSON response, which the Streamable HTTP transport allows.
-// `server/discover` (2026-07-28) is answered with "method not found", which makes
-// modern clients fall back to `initialize`.
+// Dependency-free MCP server over Streamable HTTP. Both protocol eras are served (WS32 P0.2):
+// - Handshake era (2025-11-25, 2025-06-18, 2025-03-26): initialize, then requests; an
+//   MCP-Protocol-Version header, when present, must name one of these versions.
+// - Stateless era (2026-07-28): no initialize; every request carries its protocol version and
+//   client capabilities in params._meta, mirrored by the MCP-Protocol-Version, Mcp-Method and
+//   (for tools/call) Mcp-Name headers; server/discover advertises the server. A request whose
+//   MCP-Protocol-Version header is not a handshake version takes this path, which validates it
+//   in the order of the reference SDK (mcp 2.3.0, mcp/shared/inbound.py): envelope (-32602),
+//   headers (-32020), supported version (-32022 with data.supported).
+// The first 12 tools match src/rigorx/mcp_server.py (frozen Python reference); rigorx_list_runs
+// and rigorx_usage are Worker-only. The server keeps no session: every POST is answered with a
+// single JSON response, which the Streamable HTTP transport allows.
 
 import { EngineError } from "./engine.ts";
 import type { Json, JsonObject } from "./pipeline.ts";
 
 export const SERVER_VERSION = "0.4.0.dev0";
+/** Handshake-era versions (initialize). */
 export const SUPPORTED_VERSIONS = ["2025-11-25", "2025-06-18", "2025-03-26"];
+/** Stateless-era versions (per-request _meta envelope). */
+export const MODERN_VERSIONS = ["2026-07-28"];
 const LATEST = SUPPORTED_VERSIONS[0]!;
+const SERVER_INFO = { name: "rigor-x", title: "RIGOR-X", version: SERVER_VERSION };
+
+// Reserved _meta keys and error codes of the 2026-07-28 revision (reference: mcp-types 2.3.0).
+export const META_PROTOCOL_VERSION = "io.modelcontextprotocol/protocolVersion";
+export const META_CLIENT_CAPABILITIES = "io.modelcontextprotocol/clientCapabilities";
+export const META_CLIENT_INFO = "io.modelcontextprotocol/clientInfo";
+export const META_SERVER_INFO = "io.modelcontextprotocol/serverInfo";
+export const INVALID_PARAMS = -32602;
+export const HEADER_MISMATCH = -32020;
+export const UNSUPPORTED_PROTOCOL_VERSION = -32022;
+/** Tool descriptions change only with a deploy; clients may reuse tools/list and server/discover for an hour. */
+export const LIST_TTL_MS = 3_600_000;
 
 export const SERVER_INSTRUCTIONS =
 	"RIGOR-X is a control-plane engine for rigorous multi-step work. For a non-trivial task, call " +
@@ -113,8 +134,8 @@ export function toolList(): Json[] {
 // ---------------------------------------------------------------- JSON-RPC
 
 interface RpcRequest { jsonrpc: "2.0"; id?: string | number | null; method: string; params?: unknown }
-const rpcError = (id: unknown, code: number, message: string): JsonObject =>
-	({ jsonrpc: "2.0", id: (id ?? null) as Json, error: { code, message } });
+const rpcError = (id: unknown, code: number, message: string, data?: JsonObject): JsonObject =>
+	({ jsonrpc: "2.0", id: (id ?? null) as Json, error: data ? { code, message, data } : { code, message } });
 const rpcResult = (id: unknown, result: JsonObject): JsonObject => ({ jsonrpc: "2.0", id: id as Json, result });
 
 function toolResult(data: JsonObject): JsonObject {
@@ -169,6 +190,89 @@ export async function handleMessage(message: unknown, backend: EngineBackend, ow
 	}
 }
 
+// ---------------------------------------------------------------- stateless era (2026-07-28)
+
+/** HTTP status for a JSON-RPC error code on the stateless path (reference SDK table). */
+function modernStatus(response: JsonObject): number {
+	const error = response.error as { code?: number } | undefined;
+	if (!error) return 200;
+	if (error.code === -32601) return 404;
+	if ([-32700, -32600, INVALID_PARAMS, HEADER_MISMATCH, -32021, UNSUPPORTED_PROTOCOL_VERSION].includes(error.code ?? 0)) return 400;
+	return 200;
+}
+
+/** Inverse of the header codec: `=?base64?<payload>?=` carries UTF-8; anything else is verbatim. */
+export function decodeHeaderValue(value: string | null): string | null {
+	if (value === null) return null;
+	const m = /^=\?base64\?(.*)\?=$/.exec(value);
+	if (!m) return value;
+	try {
+		const bytes = Uint8Array.from(atob(m[1]!), (c) => c.charCodeAt(0));
+		return new TextDecoder("utf-8", { fatal: true, ignoreBOM: false }).decode(bytes);
+	} catch {
+		return null; // a corrupt header never matches a body value by accident
+	}
+}
+
+/** Validate one stateless-era request; returns an error response or null when it may be served. */
+export function classifyModern(body: Record<string, unknown>, headers: Headers): JsonObject | null {
+	const id = body.id;
+	const params = body.params;
+	const meta = params && typeof params === "object" && !Array.isArray(params) ? (params as Record<string, unknown>)._meta : undefined;
+	if (!meta || typeof meta !== "object" || Array.isArray(meta)) {
+		return rpcError(id, INVALID_PARAMS, `params._meta must be an object carrying the required '${META_PROTOCOL_VERSION}' and '${META_CLIENT_CAPABILITIES}' envelope keys`);
+	}
+	const m = meta as Record<string, unknown>;
+	const missing = [META_PROTOCOL_VERSION, META_CLIENT_CAPABILITIES].filter((k) => !(k in m));
+	if (missing.length) return rpcError(id, INVALID_PARAMS, `params._meta is missing the required envelope key(s): ${missing.join(", ")}`);
+	const version = m[META_PROTOCOL_VERSION];
+	if (headers.get("MCP-Protocol-Version") !== version) {
+		return rpcError(id, HEADER_MISMATCH, "MCP-Protocol-Version header does not match the request envelope's protocol version");
+	}
+	if (headers.get("Mcp-Method") !== body.method) return rpcError(id, HEADER_MISMATCH, "Mcp-Method header does not match the request body's method");
+	if (body.method === "tools/call") {
+		const name = (params as Record<string, unknown>).name;
+		if (name !== undefined && name !== null && decodeHeaderValue(headers.get("Mcp-Name")) !== name) {
+			return rpcError(id, HEADER_MISMATCH, "Mcp-Name header does not match the request body's 'name' parameter");
+		}
+	}
+	if (typeof version !== "string") return rpcError(id, INVALID_PARAMS, "the protocol-version envelope value must be a string");
+	if (!MODERN_VERSIONS.includes(version)) {
+		return rpcError(id, UNSUPPORTED_PROTOCOL_VERSION, "Unsupported protocol version", { supported: [...MODERN_VERSIONS], requested: version });
+	}
+	return null;
+}
+
+const withServerInfo = (result: JsonObject): JsonObject => {
+	const meta = result._meta && typeof result._meta === "object" && !Array.isArray(result._meta) ? (result._meta as JsonObject) : {};
+	return { ...result, _meta: { ...meta, [META_SERVER_INFO]: { ...SERVER_INFO } } };
+};
+
+/** Serve one validated stateless-era request. */
+export async function handleModernMessage(body: Record<string, unknown>, backend: EngineBackend, owner: string | null): Promise<JsonObject> {
+	const id = body.id;
+	switch (body.method) {
+		case "server/discover":
+			return rpcResult(id, withServerInfo({
+				supportedVersions: [...MODERN_VERSIONS, ...SUPPORTED_VERSIONS],
+				capabilities: { tools: {} },
+				instructions: SERVER_INSTRUCTIONS,
+				resultType: "complete", ttlMs: LIST_TTL_MS, cacheScope: "public",
+			}));
+		case "tools/list":
+			return rpcResult(id, withServerInfo({ tools: toolList(), resultType: "complete", ttlMs: LIST_TTL_MS, cacheScope: "public" }));
+		case "tools/call": {
+			// Same dispatch as the handshake era; the result gains resultType and the server stamp.
+			const legacy = await handleMessage({ jsonrpc: "2.0", id: id as Json, method: "tools/call", params: body.params as Json }, backend, owner);
+			if (legacy && legacy.result) return rpcResult(id, withServerInfo({ ...(legacy.result as JsonObject), resultType: "complete" }));
+			return legacy ?? rpcError(id, -32603, "Internal error");
+		}
+		default:
+			// initialize, ping and the logging/subscription methods do not exist in this revision.
+			return rpcError(id, -32601, `Method not found: ${String(body.method)}`);
+	}
+}
+
 /** Streamable HTTP endpoint: POST only, JSON responses, no server-initiated stream. */
 export async function handleHttp(request: Request, backend: EngineBackend, owner: string | null): Promise<Response> {
 	if (request.method !== "POST") {
@@ -181,13 +285,19 @@ export async function handleHttp(request: Request, backend: EngineBackend, owner
 		return Response.json(rpcError(null, -32700, "Parse error"), { status: 400 });
 	}
 	if (Array.isArray(body)) return Response.json(rpcError(null, -32600, "Batch requests are not supported"), { status: 400 });
-	// A modern client probes with server/discover at its newest version; answer "method not found"
-	// (see handleMessage) so it falls back to initialize. Other requests must use a supported version.
-	const method = (body as { method?: unknown } | null)?.method;
 	const version = request.headers.get("MCP-Protocol-Version");
-	if (version && method !== "server/discover" && !SUPPORTED_VERSIONS.includes(version)) {
-		return Response.json(rpcError((body as { id?: unknown }).id, -32600, `Unsupported protocol version: ${version}`), { status: 400 });
+	if (version !== null && !SUPPORTED_VERSIONS.includes(version)) {
+		// Stateless era: anything that is not a handshake version is validated here (unknown values
+		// get a structured -32022, which tells an auto-negotiating client what this server speaks).
+		if (typeof body !== "object" || body === null) return Response.json(rpcError(null, -32600, "Invalid Request"), { status: 400 });
+		const b = body as Record<string, unknown>;
+		if (b.jsonrpc !== "2.0" || typeof b.method !== "string") return Response.json(rpcError(b.id, -32600, "Invalid Request"), { status: 400 });
+		if (!("id" in b) || b.id === undefined) return new Response(null, { status: 202 }); // notifications: acknowledged, no reply
+		const rejected = classifyModern(b, request.headers);
+		const response = rejected ?? await handleModernMessage(b, backend, owner);
+		return Response.json(response, { status: modernStatus(response) });
 	}
+	// Handshake era (no header before initialize, or a negotiated handshake version).
 	const response = await handleMessage(body, backend, owner);
 	if (response === null) return new Response(null, { status: 202 });
 	return Response.json(response);

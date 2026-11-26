@@ -118,8 +118,10 @@ jobs:
         run: node test/integration/run.mjs
       - name: Parity fixtures still match the Python engine
         run: PYTHONPATH=src python deploy/cloudflare-ts/scripts/parity_fixtures.py --check
-      - name: Conformance with the official MCP SDK client
+      - name: Conformance with the official MCP SDK client (auto, handshake and stateless eras)
         run: |
           node --no-warnings --experimental-strip-types deploy/cloudflare-ts/scripts/dev-server.ts 8787 ci-token &
           sleep 3
-          python examples/mcp_smoke.py --url http://127.0.0.1:8787/mcp --token ci-token
+          python examples/mcp_smoke.py --url http://127.0.0.1:8787/mcp --token ci-token --mode auto --expect-version 2026-07-28
+          python examples/mcp_smoke.py --url http://127.0.0.1:8787/mcp --token ci-token --mode legacy --expect-version 2025-11-25
+          python examples/mcp_smoke.py --url http://127.0.0.1:8787/mcp --token ci-token --mode 2026-07-28 --expect-version 2026-07-28

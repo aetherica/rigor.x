@@ -87,9 +87,10 @@ test("HTTP layer: POST only, 202 for notifications, version and batch checks", a
 	assert.equal((await handleHttp(new Request("https://x/mcp"), b, null)).status, 405);
 	assert.equal((await handleHttp(post({ jsonrpc: "2.0", method: "notifications/initialized" }), b, null)).status, 202);
 	assert.equal((await handleHttp(post({ jsonrpc: "2.0", id: 1, method: "ping" }, { "MCP-Protocol-Version": "1999-01-01" }), b, null)).status, 400);
+	// A stateless-era request without the per-request envelope is rejected (details: modern.test.ts).
 	const probe = await handleHttp(post({ jsonrpc: "2.0", id: 2, method: "server/discover" }, { "MCP-Protocol-Version": "2026-07-28" }), b, null);
-	assert.equal(probe.status, 200);
-	assert.equal(((await probe.json()) as any).error.code, -32601);
+	assert.equal(probe.status, 400);
+	assert.equal(((await probe.json()) as any).error.code, -32602);
 	assert.equal((await handleHttp(post([{ jsonrpc: "2.0", id: 1, method: "ping" }]), b, null)).status, 400);
 	const bad = new Request("https://x/mcp", { method: "POST", body: "{not json" });
 	assert.equal((await handleHttp(bad, b, null)).status, 400);
