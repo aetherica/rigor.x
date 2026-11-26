@@ -247,6 +247,10 @@ export function approvalProblems(op: Operation, cited: string[], evidence: Reado
 		if (d.approves !== op.id) { reasons.push(`${a.id} approves ${d.approves === undefined ? "no operation (record it with approves=<operation id>)" : String(d.approves)}, not ${op.id}`); continue; }
 		if (d.operation_digest !== operationDigest(op)) { reasons.push(`${a.id} was given for an earlier version of ${op.id}; the plan changed after the approval`); continue; }
 		if (typeof d.expires_at === "string" && Date.parse(d.expires_at) < at.getTime()) { reasons.push(`${a.id} expired at ${d.expires_at}`); continue; }
+		if (op.tier === "A5" && !(a.verification === "ENGINE_VERIFIED" && d.authenticity === "user_verified")) {
+			reasons.push(`${a.id} is host-declared; an A5 operation needs the user's own approval on the RIGOR-X site (rigorx_request_approval)`);
+			continue;
+		}
 		const other = usedBy.get(a.id);
 		if (other && other !== op.id) { reasons.push(`${a.id} is already used by ${other} (an approval covers one operation)`); continue; }
 		usedBy.set(a.id, op.id);

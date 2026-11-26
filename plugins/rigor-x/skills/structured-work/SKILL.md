@@ -36,6 +36,8 @@ The six levels are `L01_BASIC` through `L06_HYPER_RIGOROUS`. The engine determin
 - A completed stage needs a meaningful summary; partial or blocked outcomes need an explicit reason.
 - Use the host's actual tools to perform planned work. Call `rigorx_report_action` only after an action was genuinely attempted, and record failures as well as successes.
 - Record sources and receipts with `rigorx_record_evidence`; cite their returned evidence IDs in later stage data and verification.
+- An operation can only be reported `done` when every operation it depends on is `done`.
+- A done A4/A5 operation needs the user's approval for that exact operation: record it after PLAN with `evidence_type: "USER_APPROVAL"` and `approves: "<operation id>"` only after the user actually approved. It is single-use, expires after 24 hours and becomes invalid if the operation changes. For A5 (and optionally A4) use `rigorx_request_approval`, which gives the user a link to approve on the RIGOR-X site with their Google account; that approval is engine-verified.
 
 ## Verification and delivery
 

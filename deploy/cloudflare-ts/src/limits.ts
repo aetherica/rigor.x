@@ -6,6 +6,7 @@ export interface LimitVars {
 	RIGORX_RUNS_PER_DAY?: string;
 	RIGORX_STORED_RUNS?: string;
 	RIGORX_BURST_PER_MINUTE?: string;
+	RIGORX_FETCHES_PER_DAY?: string;
 }
 
 /** A missing or invalid value (not a positive safe integer) falls back to the default. */
@@ -19,5 +20,6 @@ export function limitsFromEnv(env: LimitVars): QuotaLimits {
 		runsPerDay: pick(env.RIGORX_RUNS_PER_DAY, DEFAULT_LIMITS.runsPerDay),
 		storedRuns: pick(env.RIGORX_STORED_RUNS, DEFAULT_LIMITS.storedRuns),
 		burstPerMinute: pick(env.RIGORX_BURST_PER_MINUTE, DEFAULT_LIMITS.burstPerMinute),
+		fetchesPerDay: pick(env.RIGORX_FETCHES_PER_DAY, DEFAULT_LIMITS.fetchesPerDay),
 	};
 }

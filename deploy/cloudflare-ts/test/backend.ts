@@ -2,12 +2,15 @@
 // injectable fetcher for rigorx_check_source.
 import { dispatch, EngineError, HostEngine } from "../src/engine.ts";
 import type { EngineBackend } from "../src/mcp.ts";
-import { runSourceCheck } from "../src/source.ts";
+import { runSourceCheck, type Resolver } from "../src/source.ts";
 import { DurableObjectRunStore } from "../src/store.ts";
 import type { JsonObject } from "../src/text.ts";
 import { memorySql } from "./sqlite-fake.ts";
 
-export function localBackend(engine?: HostEngine, fetcher: typeof fetch = fetch): EngineBackend {
+/** Test resolver: every name resolves to one public address (DNS behaviour is tested separately). */
+export const publicDns: Resolver = async () => ({ addresses: ["93.184.216.34"], error: null });
+
+export function localBackend(engine?: HostEngine, fetcher: typeof fetch = fetch, resolver: Resolver = publicDns): EngineBackend {
 	if (!engine) {
 		const sql = memorySql();
 		engine = new HostEngine(new DurableObjectRunStore(sql), { transaction: sql.transaction });
@@ -23,6 +26,6 @@ export function localBackend(engine?: HostEngine, fetcher: typeof fetch = fetch)
 		resolveCommands: (t) => e.resolveCommands(t),
 		compute: (args) => e.computeOp(null, args),
 		run,
-		checkSource: (owner, args) => runSourceCheck((operation, a) => run(owner, operation, a), args, fetcher),
+		checkSource: (owner, args) => runSourceCheck((operation, a) => run(owner, operation, a), args, fetcher, { resolver }),
 	};
 }

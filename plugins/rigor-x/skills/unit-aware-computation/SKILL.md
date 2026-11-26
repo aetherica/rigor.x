@@ -31,4 +31,5 @@ Supported constants include `pi`, `c`, `h`, `hbar`, `q_e`, `k_B`, `N_A`, `G`, `e
 - This tool does not execute arbitrary code or fetch external data.
 - A successful calculation validates the arithmetic and dimensional consistency within the supported model; it does not validate the empirical inputs or prove that a selected physical model applies.
 - Do not describe a failed expectation check as a successful verification.
-- At L06, numeric claims must cite successful compute receipts to pass the engine's numeric-claim gate.
+- At L06, a numeric claim must state its value (`value {status, number, unit}`) and cite a compute receipt whose `expect` checked that same value; an unrelated or unchecked calculation does not count. Use the claim's number and unit as `expect`.
+- Malformed expressions and units (for example an exponent such as `^1/13`) return a controlled error; report it, do not retry blindly.

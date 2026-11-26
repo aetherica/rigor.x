@@ -57,6 +57,9 @@ export interface RunStore {
 	profileId(ownerId: string, generate: () => string): string;
 	/** Size of this store's database in bytes, when the runtime reports it. */
 	databaseBytes(): number | null;
+	/** Auxiliary tables (idempotency, extra usage, approvals); absent on the Worker's stateless engine. */
+	readonly aux?: AuxStore;
+	deleteOwner?(ownerId: string): { runs: number; usage_rows: number; profile: number };
 }
 
 /** The subset of Durable Object `ctx.storage.sql` this store uses. */
@@ -94,6 +97,76 @@ export const MIGRATIONS: readonly { version: number; statements: readonly string
 ];
 export const SCHEMA_VERSION = MIGRATIONS[MIGRATIONS.length - 1]!.version;
 
+/**
+ * Auxiliary tables (2026-11-27 release). Additive and outside the versioned schema ON PURPOSE: the
+ * schema version stays 3, so the previous release (which refuses a newer schema_version) can still
+ * open every database after a rollback; it simply ignores these tables.
+ * - idempotency_keys: results of state-changing calls sent with an idempotency_key (24 h).
+ * - usage_extra: per-owner daily counters beyond calls and runs (external fetches).
+ * - approval_requests: user approvals requested by the host and decided by the signed-in user.
+ */
+export const AUX_STATEMENTS: readonly string[] = [
+	"CREATE TABLE IF NOT EXISTS idempotency_keys (owner_id TEXT NOT NULL, key TEXT NOT NULL, operation TEXT NOT NULL, digest TEXT NOT NULL, " +
+		"result_json TEXT NOT NULL, created_at TEXT NOT NULL, PRIMARY KEY(owner_id, key))",
+	"CREATE TABLE IF NOT EXISTS usage_extra (owner_id TEXT NOT NULL, day TEXT NOT NULL, kind TEXT NOT NULL, n INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(owner_id, day, kind))",
+	"CREATE TABLE IF NOT EXISTS approval_requests (id TEXT PRIMARY KEY, owner_id TEXT NOT NULL, run_id TEXT NOT NULL, operation_id TEXT NOT NULL, " +
+		"operation_digest TEXT NOT NULL, description TEXT NOT NULL, status TEXT NOT NULL, created_at TEXT NOT NULL, expires_at TEXT NOT NULL, " +
+		"decided_at TEXT, evidence_id TEXT)",
+	"CREATE INDEX IF NOT EXISTS approval_requests_by_run ON approval_requests(owner_id, run_id)",
+];
+
+export interface IdempotentResult { operation: string; digest: string; result: JsonObject }
+export interface ApprovalRequest {
+	id: string; owner_id: string; run_id: string; operation_id: string; operation_digest: string; description: string;
+	status: "pending" | "approved" | "denied"; created_at: string; expires_at: string; decided_at: string | null; evidence_id: string | null;
+}
+
+/** Owner-scoped access to the auxiliary tables. Every query is filtered by owner_id. */
+export class AuxStore {
+	private readonly sql: SqlLike;
+	constructor(sql: SqlLike) {
+		this.sql = sql;
+		for (const st of AUX_STATEMENTS) sql.exec(st);
+	}
+	idempotencyGet(owner: string, key: string): IdempotentResult | null {
+		const r = this.sql.exec("SELECT operation, digest, result_json FROM idempotency_keys WHERE owner_id = ? AND key = ?", owner, key).toArray()[0];
+		return r ? { operation: String(r.operation), digest: String(r.digest), result: JSON.parse(String(r.result_json)) as JsonObject } : null;
+	}
+	idempotencyPut(owner: string, key: string, operation: string, digest: string, result: JsonObject, now: Date, ttlMs: number): void {
+		this.sql.exec("DELETE FROM idempotency_keys WHERE owner_id = ? AND created_at < ?", owner, new Date(now.getTime() - ttlMs).toISOString());
+		this.sql.exec("INSERT INTO idempotency_keys(owner_id, key, operation, digest, result_json, created_at) VALUES(?, ?, ?, ?, ?, ?)",
+			owner, key, operation, digest, JSON.stringify(result), now.toISOString());
+	}
+	extra(owner: string, day: string, kind: string): number {
+		const r = this.sql.exec("SELECT n FROM usage_extra WHERE owner_id = ? AND day = ? AND kind = ?", owner, day, kind).toArray()[0];
+		return r ? Number(r.n) : 0;
+	}
+	addExtra(owner: string, day: string, kind: string, keepFrom: string): void {
+		this.sql.exec("DELETE FROM usage_extra WHERE owner_id = ? AND day < ?", owner, keepFrom);
+		this.sql.exec("INSERT INTO usage_extra(owner_id, day, kind, n) VALUES(?, ?, ?, 1) ON CONFLICT(owner_id, day, kind) DO UPDATE SET n = n + 1", owner, day, kind);
+	}
+	approvalCreate(a: ApprovalRequest): void {
+		this.sql.exec("INSERT INTO approval_requests(id, owner_id, run_id, operation_id, operation_digest, description, status, created_at, expires_at, decided_at, evidence_id) " +
+			"VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL)", a.id, a.owner_id, a.run_id, a.operation_id, a.operation_digest, a.description, a.status, a.created_at, a.expires_at);
+	}
+	approvalGet(owner: string, id: string): ApprovalRequest | null {
+		const r = this.sql.exec("SELECT * FROM approval_requests WHERE owner_id = ? AND id = ?", owner, id).toArray()[0];
+		return r ? (r as unknown as ApprovalRequest) : null;
+	}
+	approvalDecide(owner: string, id: string, status: "approved" | "denied", at: string, evidenceId: string | null): void {
+		this.sql.exec("UPDATE approval_requests SET status = ?, decided_at = ?, evidence_id = ? WHERE owner_id = ? AND id = ? AND status = 'pending'", status, at, evidenceId ?? "", owner, id);
+	}
+	/** Remove everything this owner has in the auxiliary tables (account data deletion). */
+	deleteOwner(owner: string): number {
+		let n = 0;
+		for (const t of ["idempotency_keys", "usage_extra", "approval_requests"]) {
+			n += Number(this.sql.exec(`SELECT COUNT(*) AS n FROM ${t} WHERE owner_id = ?`, owner).toArray()[0]!.n);
+			this.sql.exec(`DELETE FROM ${t} WHERE owner_id = ?`, owner);
+		}
+		return n;
+	}
+}
+
 /** Apply pending migrations; refuses a database written by a newer schema. Returns the version. */
 export function migrate(sql: SqlLike): number {
 	sql.exec("CREATE TABLE IF NOT EXISTS host_store_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)");
@@ -128,10 +201,20 @@ const now = () => new Date().toISOString().replace("Z", "+00:00");
 
 export class DurableObjectRunStore implements RunStore {
 	private readonly sql: SqlLike;
+	readonly aux: AuxStore;
 
 	constructor(sql: SqlLike) {
 		this.sql = sql;
 		migrate(sql);
+		this.aux = new AuxStore(sql);
+	}
+
+	/** Delete every run, usage row and profile of this owner (account data deletion). Returns counts. */
+	deleteOwner(ownerId: string): { runs: number; usage_rows: number; profile: number } {
+		const count = (t: string) => Number(this.sql.exec(`SELECT COUNT(*) AS n FROM ${t} WHERE owner_id = ?`, ownerId).toArray()[0]!.n);
+		const out = { runs: count("host_runs"), usage_rows: count("usage_daily"), profile: count("owner_profile") };
+		for (const t of ["host_runs", "usage_daily", "owner_profile"]) this.sql.exec(`DELETE FROM ${t} WHERE owner_id = ?`, ownerId);
+		return out;
 	}
 
 	create(ownerId: string, runId: string, snapshot: JsonObject, meta: JsonObject): number {

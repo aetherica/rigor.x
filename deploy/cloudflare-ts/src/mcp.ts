@@ -11,7 +11,7 @@
 // Worker-only. The server keeps no session: every POST is answered with a
 // single JSON response, which the Streamable HTTP transport allows.
 
-import { EngineError } from "./engine.ts";
+import { EngineError, IDEMPOTENT_OPERATIONS, ACCOUNT_DELETE_CONFIRMATION } from "./engine.ts";
 import { CONTEXTS, humorPolicy, type HumorInput } from "./humor.ts";
 import type { Json, JsonObject } from "./pipeline.ts";
 
@@ -158,6 +158,12 @@ export const TOOLS: ToolSpec[] = [
 		description: "Decide whether humor fits the reply you are about to give, how strong it may be and which styles are allowed (RIGOR-X writes no jokes; you do). contexts: one or more of emergency, bereavement, medical, legal, security_incident, sensitive_personal, negotiation, professional, debugging, education, casual, creative (no context = no humor). Optional audience (individual|group|public), user_preference (none|light|playful), user_distress, last_reaction (positive|neutral|negative), multilingual_audience. The most restrictive rule wins. Stores nothing.",
 		properties: { contexts: { type: "array", items: { type: "string" } }, audience: optStr(), user_preference: optStr(), user_distress: { type: "boolean", default: false },
 			last_reaction: optStr(), multilingual_audience: { type: "boolean", default: false } }, required: ["contexts"] },
+	{ name: "rigorx_request_approval", title: "Request the user's approval", hint: "additive", operation: "request_approval",
+		description: "Ask the user to approve one A4/A5 planned operation on the RIGOR-X site, signed in with the same Google account: returns approval_id and approve_url to give to the user. Call again with approval_id to read the decision (pending, approved, denied, expired) and the evidence_id of the engine-verified USER_APPROVAL to cite in EXECUTE. A5 operations require this; for A4 it is stronger than a host-declared approval. Never approve on the user's behalf.",
+		properties: { run_id: optStr(), operation_id: optStr(), description: optStr("What the user is approving, in one or two plain sentences (shown to the user)"), approval_id: optStr("Read the status of an earlier request") }, required: [] },
+	{ name: "rigorx_delete_account_data", title: "Delete all my RIGOR-X data", hint: "destructive", operation: "delete_account_data",
+		description: `Permanently delete every run, topic, memory item, usage counter, profile ID and approval request of the signed-in account. Only when the user explicitly asks: decided_by must be "user" and confirm must be exactly "${ACCOUNT_DELETE_CONFIRMATION}". Cannot be undone. Sign-in grants are separate (revoke the connector in the host app).`,
+		properties: { confirm: str(), decided_by: str() }, required: ["confirm", "decided_by"] },
 	{ name: "rigorx_profile", title: "Account profile", hint: "read", operation: "profile",
 		description: "Stable, opaque identifier of the signed-in account (random, not derived from your Google account).",
 		properties: {}, required: [], meta: { "openai/profile": true },
@@ -169,13 +175,17 @@ function annotations(hint: Hint, openWorld = false): JsonObject {
 	return { readOnlyHint: false, destructiveHint: hint === "destructive", openWorldHint: openWorld };
 }
 
+const IDEMPOTENCY_PROPERTY: JsonObject = { anyOf: [{ type: "string" }, { type: "null" }], default: null,
+	description: "Optional: a unique key (8-128 characters, for example a UUID) for this call. If the answer is lost and you retry with the same key and arguments, RIGOR-X returns the first result instead of acting twice." };
+
 export function toolList(): Json[] {
 	return TOOLS.map((t) => {
+		const properties = t.operation && IDEMPOTENT_OPERATIONS.has(t.operation) ? { ...t.properties, idempotency_key: IDEMPOTENCY_PROPERTY } : t.properties;
 		const tool: JsonObject = {
 			name: t.name,
 			title: t.title,
 			description: t.description,
-			inputSchema: { type: "object", properties: t.properties, required: t.required },
+			inputSchema: { type: "object", properties, required: t.required },
 			annotations: annotations(t.hint, t.openWorld),
 		};
 		if (t.outputSchema) tool.outputSchema = t.outputSchema;
@@ -238,7 +248,9 @@ export async function handleMessage(message: unknown, backend: EngineBackend, ow
 				if (tool.name === "rigorx_humor_policy") return rpcResult(m.id, toolResult(humorTool(args)));
 				if (!owner) return rpcResult(m.id, toolError("AUTH_REQUIRED: sign in to use this tool"));
 				if (tool.name === "rigorx_check_source") return rpcResult(m.id, toolResult(await backend.checkSource(owner, args)));
-				return rpcResult(m.id, toolResult(await backend.run(owner, tool.operation!, args)));
+				const out = await backend.run(owner, tool.operation!, args);
+				if (tool.name === "rigorx_request_approval" && typeof out.approve_path === "string" && origin) out.approve_url = origin + out.approve_path;
+				return rpcResult(m.id, toolResult(out));
 			} catch (e) {
 				if (e instanceof EngineError) return rpcResult(m.id, toolError(`${e.code}: ${e.message}`));
 				throw e;

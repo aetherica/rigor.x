@@ -455,6 +455,17 @@ export class MemoryStore {
 		};
 	}
 
+	/** Delete all of this owner's topic memory (account data deletion); an audit row without content remains. */
+	deleteOwner(owner: string): { topics: number; items: number } {
+		const items = Number(this.sql.exec("SELECT COUNT(*) AS n FROM memory_items WHERE owner_id = ?", owner).toArray()[0]!.n);
+		const topics = Number(this.sql.exec("SELECT COUNT(*) AS n FROM memory_topics WHERE owner_id = ?", owner).toArray()[0]!.n);
+		this.sql.exec("DELETE FROM memory_fts WHERE owner_id = ?", owner);
+		this.sql.exec("DELETE FROM memory_items WHERE owner_id = ?", owner);
+		this.sql.exec("DELETE FROM memory_topics WHERE owner_id = ?", owner);
+		this.audit(owner, "delete_account_data", "all", items, topics, "user");
+		return { topics, items };
+	}
+
 	audits(owner: string): JsonObject[] {
 		return this.sql.exec("SELECT action, target, items, topics, decided_by, at FROM memory_audit WHERE owner_id = ? ORDER BY seq", owner).toArray() as unknown as JsonObject[];
 	}

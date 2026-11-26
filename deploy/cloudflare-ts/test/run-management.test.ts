@@ -159,6 +159,6 @@ test("usage reports storage bytes when the runtime provides them", () => {
 });
 
 test("limits come from Worker vars and fall back on missing or invalid values", () => {
-	assert.deepEqual(limitsFromEnv({ RIGORX_CALLS_PER_DAY: "7", RIGORX_RUNS_PER_DAY: "x", RIGORX_STORED_RUNS: "-1" }),
-		{ callsPerDay: 7, runsPerDay: 100, storedRuns: 500, burstPerMinute: 120 });
+	assert.deepEqual(limitsFromEnv({ RIGORX_CALLS_PER_DAY: "7", RIGORX_RUNS_PER_DAY: "x", RIGORX_STORED_RUNS: "-1", RIGORX_FETCHES_PER_DAY: "30" }),
+		{ callsPerDay: 7, runsPerDay: 100, storedRuns: 500, burstPerMinute: 120, fetchesPerDay: 30 });
 });

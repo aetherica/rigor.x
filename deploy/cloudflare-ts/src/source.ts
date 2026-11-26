@@ -33,7 +33,8 @@ export interface SourceMetadata {
 }
 
 import { crossrefLookup, waybackLookup, type CrossrefRecord, type WaybackRecord } from "./sources.ts";
-import type { JsonObject } from "./text.ts";
+import { EngineError, type JsonObject } from "./text.ts";
+import { DEFAULT_POLICY, Deadline, ResilienceRegistry, ResourceExhaustedError, resilientFetch, type ResiliencePolicy } from "./resilience.ts";
 
 export interface SourceCheck {
 	ok: boolean;
@@ -59,7 +60,6 @@ export interface SourceCheck {
 }
 
 export const MAX_BYTES = 1_048_576;
-export const TIMEOUT_MS = 10_000;
 /** Measured 2026-11-26: Springer DOIs need 6 hops (cookie handshake), Nature 4; every hop is checked. */
 export const MAX_REDIRECTS = 10;
 const ALLOWED_PORTS = new Set(["", "80", "443", "8080", "8443"]);
@@ -276,9 +276,72 @@ async function sha256Hex(bytes: Uint8Array): Promise<string> {
 	return [...new Uint8Array(h)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+// ---------------------------------------------------------------- DNS verification (rebinding mitigation)
+
+export interface DnsAnswer { addresses: string[]; error: string | null }
+export type Resolver = (host: string) => Promise<DnsAnswer>;
+
+/**
+ * Resolver over DNS-over-HTTPS (Cloudflare's JSON API), A and AAAA. Workers have no resolver API,
+ * so this is the only way to see what a name points to before connecting. It narrows DNS-rebinding
+ * risk (a public name that resolves to a private address is refused) but cannot bind the connection
+ * to the checked address: the runtime resolves again when it connects (time-of-check/time-of-use).
+ * The Cloudflare edge does not route to private networks, which is the second layer [B].
+ */
+export function dohResolver(fetcher: typeof fetch, reg: ResilienceRegistry, deadline: Deadline): Resolver {
+	return async (host) => {
+		const addresses: string[] = [];
+		for (const type of ["A", "AAAA"]) {
+			let res: Response;
+			try {
+				res = await resilientFetch(fetcher, `https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(host)}&type=${type}`,
+					{ headers: { Accept: "application/dns-json" }, redirect: "manual" }, { policy: reg.policy, deadline, breaker: reg.breaker("doh"), perAttemptMs: reg.policy.lookupTimeoutMs });
+			} catch (e) {
+				return { addresses, error: `DNS lookup unavailable (${e instanceof Error ? e.name : "error"})` };
+			}
+			if (!res.ok) return { addresses, error: `DNS lookup failed: HTTP ${res.status}` };
+			const j = (await res.json().catch(() => null)) as { Status?: number; Answer?: { type: number; data: string }[] } | null;
+			if (!j || typeof j.Status !== "number") return { addresses, error: "DNS lookup returned an unreadable answer" };
+			if (j.Status !== 0 && j.Status !== 3) return { addresses, error: `DNS lookup failed (rcode ${j.Status})` };
+			for (const a of j.Answer ?? []) if ((a.type === 1 || a.type === 28) && typeof a.data === "string") addresses.push(a.data);
+		}
+		return { addresses, error: null };
+	};
+}
+
+/** Refuse a host whose DNS answers include any non-public address, or that does not resolve, or that cannot be checked (fail closed). */
+export async function checkResolved(host: string, resolve: Resolver): Promise<string | null> {
+	const h = host.toLowerCase().replace(/\.+$/, "");
+	if (h.startsWith("[") || parseIPv4(h)) return null; // IP literals were checked by checkUrl
+	const answer = await resolve(h);
+	if (answer.error) return `destination could not be verified: ${answer.error}`;
+	if (!answer.addresses.length) return "the host name does not resolve";
+	for (const a of answer.addresses) {
+		const why = a.includes(":") ? (parseIPv6(a) ? blockedIPv6(parseIPv6(a)!) : "malformed address") : parseIPv4(a) ? blockedIPv4(parseIPv4(a)!) : "malformed address";
+		if (why) return `the host name resolves to a non-public address (${why})`;
+	}
+	return null;
+}
+
 // ---------------------------------------------------------------- fetch
 
-export async function checkSource(ref: string, fetcher: typeof fetch = fetch, now: () => Date = () => new Date()): Promise<SourceCheck> {
+export interface CheckOptions {
+	registry?: ResilienceRegistry;
+	/** DNS verification of every hop's host name; defaults to DNS-over-HTTPS through the same fetcher. */
+	resolver?: Resolver;
+	deadline?: Deadline;
+}
+
+let defaultRegistry: ResilienceRegistry | null = null;
+/** The isolate's registry (breakers, limiter); the Worker replaces it with one built from its vars. */
+export function sharedRegistry(policy?: ResiliencePolicy): ResilienceRegistry {
+	if (!defaultRegistry || (policy && defaultRegistry.policy !== policy)) {
+		defaultRegistry = new ResilienceRegistry(policy ?? DEFAULT_POLICY, (e) => console.log(JSON.stringify({ evt: "rigorx_circuit", ...e })));
+	}
+	return defaultRegistry;
+}
+
+export async function checkSource(ref: string, fetcher: typeof fetch = fetch, now: () => Date = () => new Date(), opts: CheckOptions = {}): Promise<SourceCheck> {
 	const base: SourceCheck = {
 		ok: false, requested: ref, resolved_url: null, final_url: null, redirects: [], status: null, content_type: null,
 		bytes: 0, truncated: false, sha256: null, metadata: null, injection_signals: [], checked_at: now().toISOString(), error: null,
@@ -286,18 +349,29 @@ export async function checkSource(ref: string, fetcher: typeof fetch = fetch, no
 	const target = resolveRef(ref);
 	if ("error" in target) return { ...base, error: target.error };
 	base.resolved_url = target.url;
-	const signal = AbortSignal.timeout(TIMEOUT_MS);
+	const reg = opts.registry ?? sharedRegistry();
+	const deadline = opts.deadline ?? new Deadline(reg.policy.sourceDeadlineMs);
+	const resolve = opts.resolver ?? dohResolver(fetcher, reg, deadline);
 	const visited = new Set<string>([target.url]);
 	let url = target.url;
 	let response: Response;
 	for (let hop = 0; ; hop++) {
+		const host = new URL(url).hostname;
+		const dns = await checkResolved(host, resolve);
+		if (dns) {
+			console.log(JSON.stringify({ evt: "rigorx_security", kind: "ssrf_refused", stage: "dns", host_sha: (await sha256Hex(new TextEncoder().encode(host))).slice(0, 16) }));
+			return { ...base, final_url: url, error: `${hop ? "redirect refused" : "source refused"}: ${dns}` };
+		}
 		try {
-			response = await fetcher(url, {
-				method: "GET", redirect: "manual", signal,
+			response = await resilientFetch(fetcher, url, {
+				method: "GET", redirect: "manual",
 				headers: { "User-Agent": USER_AGENT, Accept: "text/html,application/xhtml+xml,application/pdf;q=0.9,*/*;q=0.8" },
-			});
+			}, { policy: reg.policy, deadline, breaker: reg.breaker(`host:${host}`) });
 		} catch (e) {
-			const message = e instanceof Error ? (e.name === "TimeoutError" || e.name === "AbortError" ? `no answer within ${TIMEOUT_MS / 1000} s` : e.message) : String(e);
+			const name = e instanceof Error ? e.name : "";
+			const message = ["TimeoutError", "AbortError", "DeadlineExceededError"].includes(name) ? `no answer before the deadline (${Math.round(reg.policy.sourceDeadlineMs / 1000)} s for the whole check)`
+				: name === "CircuitOpenError" ? "the host failed repeatedly; its circuit is open, retry later"
+				: e instanceof Error ? e.message : String(e);
 			return { ...base, final_url: url, error: `fetch failed: ${message}` };
 		}
 		if (!REDIRECT_STATUSES.has(response.status)) break;
@@ -311,7 +385,10 @@ export async function checkSource(ref: string, fetcher: typeof fetch = fetch, no
 			return { ...base, final_url: url, status: response.status, error: "redirect to an invalid URL" };
 		}
 		const checked = checkUrl(next);
-		if ("error" in checked) return { ...base, final_url: url, status: response.status, error: `redirect refused: ${checked.error}` };
+		if ("error" in checked) {
+			console.log(JSON.stringify({ evt: "rigorx_security", kind: "ssrf_refused", stage: "redirect" }));
+			return { ...base, final_url: url, status: response.status, error: `redirect refused: ${checked.error}` };
+		}
 		if (visited.has(checked.url)) return { ...base, final_url: url, status: response.status, error: `redirect loop at ${checked.url}` };
 		if (hop + 1 > MAX_REDIRECTS) return { ...base, final_url: url, status: response.status, error: `more than ${MAX_REDIRECTS} redirects` };
 		visited.add(checked.url);
@@ -370,18 +447,33 @@ export async function checkSource(ref: string, fetcher: typeof fetch = fetch, no
  * The whole rigorx_check_source flow, shared by the Worker, the dev server and the tests:
  * 1. reserve: `evidence_for_check` is metered in the owner's Durable Object BEFORE any fetch, and
  *    refuses a terminal run or a full evidence list (audit finding A3);
- * 2. fetch the source under the outbound policy (checkSource);
- * 3. D02: for a DOI (from the reference or the page's citation_doi), look up Crossref metadata and
- *    retractions; D05: for a source that could not be retrieved, look up the closest Wayback snapshot;
- * 4. record the engine-verified SOURCE_CHECK receipt (not charged again).
- * At most 1 + MAX_REDIRECTS + 2 external requests per call (the Free plan allows 50).
+ * 2. acquire under the bulkhead (at most acquisitionConcurrency per isolate, bounded queue,
+ *    excess refused) and one deadline for everything below;
+ * 3. fetch the source under the outbound policy (checkSource: DNS check and URL check per hop,
+ *    bounded retries of transient failures, per-host circuit breaker);
+ * 4. D02: Crossref metadata and retractions for a DOI; D05: the closest Wayback snapshot for a
+ *    source that could not be retrieved. A failed lookup is reported, never fabricated, and does not
+ *    fail the check (graceful degradation: optional enrichments);
+ * 5. record the engine-verified SOURCE_CHECK receipt (not charged again).
  */
-export async function runSourceCheck(run: (operation: string, args: JsonObject) => Promise<JsonObject>, args: JsonObject, fetcher: typeof fetch = fetch): Promise<JsonObject> {
+export async function runSourceCheck(run: (operation: string, args: JsonObject) => Promise<JsonObject>, args: JsonObject, fetcher: typeof fetch = fetch, opts: CheckOptions = {}): Promise<JsonObject> {
 	const evidence = await run("evidence_for_check", args);
-	const check = await checkSource(String(evidence.source_ref), fetcher);
-	const identity = (evidence.identity ?? null) as { kind?: unknown; canonical?: unknown; archive?: unknown } | null;
-	const doi = identity?.kind === "doi" && typeof identity.canonical === "string" ? identity.canonical.slice(4) : check.metadata?.doi ?? null;
-	if (doi) check.crossref = await crossrefLookup(doi, fetcher);
-	if (!check.ok && !identity?.archive && check.resolved_url && !/^https:\/\/doi\.org\//.test(check.resolved_url)) check.wayback = await waybackLookup(check.resolved_url, fetcher);
+	const reg = opts.registry ?? sharedRegistry();
+	const deadline = opts.deadline ?? new Deadline(reg.policy.sourceDeadlineMs);
+	let check: SourceCheck;
+	try {
+		check = await reg.limiter.run(async () => {
+			const c = await checkSource(String(evidence.source_ref), fetcher, undefined, { ...opts, registry: reg, deadline });
+			const identity = (evidence.identity ?? null) as { kind?: unknown; canonical?: unknown; archive?: unknown } | null;
+			const doi = identity?.kind === "doi" && typeof identity.canonical === "string" ? identity.canonical.slice(4) : c.metadata?.doi ?? null;
+			const lookup = { registry: reg, deadline };
+			if (doi) c.crossref = await crossrefLookup(doi, fetcher, lookup);
+			if (!c.ok && !identity?.archive && c.resolved_url && !/^https:\/\/doi\.org\//.test(c.resolved_url) && !/refused/.test(c.error ?? "")) c.wayback = await waybackLookup(c.resolved_url, fetcher, lookup);
+			return c;
+		});
+	} catch (e) {
+		if (e instanceof ResourceExhaustedError) throw new EngineError(e.message, "RESOURCE_EXHAUSTED");
+		throw e;
+	}
 	return run("record_source_check", { run_id: args.run_id ?? null, evidence_id: args.evidence_id ?? null, check: check as unknown as JsonObject });
 }

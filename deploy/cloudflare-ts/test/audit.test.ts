@@ -11,7 +11,7 @@ import { checkSource, resolveRef, MAX_REDIRECTS } from "../src/source.ts";
 import { compute, ComputeError } from "../src/compute.ts";
 import { route } from "../src/router.ts";
 import { handleHttp } from "../src/mcp.ts";
-import { localBackend } from "./backend.ts";
+import { localBackend, publicDns } from "./backend.ts";
 import { memorySql } from "./sqlite-fake.ts";
 
 type Env = { ok: true; result: any } | { ok: false; code: string; message: string };
@@ -101,7 +101,7 @@ test("A1 a public URL that redirects to a private address is refused at the redi
 		if (url.startsWith("https://public.example.com/")) return new Response(null, { status: 302, headers: { Location: "http://169.254.169.254/latest/meta-data/" } });
 		return new Response("unexpected");
 	}) as typeof fetch;
-	const result = await checkSource("https://public.example.com/start", fetcher);
+	const result = await checkSource("https://public.example.com/start", fetcher, undefined, { resolver: publicDns });
 	assert.equal(result.ok, false);
 	assert.match(String(result.error), /redirect/i);
 	assert.ok(!seen.some((u) => u.includes("169.254")), `fetched ${JSON.stringify(seen)}`);
@@ -118,17 +118,17 @@ test("A1 redirect chains: relative locations followed, loops and long chains sto
 		if (url.pathname === "/start") return new Response(null, { status: 302, headers: { Location: "/final" } });
 		return new Response("final body", { status: 200, headers: { "content-type": "text/plain" } });
 	}) as typeof fetch;
-	const ok = await checkSource("https://example.com/start", chain);
+	const ok = await checkSource("https://example.com/start", chain, undefined, { resolver: publicDns });
 	assert.equal(ok.ok, true);
 	assert.equal(ok.final_url, "https://example.com/final");
 	assert.deepEqual(ok.redirects, ["https://example.com/final"]);
 	calls = 0;
-	const loop = await checkSource("https://example.com/loop", chain);
+	const loop = await checkSource("https://example.com/loop", chain, undefined, { resolver: publicDns });
 	assert.equal(loop.ok, false);
 	assert.match(String(loop.error), /loop/);
 	assert.ok(calls <= 2);
 	calls = 0;
-	const long = await checkSource("https://example.com/hop", chain);
+	const long = await checkSource("https://example.com/hop", chain, undefined, { resolver: publicDns });
 	assert.equal(long.ok, false);
 	assert.match(String(long.error), /more than \d+ redirects/);
 	assert.ok(calls <= MAX_REDIRECTS + 1, `made ${calls} requests`);

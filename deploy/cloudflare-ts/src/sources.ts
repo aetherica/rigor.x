@@ -21,6 +21,15 @@
 import type { EvidenceRecord } from "./run.ts";
 import type { Claim, Contradiction } from "./ledger.ts";
 import type { Json, JsonObject } from "./text.ts";
+import { Deadline, resilientFetch, type ResilienceRegistry } from "./resilience.ts";
+
+/** How a lookup is run: through the isolate's breakers and the caller's deadline (or a fresh one). */
+export interface LookupOptions { registry?: ResilienceRegistry; deadline?: Deadline }
+async function lookupFetch(adapter: string, url: string, fetcher: typeof fetch, o: LookupOptions): Promise<Response> {
+	if (!o.registry) return fetcher(url, { redirect: "manual", signal: AbortSignal.timeout(o.deadline?.remaining() || 8_000), headers: { Accept: "application/json", "User-Agent": "RIGOR-X source check (+https://github.com/aetherica/rigor.x)" } });
+	return resilientFetch(fetcher, url, { redirect: "manual", headers: { Accept: "application/json", "User-Agent": "RIGOR-X source check (+https://github.com/aetherica/rigor.x)" } },
+		{ policy: o.registry.policy, deadline: o.deadline ?? new Deadline(o.registry.policy.lookupTimeoutMs * 2), breaker: o.registry.breaker(adapter), perAttemptMs: o.registry.policy.lookupTimeoutMs });
+}
 
 // ---------------------------------------------------------------- the nine domains
 
@@ -383,7 +392,7 @@ export function independenceGroups(ids: SourceIdentity[]): IndependenceGroup[] {
 export type LifecycleStage = "DISCOVERED" | "ACQUISITION_FAILED" | "ACQUIRED" | "PARSED" | "CROSS_CHECKED";
 export type Verdict = "ACCEPTED" | "DISPUTED" | "REJECTED" | "INSUFFICIENT";
 
-export interface CheckSummary { ok: boolean; status: number | null; error: string | null; retracted: boolean; injection_signals: string[]; wayback: Json }
+export interface CheckSummary { ok: boolean; status: number | null; error: string | null; retracted: boolean; retraction_status: "retracted" | "not_listed" | "unknown" | "not_applicable"; acquisition: string; injection_signals: string[]; wayback: Json }
 
 export function checkSummary(check: JsonObject | null | undefined): CheckSummary | null {
 	if (!check) return null;
@@ -391,6 +400,8 @@ export function checkSummary(check: JsonObject | null | undefined): CheckSummary
 	return {
 		ok: check.ok === true, status: typeof check.status === "number" ? check.status : null, error: typeof check.error === "string" ? check.error : null,
 		retracted: !!cr && cr.retracted === true,
+		retraction_status: !cr ? "not_applicable" : cr.retracted === true ? "retracted" : cr.retracted === false ? "not_listed" : "unknown",
+		acquisition: acquisitionStatus(check),
 		injection_signals: Array.isArray(check.injection_signals) ? (check.injection_signals as Json[]).map(String) : [],
 		wayback: (check.wayback ?? null) as Json,
 	};
@@ -401,6 +412,21 @@ export interface Assessment {
 	groups: IndependenceGroup[];
 	claims: JsonObject[];
 	domains: JsonObject;
+	/** Discovery Gap Register: what was not covered and why (never "not found" for "not searched"). */
+	discovery_gaps: JsonObject;
+}
+
+/** Acquisition outcome of a checked source, kept apart: NOT_FOUND ≠ ACCESS_BLOCKED ≠ UNAVAILABLE ≠ REFUSED. */
+export function acquisitionStatus(check: JsonObject | null | undefined): string {
+	if (!check) return "NOT_CHECKED";
+	if (check.ok === true) return "ACQUIRED";
+	const status = typeof check.status === "number" ? check.status : null;
+	const err = typeof check.error === "string" ? check.error : "";
+	if (/refused|not fetched|not checked/.test(err)) return "REFUSED_BY_POLICY";
+	if (status === 404 || status === 410) return "NOT_FOUND";
+	if (status === 401 || status === 403 || status === 407 || status === 451) return "ACCESS_BLOCKED";
+	if (status === 429 || (status !== null && status >= 500) || /fetch failed|deadline|circuit/.test(err)) return "UNAVAILABLE";
+	return "FAILED";
 }
 
 /**
@@ -479,7 +505,21 @@ export function assessSources(evidence: EvidenceRecord[], claims: Claim[], contr
 		domains[id] = { name: d.name, adapter_status: d.status, sources: ids.filter((i) => i.domain === id).length, not_operational: d.not_operational };
 	}
 	domains.unclassified = { sources: ids.filter((i) => i.domain === null).length };
-	return { sources, groups, claims: claimViews, domains };
+	const outcomes: Record<string, string[]> = {};
+	for (const i of ids) {
+		const st = acquisitionStatus(checks.get(i.evidence_id));
+		if (st !== "ACQUIRED") (outcomes[st] ??= []).push(i.evidence_id);
+	}
+	const discovery_gaps: JsonObject = {
+		domains_without_sources: DOMAIN_IDS.filter((id) => !ids.some((i) => i.domain === id)).map((id) => ({
+			domain: id, name: DOMAINS[id].name, adapter_status: DOMAINS[id].status,
+			gap: DOMAINS[id].status === "CONTRACT_ONLY" ? "NOT_CONNECTED (RIGOR-X has no acquisition path; only the host can record such sources)" : "NO_SOURCES_RECORDED",
+		})) as unknown as Json,
+		acquisition: outcomes as unknown as Json,
+		languages: [...new Set(evidence.map((e) => (typeof e.details.lang === "string" ? e.details.lang : null)).filter(Boolean))] as Json[],
+		notice: "RIGOR-X sees only what the host recorded: NO_SOURCES_RECORDED means nothing was recorded, not that nothing exists (NOT_SEARCHED and NOT_FOUND cannot be told apart unless the host reports its searches with rigorx_report_action). NOT_CHECKED sources were never fetched.",
+	};
+	return { sources, groups, claims: claimViews, domains, discovery_gaps };
 }
 
 // ---------------------------------------------------------------- provider adapters (Worker side)
@@ -491,18 +531,17 @@ export interface CrossrefRecord {
 	container: string | null;
 	type: string | null;
 	issued: string | null;
-	retracted: boolean;
+	/** true = retracted/withdrawn, false = Crossref lists no such update, null = could not be determined (unknown is not "no"). */
+	retracted: boolean | null;
 	updates: { type: string; doi: string | null; date: string | null; source: string | null }[];
 	error: string | null;
 }
 
 /** Crossref works record for a DOI: bibliographic metadata and editorial updates (retractions, corrections). */
-export async function crossrefLookup(doi: string, fetcher: typeof fetch = fetch, timeoutMs = 8_000): Promise<CrossrefRecord> {
-	const base: CrossrefRecord = { doi: doi.toLowerCase(), title: null, publisher: null, container: null, type: null, issued: null, retracted: false, updates: [], error: null };
+export async function crossrefLookup(doi: string, fetcher: typeof fetch = fetch, o: LookupOptions = {}): Promise<CrossrefRecord> {
+	const base: CrossrefRecord = { doi: doi.toLowerCase(), title: null, publisher: null, container: null, type: null, issued: null, retracted: null, updates: [], error: null };
 	try {
-		const res = await fetcher(`https://api.crossref.org/works/${encodeURIComponent(doi)}`, {
-			redirect: "manual", signal: AbortSignal.timeout(timeoutMs), headers: { Accept: "application/json", "User-Agent": "RIGOR-X source check (+https://github.com/aetherica/rigor.x)" },
-		});
+		const res = await lookupFetch("crossref", `https://api.crossref.org/works/${encodeURIComponent(doi)}`, fetcher, o);
 		if (res.status === 404) return { ...base, error: "DOI not registered with Crossref (it may be registered with another agency such as DataCite)" };
 		if (!res.ok) return { ...base, error: `Crossref HTTP ${res.status}` };
 		const text = await res.text();
@@ -530,12 +569,10 @@ export async function crossrefLookup(doi: string, fetcher: typeof fetch = fetch,
 export interface WaybackRecord { url: string; available: boolean; snapshot_url: string | null; timestamp: string | null; error: string | null }
 
 /** Closest Wayback Machine snapshot of a URL (availability API). */
-export async function waybackLookup(url: string, fetcher: typeof fetch = fetch, timeoutMs = 8_000): Promise<WaybackRecord> {
+export async function waybackLookup(url: string, fetcher: typeof fetch = fetch, o: LookupOptions = {}): Promise<WaybackRecord> {
 	const base: WaybackRecord = { url, available: false, snapshot_url: null, timestamp: null, error: null };
 	try {
-		const res = await fetcher(`https://archive.org/wayback/available?url=${encodeURIComponent(url)}`, {
-			redirect: "manual", signal: AbortSignal.timeout(timeoutMs), headers: { Accept: "application/json", "User-Agent": "RIGOR-X source check (+https://github.com/aetherica/rigor.x)" },
-		});
+		const res = await lookupFetch("wayback", `https://archive.org/wayback/available?url=${encodeURIComponent(url)}`, fetcher, o);
 		if (!res.ok) return { ...base, error: `Wayback HTTP ${res.status}` };
 		const j = (await res.json()) as { archived_snapshots?: { closest?: { available?: boolean; url?: string; timestamp?: string } } };
 		const c = j.archived_snapshots?.closest;

@@ -26,7 +26,7 @@ export async function s256(verifier: string): Promise<string> {
 	return base64url(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier))));
 }
 
-export function googleAuthorizeUrl(o: { clientId: string; redirectUri: string; state: string; codeChallenge: string }): string {
+export function googleAuthorizeUrl(o: { clientId: string; redirectUri: string; state: string; codeChallenge: string; nonce?: string }): string {
 	const url = new URL(GOOGLE_AUTHORIZE_URL);
 	url.search = new URLSearchParams({
 		client_id: o.clientId,
@@ -37,6 +37,7 @@ export function googleAuthorizeUrl(o: { clientId: string; redirectUri: string; s
 		code_challenge: o.codeChallenge,
 		code_challenge_method: "S256",
 		prompt: "select_account",
+		...(o.nonce ? { nonce: o.nonce } : {}),
 	}).toString();
 	return url.toString();
 }
@@ -57,7 +58,7 @@ export function googleTokenRequestBody(o: { code: string; clientId: string; clie
  * TLS in exchange for our client secret, so OpenID Connect Core 3.1.3.7 allows skipping the
  * signature check; issuer, audience and expiry are still checked.
  */
-export function parseGoogleIdToken(idToken: string, clientId: string, nowSeconds: number): GoogleIdentity {
+export function parseGoogleIdToken(idToken: string, clientId: string, nowSeconds: number, expectedNonce?: string): GoogleIdentity {
 	const parts = idToken.split(".");
 	if (parts.length !== 3) throw new Error("Malformed ID token");
 	let claims: Record<string, unknown>;
@@ -70,7 +71,12 @@ export function parseGoogleIdToken(idToken: string, clientId: string, nowSeconds
 	if (typeof claims.iss !== "string" || !GOOGLE_ISSUERS.has(claims.iss)) throw new Error("ID token issuer is not Google");
 	const aud = claims.aud;
 	if (!(aud === clientId || (Array.isArray(aud) && aud.includes(clientId)))) throw new Error("ID token audience mismatch");
+	// OIDC Core 3.1.3.7: with several audiences, azp must be present and be this client.
+	if (Array.isArray(aud) && aud.length > 1 && claims.azp !== clientId) throw new Error("ID token authorized party mismatch");
+	if (claims.azp !== undefined && claims.azp !== clientId) throw new Error("ID token authorized party mismatch");
 	if (typeof claims.exp !== "number" || claims.exp + 60 < nowSeconds) throw new Error("ID token expired");
+	if (typeof claims.iat === "number" && claims.iat > nowSeconds + 300) throw new Error("ID token issued in the future");
+	if (expectedNonce !== undefined && claims.nonce !== expectedNonce) throw new Error("ID token nonce mismatch");
 	if (typeof claims.sub !== "string" || claims.sub === "") throw new Error("ID token has no subject");
 	return { sub: claims.sub };
 }
@@ -146,6 +152,25 @@ ${EMBLEM}
 <p>Verification results are structural checks of what your assistant submitted ("structurally verified"); they do not guarantee that any claim is correct or true.</p>
 <p>Do not use RIGOR-X for unlawful purposes or to attack the service. Source code and license: <a href="${REPO_URL}">${REPO_URL}</a>.</p>
 </html>`;
+
+/** The approval decision page (values come from the engine; host-written description is escaped). */
+export function approvalPage(v: Record<string, unknown>, csrf: string): string {
+	const e = (x: unknown) => escapeHtml(x === null || x === undefined ? "—" : String(x));
+	const open = v.status === "pending" && v.plan_changed !== true;
+	const reason = v.status !== "pending" ? `This request is ${e(v.status)}.` : v.plan_changed === true ? "The operation changed after this request; ask your assistant for a new one." : "";
+	return `<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Approve an action — RIGOR-X</title>${HEAD_ICONS}<style>${PAGE_STYLE}</style>
+${EMBLEM}
+<h1>Approve this action?</h1>
+<p>Your assistant asks for your approval of <strong>one</strong> planned operation. Approve only if you want it done.</p>
+<p><strong>What:</strong> ${e(v.description || "(no description given)")}</p>
+<p><strong>Operation:</strong> ${e(v.operation_id)} · tier ${e(v.tier)} · capability ${e(v.capability)}<br><strong>Run:</strong> ${e(v.run_id)}<br><strong>Valid until:</strong> ${e(v.expires_at)}</p>
+<p class="warn">The description was written by your assistant, not by RIGOR-X.</p>
+${open ? `<form method="post"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}">
+<p><button name="decision" value="approve">Approve this operation</button><button name="decision" value="deny">Deny</button></p></form>` : `<p>${reason}</p>`}
+</html>`;
+}
 
 export function messagePage(title: string, message: string): string {
 	return `<!doctype html>

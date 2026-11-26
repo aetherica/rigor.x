@@ -10,7 +10,7 @@ import { checkSource, extractMetadata, injectionSignals, cleanText } from "../sr
 import { dispatch, HostEngine } from "../src/engine.ts";
 import { DurableObjectRunStore } from "../src/store.ts";
 import type { EvidenceRecord } from "../src/run.ts";
-import { localBackend } from "./backend.ts";
+import { localBackend, publicDns } from "./backend.ts";
 import { memorySql } from "./sqlite-fake.ts";
 
 const ev = (id: string, ref: string, details: Record<string, unknown> = {}): EvidenceRecord =>
@@ -197,7 +197,7 @@ test("untrusted content: metadata is bounded and cleaned; instruction-like text 
 	assert.deepEqual(injectionSignals(m.author), ["asks to ignore earlier instructions", "asks to mark something as verified"]);
 	assert.deepEqual(injectionSignals("A study of flood patterns in the delta"), []);
 	assert.equal(cleanText("a\u0000b​c".repeat(200), 10).length, 10);
-	const r = await checkSource("https://news.example.com/copy", (async () => new Response(html, { headers: { "content-type": "text/html; charset=utf-8" } })) as typeof fetch);
+	const r = await checkSource("https://news.example.com/copy", (async () => new Response(html, { headers: { "content-type": "text/html; charset=utf-8" } })) as typeof fetch, undefined, { resolver: publicDns });
 	assert.deepEqual(r.injection_signals, ["asks to ignore earlier instructions", "asks to mark something as verified"]);
 	// A canonical link pointing at a private address is dropped, never followed.
 	assert.equal(extractMetadata(`<link rel="canonical" href="http://169.254.169.254/x">`, "https://a.example.com/").canonical_url, null);
@@ -205,9 +205,9 @@ test("untrusted content: metadata is bounded and cleaned; instruction-like text 
 
 test("source check budget: a body larger than 1 MiB is truncated, and the deadline covers the whole chain", async () => {
 	const big = new Uint8Array(1_200_000).fill(65);
-	const r = await checkSource("https://example.com/big", (async () => new Response(big)) as typeof fetch);
+	const r = await checkSource("https://example.com/big", (async () => new Response(big)) as typeof fetch, undefined, { resolver: publicDns });
 	assert.equal(r.bytes, 1_048_576);
 	assert.equal(r.truncated, true);
-	const slow = await checkSource("https://example.com/slow", (async (_: unknown, init?: RequestInit) => { throw Object.assign(new Error("aborted"), { name: "TimeoutError" }); }) as typeof fetch);
-	assert.match(slow.error!, /no answer within 10 s/);
+	const slow = await checkSource("https://example.com/slow", (async (_: unknown, init?: RequestInit) => { throw Object.assign(new Error("aborted"), { name: "TimeoutError" }); }) as typeof fetch, undefined, { resolver: publicDns });
+	assert.match(slow.error!, /no answer before the deadline/);
 });

@@ -9,7 +9,7 @@ import {
 } from "./protocol.ts";
 import { route } from "./router.ts";
 import { resolvePrompt } from "./commands.ts";
-import { RunNotFound, type RunStore } from "./store.ts";
+import { RunNotFound, canonicalJson, type RunStore } from "./store.ts";
 import {
 	DEFAULT_TEXT_POLICY, EngineError, chars, conflict, digest, invalid, jsonish, limit, normalized, notFound, object, quota,
 	storedNote, substantial, text, type Json, type JsonObject, type TextPolicy,
@@ -60,8 +60,10 @@ export interface QuotaLimits {
 	runsPerDay: number;
 	storedRuns: number;
 	burstPerMinute: number;
+	/** External acquisitions (rigorx_check_source) per UTC day: a separate, smaller budget for outbound traffic. */
+	fetchesPerDay: number;
 }
-export const DEFAULT_LIMITS: QuotaLimits = { callsPerDay: 2_000, runsPerDay: 100, storedRuns: 500, burstPerMinute: 120 };
+export const DEFAULT_LIMITS: QuotaLimits = { callsPerDay: 2_000, runsPerDay: 100, storedRuns: 500, burstPerMinute: 120, fetchesPerDay: 200 };
 
 /**
  * Operations that change stored state or reach outside RIGOR-X: they count against the daily quota
@@ -71,7 +73,7 @@ export const DEFAULT_LIMITS: QuotaLimits = { callsPerDay: 2_000, runsPerDay: 100
  */
 export const METERED_OPERATIONS: ReadonlySet<string> = new Set([
 	"start_run", "submit_stage", "record_evidence", "report_action", "verify", "reenter", "cancel_run",
-	"compute", "evidence_for_check", "memory_topic", "memory_write",
+	"compute", "evidence_for_check", "memory_topic", "memory_write", "request_approval",
 ]);
 /**
  * Reads and deletes are never refused by the daily quota (the user can always look and free
@@ -80,9 +82,22 @@ export const METERED_OPERATIONS: ReadonlySet<string> = new Set([
  */
 export const RATE_LIMITED_OPERATIONS: ReadonlySet<string> = new Set([
 	"get_run", "list_runs", "usage", "profile", "delete_run", "memory_recall", "memory_delete", "assess_sources",
+	"delete_account_data", "approval_view", "approval_decide",
+]);
+/** Operations that accept an idempotency_key (state-changing calls a client may retry after a lost answer). */
+export const IDEMPOTENT_OPERATIONS: ReadonlySet<string> = new Set([
+	"start_run", "submit_stage", "record_evidence", "report_action", "verify", "reenter", "cancel_run", "delete_run",
+	"compute", "memory_topic", "memory_write", "memory_delete", "request_approval",
 ]);
 /** USER_APPROVAL evidence is valid for this long after it is recorded (audit finding B1). */
 export const APPROVAL_TTL_MS = 24 * 3_600_000;
+/** How long a pending approval request can be decided by the user. */
+export const APPROVAL_REQUEST_TTL_MS = 24 * 3_600_000;
+/** Idempotency keys and their stored results are kept this long. */
+export const IDEMPOTENCY_TTL_MS = 24 * 3_600_000;
+const IDEMPOTENCY_KEY = /^[A-Za-z0-9][A-Za-z0-9_.:-]{7,127}$/;
+/** The phrase the user must confirm before all of their RIGOR-X data is deleted. */
+export const ACCOUNT_DELETE_CONFIRMATION = "DELETE ALL MY RIGOR-X DATA";
 /** Recent actions returned in a run view; the full count and unresolved IDs are always returned. */
 export const RECENT_ACTIONS = 10;
 const USAGE_RETENTION_DAYS = 35;
@@ -561,6 +576,7 @@ export class HostEngine {
 			sources: a.sources as unknown as Json[],
 			origin_groups: a.groups as unknown as Json[],
 			domains: a.domains,
+			discovery_gaps: a.discovery_gaps,
 			notice: "Structural assessment: it counts independent origins and shows what they share and what is missing; it does not establish that any claim is true. Source metadata is untrusted data.",
 		};
 	}
@@ -702,6 +718,9 @@ export class HostEngine {
 		const used = this.store.usage(owner, day);
 		const l = this.limits;
 		if (used.calls >= l.callsPerDay) throw quota(`Daily limit of ${l.callsPerDay} tool calls reached; it resets at ${reset}`);
+		if (operation === "evidence_for_check" && this.store.aux) {
+			if (this.store.aux.extra(owner, day, "fetch") >= l.fetchesPerDay) throw quota(`Daily limit of ${l.fetchesPerDay} source checks reached; it resets at ${reset}`);
+		}
 		if (operation === "start_run") {
 			if (used.runs_started >= l.runsPerDay) throw quota(`Daily limit of ${l.runsPerDay} new runs reached; it resets at ${reset}`);
 			if (this.store.countRuns(owner) >= l.storedRuns) {
@@ -712,6 +731,7 @@ export class HostEngine {
 		this.burstCount(owner, ms);
 		const keepFrom = utcDay(new Date(ms - USAGE_RETENTION_DAYS * 86_400_000));
 		this.store.addUsage(owner, day, 1, operation === "start_run" ? 1 : 0, keepFrom);
+		if (operation === "evidence_for_check") this.store.aux?.addExtra(owner, day, "fetch", keepFrom);
 	}
 
 	/** Count one call in the owner's 60-second window, or refuse it (in memory, best effort). */
@@ -738,6 +758,7 @@ export class HostEngine {
 			runs_started: { used: used.runs_started, limit: l.runsPerDay },
 			stored_runs: { used: this.store.countRuns(owner), limit: l.storedRuns },
 			burst_per_minute: l.burstPerMinute,
+			source_checks: { used: this.store.aux?.extra(owner, utcDay(at), "fetch") ?? 0, limit: l.fetchesPerDay },
 			storage_bytes: this.store.databaseBytes(),
 			memory_bytes: this.memory ? { used: this.memory.bytesUsed(owner), limit: this.memory.limitBytes } : null,
 			limits_provisional: true,
@@ -764,6 +785,136 @@ export class HostEngine {
 	profile(ownerId: unknown): JsonObject {
 		// A random ID stored per owner: stable for the account, not derivable from the Google subject.
 		return { id: this.store.profileId(this.owner(ownerId), () => randomHex(16)) };
+	}
+
+	// ---------------------------------------------------------------- idempotency (release directive §7.1)
+
+	/**
+	 * Run a state-changing operation at most once per (owner, idempotency_key). The first call stores
+	 * its result with a digest of the operation and arguments, in the same transaction as the effect.
+	 * A retry with the same key and payload returns the stored result (idempotent_replay: true) without
+	 * charging quota again; the same key with a different payload is refused. Failed calls store
+	 * nothing, so they can be retried. Durable Object calls run one at a time, so two identical
+	 * requests cannot both pass the lookup.
+	 */
+	idempotent(ownerId: string, operation: string, args: Record<string, unknown>, run: () => JsonObject): JsonObject {
+		const key = args.idempotency_key;
+		if (key === undefined || key === null) {
+			this.meter(ownerId, operation, args);
+			return this.atomic(run);
+		}
+		if (!IDEMPOTENT_OPERATIONS.has(operation)) throw invalid("idempotency_key is accepted only by tools that change state");
+		if (typeof key !== "string" || !IDEMPOTENCY_KEY.test(key)) throw invalid("idempotency_key must be 8 to 128 characters: letters, digits and _ . : - (a UUID works)");
+		const aux = this.store.aux;
+		if (!aux) throw new EngineError("Idempotency keys are not available on this server");
+		const owner = this.owner(ownerId);
+		const { idempotency_key: _drop, ...rest } = args;
+		const fingerprint = digest(`${operation}\n${canonicalJson(rest)}`);
+		const prior = aux.idempotencyGet(owner, key);
+		if (prior) {
+			if (prior.operation !== operation || prior.digest !== fingerprint) {
+				throw invalid("idempotency_key was already used for a different call; use a new key for a new operation");
+			}
+			return { ...prior.result, idempotent_replay: true };
+		}
+		this.meter(ownerId, operation, args);
+		return this.atomic(() => {
+			const result = run();
+			aux.idempotencyPut(owner, key, operation, fingerprint, result, this.now(), IDEMPOTENCY_TTL_MS);
+			return result;
+		});
+	}
+
+	// ---------------------------------------------------------------- account lifecycle (release directive §5.3)
+
+	/** Delete every run, topic, memory item, usage counter, profile and approval of the signed-in account. */
+	deleteAccountData(ownerId: unknown, args: Record<string, unknown>): JsonObject {
+		const owner = this.owner(ownerId);
+		if (args.decided_by !== "user") throw new EngineError("Deleting all account data is the user's decision: decided_by must be \"user\"", "FORBIDDEN");
+		if (args.confirm !== ACCOUNT_DELETE_CONFIRMATION) throw invalid(`confirm must be exactly "${ACCOUNT_DELETE_CONFIRMATION}" (ask the user to confirm this permanent deletion)`);
+		if (!this.store.deleteOwner) throw new EngineError("Account data deletion is not available on this server");
+		const runs = this.store.deleteOwner(owner);
+		const memory = this.memory ? this.memory.deleteOwner(owner) : { topics: 0, items: 0 };
+		const aux = this.store.aux ? this.store.aux.deleteOwner(owner) : 0;
+		this.burst.delete(owner);
+		return { deleted: true, runs: runs.runs, usage_rows: runs.usage_rows, profile: runs.profile, memory_topics: memory.topics, memory_items: memory.items, other_rows: aux,
+			note: "Deleted permanently. A memory audit row without content records that the deletion happened. Sign-in records (OAuth grants) are separate; revoke them in the app that connected RIGOR-X." };
+	}
+
+	// ---------------------------------------------------------------- verified approvals (release directive §3.2)
+
+	/**
+	 * rigorx_request_approval: create (or read) a request for the user to approve one A4/A5 operation
+	 * on the RIGOR-X site, signed in with the same Google account. Only that decision, made by the
+	 * authenticated user in their own browser, creates an engine-verified USER_APPROVAL.
+	 */
+	requestApproval(ownerId: string, args: Record<string, unknown>): JsonObject {
+		const owner = this.owner(ownerId);
+		const aux = this.store.aux;
+		if (!aux) throw new EngineError("Approvals are not available on this server");
+		if (args.approval_id !== undefined && args.approval_id !== null) {
+			const r = aux.approvalGet(owner, text("approval_id", args.approval_id, 64));
+			if (!r) throw new EngineError("Approval request not found", "NOT_FOUND");
+			return this.approvalStatus(r);
+		}
+		const l = this.load(owner, args.run_id);
+		assertActive(l.run);
+		const opId = text("operation_id", args.operation_id, 32);
+		const op = (l.run.ledger.plan?.operations ?? []).find((o) => o.id === opId);
+		if (!op) throw invalid(`${opId} is not an operation of this run's plan`);
+		if (op.tier !== "A4" && op.tier !== "A5") throw invalid(`Operation ${op.id} is tier ${op.tier ?? "none"}; approvals are requested for A4 and A5 operations`);
+		const description = args.description === undefined || args.description === null ? "" : text("description", args.description, 500);
+		const at = this.now();
+		const req = {
+			id: `apv_${randomHex(16)}`, owner_id: owner, run_id: l.run.run_id, operation_id: op.id, operation_digest: operationDigest(op), description,
+			status: "pending" as const, created_at: at.toISOString(), expires_at: new Date(at.getTime() + APPROVAL_REQUEST_TTL_MS).toISOString(), decided_at: null, evidence_id: null,
+		};
+		aux.approvalCreate(req);
+		return { ...this.approvalStatus(req), approve_path: `/approve/${req.id}`,
+			guidance: "Give the user the approve_url and ask them to open it, sign in with their Google account and decide. Then call rigorx_request_approval with approval_id to read the decision; cite evidence_id in EXECUTE when it is approved." };
+	}
+
+	private approvalStatus(r: { id: string; run_id: string; operation_id: string; status: string; expires_at: string; evidence_id: string | null }): JsonObject {
+		const expired = r.status === "pending" && Date.parse(r.expires_at) < this.now().getTime();
+		return { approval_id: r.id, run_id: r.run_id, operation_id: r.operation_id, status: expired ? "expired" : r.status, expires_at: r.expires_at, evidence_id: r.evidence_id || null };
+	}
+
+	/** Internal (approval page, signed-in owner only): what the user is asked to approve. */
+	approvalView(ownerId: string, args: Record<string, unknown>): JsonObject {
+		const owner = this.owner(ownerId);
+		const r = this.store.aux?.approvalGet(owner, text("approval_id", args.approval_id, 64));
+		if (!r) throw new EngineError("Approval request not found", "NOT_FOUND");
+		const l = this.load(owner, r.run_id);
+		const op = (l.run.ledger.plan?.operations ?? []).find((o) => o.id === r.operation_id);
+		return { ...this.approvalStatus(r), description: r.description, capability: op?.capability ?? null, tier: op?.tier ?? null,
+			plan_changed: !op || operationDigest(op) !== r.operation_digest, run_status: l.run.status };
+	}
+
+	/** Internal (approval page POST, signed-in owner only): record the user's decision. */
+	approvalDecide(ownerId: string, args: Record<string, unknown>): JsonObject {
+		const owner = this.owner(ownerId);
+		const aux = this.store.aux;
+		const r = aux?.approvalGet(owner, text("approval_id", args.approval_id, 64));
+		if (!aux || !r) throw new EngineError("Approval request not found", "NOT_FOUND");
+		if (r.status !== "pending") throw conflict(`This request was already ${r.status}`);
+		const at = this.now();
+		if (Date.parse(r.expires_at) < at.getTime()) throw conflict("This request expired; ask for a new one");
+		if (args.decision === "deny") {
+			aux.approvalDecide(owner, r.id, "denied", at.toISOString(), null);
+			return { approval_id: r.id, status: "denied" };
+		}
+		if (args.decision !== "approve") throw invalid('decision must be "approve" or "deny"');
+		const l = this.load(owner, r.run_id);
+		if (TERMINAL.has(l.run.status)) throw conflict(`The run is ${l.run.status}`);
+		const op = (l.run.ledger.plan?.operations ?? []).find((o) => o.id === r.operation_id);
+		if (!op || operationDigest(op) !== r.operation_digest) throw conflict("The operation changed after the approval was requested; ask for a new approval");
+		const e = this.capture(l.run, USER_APPROVAL, `rigorx:approval:${r.id}`, null, null, "ENGINE_VERIFIED", {
+			approves: op.id, operation_digest: r.operation_digest, approval_id: r.id, approved_at: at.toISOString(),
+			expires_at: new Date(at.getTime() + APPROVAL_TTL_MS).toISOString(), authenticity: "user_verified", verified_by: "google_oidc_same_account",
+		});
+		this.save(l);
+		aux.approvalDecide(owner, r.id, "approved", at.toISOString(), e.id);
+		return { approval_id: r.id, status: "approved", evidence_id: e.id };
 	}
 
 	// ---------------------------------------------------------------- helpers
@@ -932,6 +1083,7 @@ export const RUN_OPERATIONS = new Set([
 	"start_run", "get_run", "submit_stage", "record_evidence", "report_action", "verify", "reenter", "cancel_run", "delete_run",
 	"list_runs", "usage", "profile", "compute", "evidence_for_check", "record_source_check",
 	"memory_topic", "memory_write", "memory_recall", "memory_delete", "assess_sources",
+	"delete_account_data", "request_approval", "approval_view", "approval_decide",
 ]);
 
 function encodeCursor(updatedAt: string, runId: string): string {
@@ -957,8 +1109,9 @@ export function dispatch(engine: HostEngine, ownerId: string, operation: string,
 		const p = JSON.parse(payloadJson) as unknown;
 		if (typeof p !== "object" || p === null || Array.isArray(p)) throw new EngineError("Payload must be a JSON object");
 		const a = p as Record<string, unknown>;
-		engine.meter(ownerId, operation, a); // outside the transaction: a refused or failing call is still counted
-		const result = engine.atomic(() => {
+		// Quota is counted outside the transaction (a refused or failing call is still counted), except
+		// that an idempotent replay is not charged again; see HostEngine.idempotent.
+		const result = engine.idempotent(ownerId, operation, a, () => {
 			switch (operation) {
 				case "start_run": return engine.startRun(ownerId, a.task);
 				case "get_run": return engine.getRun(ownerId, a.run_id);
@@ -983,6 +1136,10 @@ export function dispatch(engine: HostEngine, ownerId: string, operation: string,
 				case "memory_recall": return engine.memoryRecall(ownerId, a);
 				case "memory_delete": return engine.memoryDelete(ownerId, a);
 				case "assess_sources": return engine.assessSourcesOp(ownerId, a);
+				case "delete_account_data": return engine.deleteAccountData(ownerId, a);
+				case "request_approval": return engine.requestApproval(ownerId, a);
+				case "approval_view": return engine.approvalView(ownerId, a);
+				case "approval_decide": return engine.approvalDecide(ownerId, a);
 				default: return engine.deleteRun(ownerId, a.run_id);
 			}
 		});
