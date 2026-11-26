@@ -53,10 +53,10 @@ In the Cloudflare dashboard: **Workers & Pages → rigorx-mcp → Settings → B
 | Setting | Value |
 |---|---|
 | Root directory (Path) | `deploy/cloudflare-ts` |
-| Build command | `npm test` |
-| Deploy command | `npm run deploy` |
+| Build command | `npm run typecheck && npm test` |
+| Deploy command | `npm run deploy` (provenance-guarded) |
 
-Push to `main` (a Retry rebuilds the same commit; see below). The Worker name, Durable Object binding and migration tag are unchanged, so existing runs stay in place.
+Push to `main`. Cloudflare Workers Builds is the single production deploy path: it runs strict type-checking and tests, then `scripts/deploy.mjs` blocks deployment unless the checkout is clean, on `main`, and tagged with the exact full commit SHA. Production previews remain disabled. The Worker name, Durable Object binding and migration tag are unchanged, so existing runs stay in place.
 
 Check: `https://rigorx-mcp.<subdomain>.workers.dev/` returns the banner; `POST /mcp` without a token returns `401` with `WWW-Authenticate: Bearer … resource_metadata=…`; a signed-in host (for example the Claude connector) can call `rigorx_profile` and run `rigorx_start_run` → `rigorx_delete_run`.
 
