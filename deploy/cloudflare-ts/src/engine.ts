@@ -1050,7 +1050,13 @@ export class HostEngine {
 			last_verification: last ? { gate_version: last.gate_version, passed: last.passed, checks: last.checks as unknown as Json[], levels: last.levels } : null,
 		};
 		if (active && run.current_stage === "DELIVER") view.requires = this.requiredDisclosures(run) as unknown as JsonObject;
-		if (!active && run.status !== "CANCELLED") view.limitations = this.engineLimitations(run);
+		if (!active && run.status !== "CANCELLED") {
+			view.limitations = this.engineLimitations(run);
+			// Host-disclosed limitations are stored as digests only (privacy model), so the view
+			// confirms how many were recorded and their digests instead of echoing the text.
+			const disclosed = run.ledger.delivery?.limitations ?? [];
+			view.disclosed_limitations = { count: disclosed.length, items: disclosed.map((l) => ({ sha256: l.sha256, chars: l.chars })) };
+		}
 		return view;
 	}
 }

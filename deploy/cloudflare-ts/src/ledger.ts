@@ -3,7 +3,7 @@
 // SHA-256 digests and lengths (privacy model of the run store); IDs, statuses, capability and
 // method names are stored as given because the gate and the disclosures compare them.
 import {
-	CLAIM_STATUSES, LEVELS, STAKES, isLevel, levelRank, type ClaimStatus, type Level, type Stage, type Stakes,
+	CLAIM_STATUSES, LEVELS, STAKES, isLevel, levelRank, normalizeLevel, type ClaimStatus, type Level, type Stage, type Stakes,
 } from "./protocol.ts";
 import {
 	chars, digest, evidenceIds, fingerprint, ident, invalid, list, object, oneOf, storedNote, substantial, text,
@@ -112,11 +112,19 @@ export function queryContract(data: Record<string, unknown>, ctx: ContractContex
 	return { constraints: optionalNotes("data.constraints", data.constraints, ctx, 30), ambiguities: optionalNotes("data.ambiguities", data.ambiguities, ctx, 30) };
 }
 
+/** A declared level: the full name or its short code (L01-L06); null when not declared. */
+function declaredLevel(value: unknown): Level | null {
+	if (value === undefined || value === null) return null;
+	const level = normalizeLevel(value);
+	if (!level) throw invalid(`data.level must be one of ${JSON.stringify(LEVELS)} or a short code L01-L06`);
+	return level;
+}
+
 /** Returns the slice and the level the run must have at least after CLASSIFY. */
 export function classifyContract(data: Record<string, unknown>, ctx: ContractContext, stakesFloor: Record<Stakes, Level>): { slice: NonNullable<Ledger["classify"]>; level: Level } {
 	const objective = storedNote("data.objective", data.objective, ctx.policy, ctx.maxText, "state the objective in one sentence");
 	const deliverable = storedNote("data.deliverable", data.deliverable, ctx.policy, ctx.maxText, "state what will be delivered");
-	const declared = data.level === undefined || data.level === null ? null : oneOf("data.level", data.level, LEVELS);
+	const declared = declaredLevel(data.level);
 	const stakes = data.stakes === undefined || data.stakes === null ? null : oneOf("data.stakes", data.stakes, STAKES);
 	if (ctx.classificationUnknown && (declared === null || stakes === null)) {
 		throw invalid("The router found no signal in this task (classification_unknown), so data.level and data.stakes are required: unknown is not treated as low risk");
@@ -164,7 +172,7 @@ export function methodsContract(data: Record<string, unknown>, ctx: ContractCont
 }
 
 export function complexityContract(data: Record<string, unknown>, ctx: ContractContext): { slice: NonNullable<Ledger["complexity"]>; level: Level } {
-	const declared = data.level === undefined || data.level === null ? null : oneOf("data.level", data.level, LEVELS);
+	const declared = declaredLevel(data.level);
 	if (declared && levelRank(declared) < levelRank(ctx.level)) {
 		throw invalid(`The level can only rise during a run: it is ${ctx.level}, ${declared} would lower it`);
 	}

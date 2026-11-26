@@ -16,6 +16,16 @@ export type Level = (typeof LEVELS)[number];
 
 export const isStage = (v: unknown): v is Stage => typeof v === "string" && (STAGES as readonly string[]).includes(v);
 export const isLevel = (v: unknown): v is Level => typeof v === "string" && (LEVELS as readonly string[]).includes(v);
+/**
+ * Canonical level for a declared value: the full name (L01_BASIC) or its short code (L01, case-insensitive).
+ * Returns null for anything else, so callers can raise a precise error.
+ */
+export const normalizeLevel = (v: unknown): Level | null => {
+	if (typeof v !== "string") return null;
+	if (isLevel(v)) return v;
+	const m = /^l0([1-6])$/i.exec(v.trim());
+	return m ? LEVELS[Number(m[1]) - 1]! : null;
+};
 export const stageIndex = (s: Stage) => STAGES.indexOf(s);
 export const levelRank = (l: Level) => LEVELS.indexOf(l) + 1; // 1..6
 export const maxLevel = (...levels: Level[]): Level => levels.reduce((a, b) => (levelRank(b) > levelRank(a) ? b : a));
@@ -64,9 +74,9 @@ export type VerificationLevel = (typeof VERIFICATION_LEVELS)[number];
 
 export const STAGE_GUIDANCE: Record<Stage, string> = {
 	QUERY: "Restate the request and the context it depends on (prior decisions, constraints, what is missing). Submit a summary; optionally data.constraints and data.ambiguities (lists of short texts).",
-	CLASSIFY: "Submit data.objective, data.deliverable and data.requirements: pre-registered acceptance criteria [{id, text, importance: must|should, items?: [names that each need their own evidence], max_age_days?}]. Declare data.level (L01-L06) and data.stakes (low|medium|high|critical); both are required when the router found no signal. The level can only rise.",
+	CLASSIFY: "Submit data.objective, data.deliverable and data.requirements: pre-registered acceptance criteria [{id, text, importance: must|should, items?: [names that each need their own evidence], max_age_days?}]. Declare data.level (L01_BASIC, L02_STANDARD, L03_DEEP, L04_COMPLEX, L05_CRITICAL or L06_HYPER_RIGOROUS; the short codes L01-L06 are accepted) and data.stakes (low|medium|high|critical); both are required when the router found no signal. The level can only rise.",
 	SELECT_METHODS: "Submit data.methods: [{name, reason}] — the analytical, computational or research methods this task needs and why.",
-	ASSESS_COMPLEXITY: "Confirm the level or raise it with data.level (never lower). Raising it can make earlier stages mandatory; the run then returns to them.",
+	ASSESS_COMPLEXITY: "Confirm the level or raise it with data.level (a full name such as L03_DEEP or its short code L03; never lower). Raising it can make earlier stages mandatory; the run then returns to them.",
 	IDENTIFY_CAPABILITIES: "Submit data.available and data.missing: capability names (for example web_search, code_execution, files). RIGOR-X cannot see your tools; missing capabilities the plan relies on must be disclosed at DELIVER.",
 	PLAN: "Submit data.operations: [{id, capability, depends_on: [ids], parallel_group?, completion_condition, requirement_ids?, tier?}]. The graph must be acyclic and reference existing operations. tier is the autonomy tier A0 observe, A1 analyze, A2 recommend, A3 reversible action, A4 consequential action, A5 restricted (required from L05); a done A4/A5 operation must cite a USER_APPROVAL recorded for it (rigorx_record_evidence with evidence_type USER_APPROVAL and approves=<operation id>; single use, valid 24 h, invalid if the operation changes).",
 	EXECUTE: "Do the work with your tools. Record sources with rigorx_record_evidence (declare source_domain, derived_from or origin_ref when a source copies another) and actions with rigorx_report_action (failures too). If a plan exists, submit data.operations: [{id, status: done|failed|not_done, evidence_ids}] for every planned operation; an operation can only be done when every operation it depends on is done.",
@@ -74,5 +84,5 @@ export const STAGE_GUIDANCE: Record<Stage, string> = {
 	VALIDATE: "Call rigorx_verify with requirements: [{id, met: true|false|partial, evidence_ids, items?: [{id, evidence_ids}]}] answering every pre-registered requirement. Submitting this stage directly is not allowed.",
 	STRESS_TEST: "Submit data.scenarios: [{id, requirement_ids, failure_mode, outcome: survives|breaks|unknown, mitigation?}] — at least one failure scenario per must-requirement.",
 	OPTIMIZE: "Submit data.changed (true if you revised the result) and data.result_summary (the result as it now stands). A changed result returns to VALIDATE (at most 2 cycles; an unchanged fingerprint stops the loop).",
-	DELIVER: "Submit the final summary and the disclosures the engine lists in requires: data.unmet_requirements, data.missing_capabilities, data.unverified_assumptions, data.broken_scenarios, data.unknown_values, data.limitations.",
+	DELIVER: "Submit the final summary and the disclosures the engine lists in requires: data.unmet_requirements, data.missing_capabilities, data.unverified_assumptions, data.broken_scenarios, data.unknown_values, and any other data.limitations. The run view returns the engine's own limitations in limitations and confirms yours in disclosed_limitations (count and digests; RIGOR-X stores digests, not your text).",
 };
