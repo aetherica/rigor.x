@@ -34,6 +34,10 @@ This project is in pre-release development. Entries summarize notable changes; t
 ### Release hardening (2026-11-27)
 - Resilience policy (retries, deadlines, circuit breakers, bulkhead), DNS-verified source fetches, idempotency keys, engine-verified user approvals (`rigorx_request_approval`), account data deletion, suspension, source-check quota, OIDC azp/iat/nonce, `/version` and `/health`, structured logs, commit-tagged deploys, discovery gap register; rollback-compatible storage; mutation test in CI.
 
+### Fixed (2026-11-26 connector test)
+- `data.level` at CLASSIFY and ASSESS_COMPLEXITY accepts the short codes `L01`–`L06` (any case) and normalizes them to the full level name; the stage guidance lists the full names.
+- Finished runs return host-disclosed DELIVER limitations in `disclosed_limitations` (count, SHA-256 digests and lengths; the text is still not stored), next to the engine's own `limitations`.
+
 ### Added (2026-11-26 engineering audit)
 - Source Intelligence Gate (`src/sources.ts`, tool `rigorx_assess_sources`): canonical identity, nine source domains, independence groups, lifecycle verdicts, claim-level cross-checks; Crossref (metadata, retractions) and Wayback lookups in `rigorx_check_source`; HTML metadata and injection signals.
 - Circular transparent Aetherica icons (static assets, MCP `serverInfo.icons`, sign-in pages).

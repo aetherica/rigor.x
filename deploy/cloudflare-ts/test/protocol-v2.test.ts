@@ -136,6 +136,35 @@ test("the declared level cannot go below the router's seed", () => {
 	assert.equal(r.must("CLASSIFY", classify("L02_STANDARD", [req("R1")])).level, "L03_DEEP");
 });
 
+test("data.level accepts the short codes L01-L06 (any case) and normalizes them; other values are refused", () => {
+	const h = harness();
+	const r = runner(h, "Research and compare the options for the decision");
+	r.must("QUERY");
+	const bad = r.submit("CLASSIFY", classify("L7" as Level, [req("R1")]));
+	assert.equal(bad.ok, false);
+	assert.match((bad as any).message, /short code L01-L06/);
+	assert.equal(r.must("CLASSIFY", classify("l04" as Level, [req("R1")])).level, "L04_COMPLEX");
+	assert.equal(r.must("SELECT_METHODS", { methods: [{ name: "comparison", reason: "the options must be weighed against each other" }] }).current_stage, "ASSESS_COMPLEXITY");
+	assert.equal(r.must("ASSESS_COMPLEXITY", { level: "L05" }).level, "L05_CRITICAL");
+});
+
+test("DELIVER: host-disclosed limitations are confirmed in the view as count and digests, never as text", () => {
+	const h = harness();
+	const r = runner(h, "What is gravity?");
+	r.must("QUERY");
+	r.must("CLASSIFY", { objective: "Explain what gravity is in plain words", deliverable: "Two sentences in plain English", level: "L01" });
+	r.must("EXECUTE");
+	const note = "VALIDATE was skipped at this level, so nothing was verified";
+	const d = r.must("DELIVER", { limitations: [note] });
+	assert.equal(d.status, "DELIVERED_UNVERIFIED");
+	assert.deepEqual(d.limitations, []);
+	assert.equal(d.disclosed_limitations.count, 1);
+	assert.equal(d.disclosed_limitations.items[0].chars, note.length);
+	assert.match(d.disclosed_limitations.items[0].sha256, /^[0-9a-f]{64}$/);
+	assert.ok(!JSON.stringify(r.get()).includes(note), "the disclosed text is not stored or echoed");
+	assert.equal(r.get().disclosed_limitations.count, 1);
+});
+
 test("requirements are pre-registered at CLASSIFY from L02 on", () => {
 	const h = harness();
 	const r = runner(h, "Compare two database designs for a service");
