@@ -31,7 +31,7 @@ TEST_FILES = sorted(str(p) for p in pathlib.Path("test").glob("*.test.ts"))
 
 def run_tests() -> tuple[bool, int]:
     """Run the suite; returns (passed, number of test results reported). Explicit files, as npm test."""
-    r = subprocess.run(["node", "--no-warnings", "--experimental-strip-types", "--test", *TEST_FILES], capture_output=True, text=True, timeout=600, check=False)
+    r = subprocess.run(["node", "--no-warnings", "--experimental-strip-types", "--test", "--test-reporter=tap", *TEST_FILES], capture_output=True, text=True, timeout=600, check=False)
     reported = sum(1 for line in r.stdout.splitlines() if line.startswith(("ok ", "not ok ")))
     return r.returncode == 0, reported
 
