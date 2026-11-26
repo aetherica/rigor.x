@@ -146,7 +146,7 @@ test("pages: one button per enabled sign-in method, a chooser, and sign-in metho
 	}, "c");
 	assert.ok(acct.includes("Sign-in methods") && acct.includes("since 2026-11-01"));
 	assert.ok(acct.includes('value="unlink"') && acct.includes('name="provider" value="github"'));
-	assert.ok(acct.includes('value="link"') && acct.includes("Add ChatGPT"));
+	assert.ok(acct.includes('value="link"') && acct.includes("Add sign-in with ChatGPT"));
 	const single = accountPage({ usage: {}, runs: [], more_runs: false, topics: [], confirmation: "X", identities: [{ provider: "google", label: "Google", since: "" }], linkable: [], linking: true }, "c");
 	assert.ok(!single.includes('value="unlink"')); // the only sign-in cannot be removed
 });
