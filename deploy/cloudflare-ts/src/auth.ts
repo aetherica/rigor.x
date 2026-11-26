@@ -128,7 +128,9 @@ async function pageCallback(request: Request, env: AuthEnv, origin: string, prov
 		identity = await exchangeCode(env, provider, { origin, code, verifier: saved.verifier, nonce: saved.nonce }, fetcher);
 	} catch (e) {
 		console.log(JSON.stringify({ evt: "rigorx_security", kind: "page_signin_rejected", provider, reason: e instanceof Error ? e.message : "error" }));
-		return html(messagePage("Sign-in rejected", "You are not signed in. Nothing was changed."), 400);
+		// The reason names the failed step (no tokens or secrets), so the owner can fix the configuration.
+		const reason = e instanceof Error ? e.message.slice(0, 160) : "unknown error";
+		return html(messagePage("Sign-in rejected", `You are not signed in. Nothing was changed. Reason: ${reason}.`), 400);
 	}
 	const purpose = saved.purpose;
 	if (purpose.kind === "link") {

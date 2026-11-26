@@ -119,8 +119,8 @@ export async function exchangeCode(
 	const headers: Record<string, string> = { "Content-Type": "application/x-www-form-urlencoded", Accept: "application/json" };
 	if (spec.clientAuth === "basic") headers.Authorization = `Basic ${btoa(`${encodeURIComponent(creds.clientId)}:${encodeURIComponent(creds.clientSecret)}`)}`;
 	const response = await fetcher(spec.tokenUrl, { method: "POST", headers, body });
-	const tokens = (await response.json().catch(() => ({}))) as { id_token?: string; access_token?: string; error?: string };
-	if (!response.ok || tokens.error) throw new Error(`${spec.label} token exchange failed (${response.status}${tokens.error ? ` ${tokens.error}` : ""})`);
+	const tokens = (await response.json().catch(() => ({}))) as { id_token?: string; access_token?: string; error?: string; error_description?: string };
+	if (!response.ok || tokens.error) throw new Error(`${spec.label} token exchange failed (${response.status}${tokens.error ? ` ${tokens.error}` : ""}${typeof tokens.error_description === "string" ? `: ${tokens.error_description.slice(0, 120)}` : ""})`);
 	if (spec.oidc) {
 		if (!tokens.id_token) throw new Error(`${spec.label} returned no ID token`);
 		const { sub } = parseIdToken(tokens.id_token, { issuers: spec.issuers!, clientId: creds.clientId, nowSeconds, expectedNonce: o.nonce });
@@ -131,6 +131,6 @@ export async function exchangeCode(
 		headers: { Authorization: `Bearer ${tokens.access_token}`, Accept: "application/vnd.github+json", "User-Agent": "Aetherica", "X-GitHub-Api-Version": "2022-11-28" },
 	});
 	const profile = (await user.json().catch(() => ({}))) as { id?: unknown };
-	if (!user.ok || typeof profile.id !== "number" || !Number.isSafeInteger(profile.id) || profile.id <= 0) throw new Error("GitHub user lookup failed");
+	if (!user.ok || typeof profile.id !== "number" || !Number.isSafeInteger(profile.id) || profile.id <= 0) throw new Error(`GitHub user lookup failed (${user.status})`);
 	return { provider: id, subject: String(profile.id) };
 }
