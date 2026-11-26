@@ -26,9 +26,23 @@ MUTATIONS = [
     ("MCP: nesting depth unchecked", "src/mcp.ts", "if (jsonDepth(body, MAX_JSON_DEPTH) > MAX_JSON_DEPTH)", "if (false)"),
 ]
 
-def run_tests() -> bool:
-    r = subprocess.run(["node", "--no-warnings", "--experimental-strip-types", "--test", "test/"], capture_output=True, text=True, timeout=600, check=False)
-    return r.returncode == 0
+TEST_FILES = sorted(str(p) for p in pathlib.Path("test").glob("*.test.ts"))
+
+
+def run_tests() -> tuple[bool, int]:
+    """Run the suite; returns (passed, number of test results reported). Explicit files, as npm test."""
+    r = subprocess.run(["node", "--no-warnings", "--experimental-strip-types", "--test", *TEST_FILES], capture_output=True, text=True, timeout=600, check=False)
+    reported = sum(1 for line in r.stdout.splitlines() if line.startswith(("ok ", "not ok ")))
+    return r.returncode == 0, reported
+
+
+# Baseline: the unmutated suite must pass and actually run tests, otherwise every mutation would
+# look "killed" (a runner error is not a detected mutation).
+baseline_ok, baseline_count = run_tests()
+if not baseline_ok or baseline_count < 50:
+    print(f"ERROR  baseline suite did not pass cleanly (passed={baseline_ok}, tests reported={baseline_count}); no mutation score")
+    sys.exit(2)
+print(f"baseline: {baseline_count} test results, all passing")
 
 killed = 0
 for name, path, old, new in MUTATIONS:
@@ -39,10 +53,13 @@ for name, path, old, new in MUTATIONS:
         sys.exit(2)
     try:
         p.write_text(original.replace(old, new, 1))
-        survived = run_tests()
+        survived, count = run_tests()
     finally:
         p.write_text(original)
+    if count < baseline_count // 2:
+        print(f"ERROR  {name}: the suite stopped early ({count} results); not counted as killed")
+        sys.exit(2)
     killed += 0 if survived else 1
-    print(f"{'SURVIVED' if survived else 'killed  '}  {name}")
+    print(f"{'SURVIVED' if survived else 'killed  '}  {name}  ({count} results)")
 print(f"mutation score: {killed}/{len(MUTATIONS)} killed")
 sys.exit(0 if killed == len(MUTATIONS) else 1)
