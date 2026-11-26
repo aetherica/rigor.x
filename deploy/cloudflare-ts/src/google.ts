@@ -255,7 +255,7 @@ export const HOME_PAGE = page(BRAND, `${MARK}
 <p class="legal">Connector address: <code>/mcp</code> on this host. <a href="/account">Manage your account</a>.</p>`);
 
 /** Typed by the user to delete everything; must equal engine.ts ACCOUNT_DELETE_CONFIRMATION (tested). */
-export const ACCOUNT_DELETE_CONFIRMATION = "DELETE ALL MY RIGOR-X DATA";
+export const ACCOUNT_DELETE_CONFIRMATION = "DELETE ALL MY AETHERICA DATA";
 
 /** What the account page shows; values come from the signed-in owner's own engine calls. */
 export interface AccountView {
@@ -269,6 +269,15 @@ export interface AccountView {
 	identities?: { provider: string; label: string; since: string }[];
 	linkable?: SignInOption[];
 	linking?: boolean;
+}
+
+/** "2026-11-27T00:00:00.000Z" → "27 Nov 2026, 00:00 UTC"; anything else is shown as given. */
+function friendlyUtc(value: unknown): unknown {
+	if (typeof value !== "string") return value;
+	const d = new Date(value);
+	if (Number.isNaN(d.getTime())) return value;
+	const month = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][d.getUTCMonth()];
+	return `${d.getUTCDate()} ${month} ${d.getUTCFullYear()}, ${String(d.getUTCHours()).padStart(2, "0")}:${String(d.getUTCMinutes()).padStart(2, "0")} UTC`;
 }
 
 /** The signed-in account page: usage, tasks and topics, each deletable by the user (POST with CSRF). */
@@ -287,14 +296,14 @@ export function accountPage(v: AccountView, csrf: string): string {
 		? `<ul class="rows">${v.topics.map((t) => `<li><span><strong>${e(t.name)}</strong><br><span class="muted">${e(t.items)} notes</span></span>${form("delete_topic", `<input type="hidden" name="topic_id" value="${e(t.id)}">`, "Delete")}</li>`).join("")}</ul>`
 		: '<p class="muted">No saved topics.</p>';
 	const ids = v.identities ?? [];
-	const methods = `<ul class="rows">${ids.map((i) => `<li><span><strong>${e(i.label)}</strong>${i.since ? `<br><span class="muted">since ${e(i.since.slice(0, 10))}</span>` : ""}</span>${v.linking && ids.length > 1 ? form("unlink", `<input type="hidden" name="provider" value="${e(i.provider)}">`, "Remove") : ""}</li>`).join("")}</ul>`
+	const methods = `<ul class="rows">${ids.map((i) => `<li><span><strong>${e(i.label)}</strong>${i.since ? `<br><span class="muted">since ${e(String(friendlyUtc(i.since)).replace(/, \d\d:\d\d UTC$/, ""))}</span>` : ""}</span>${v.linking && ids.length > 1 ? form("unlink", `<input type="hidden" name="provider" value="${e(i.provider)}">`, "Remove") : ""}</li>`).join("")}</ul>`
 		+ (v.linking && v.linkable?.length ? `<p class="muted">Add another way to sign in to this same account:</p><div class="stack">${v.linkable.map((o) => `<form method="post"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><input type="hidden" name="action" value="link"><input type="hidden" name="provider" value="${e(o.id)}"><button class="signin ${providerClass(o.id)}">${optionLabel(o, "Add sign-in")}</button></form>`).join("")}</div>` : "");
 	return page(`Your account — ${BRAND}`, `${MARK}
 <h1>Your account</h1>
 ${v.notice ? `<p class="chip">${e(v.notice)}</p>` : ""}
 <h2>Sign-in methods</h2>${methods}
 <h2>Today's usage</h2>
-<dl><dt>Requests</dt><dd>${pair("calls")}</dd><dt>New tasks</dt><dd>${pair("runs_started")}</dd><dt>Stored tasks</dt><dd>${pair("stored_runs")}</dd><dt>Resets</dt><dd>${e(v.usage.resets_at)}</dd></dl>
+<dl><dt>Requests</dt><dd>${pair("calls")}</dd><dt>New tasks</dt><dd>${pair("runs_started")}</dd><dt>Stored tasks</dt><dd>${pair("stored_runs")}</dd><dt>Resets</dt><dd>${e(friendlyUtc(v.usage.resets_at))}</dd></dl>
 <h2>Tasks</h2>${runs}
 <h2>Saved topics</h2>${topics}
 <h2>Delete everything</h2>

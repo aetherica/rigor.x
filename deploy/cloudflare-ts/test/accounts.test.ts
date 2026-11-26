@@ -144,7 +144,7 @@ test("pages: one button per enabled sign-in method, a chooser, and sign-in metho
 		identities: [{ provider: "google", label: "Google", since: "2026-11-01T00:00:00Z" }, { provider: "github", label: "GitHub", since: "2026-11-27T00:00:00Z" }],
 		linkable: [{ id: "openai", label: "ChatGPT" }], linking: true,
 	}, "c");
-	assert.ok(acct.includes("Sign-in methods") && acct.includes("since 2026-11-01"));
+	assert.ok(acct.includes("Sign-in methods") && acct.includes("since 1 Nov 2026"));
 	assert.ok(acct.includes('value="unlink"') && acct.includes('name="provider" value="github"'));
 	assert.ok(acct.includes('value="link"') && acct.includes("Add sign-in with ChatGPT"));
 	const single = accountPage({ usage: {}, runs: [], more_runs: false, topics: [], confirmation: "X", identities: [{ provider: "google", label: "Google", since: "" }], linkable: [], linking: true }, "c");

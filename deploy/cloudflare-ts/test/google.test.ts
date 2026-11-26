@@ -96,5 +96,5 @@ test("account page: plain usage, deletable tasks and topics, escaped values, CSR
 	const forms = html.match(/<form method="post"/g)!.length;
 	assert.equal(html.match(/name="csrf" value="csrf&#38;1"/g)!.length, forms);
 	for (const action of ["delete_run", "delete_topic", "delete_all", "sign_out"]) assert.ok(html.includes(`value="${action}"`), action);
-	assert.doesNotMatch(html, /RIGOR-X(?! DATA)|workers\.dev|humou?r/);
+	assert.doesNotMatch(html, /RIGOR-X|workers\.dev|humou?r/);
 });

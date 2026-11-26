@@ -97,7 +97,7 @@ export const APPROVAL_REQUEST_TTL_MS = 24 * 3_600_000;
 export const IDEMPOTENCY_TTL_MS = 24 * 3_600_000;
 const IDEMPOTENCY_KEY = /^[A-Za-z0-9][A-Za-z0-9_.:-]{7,127}$/;
 /** The phrase the user must confirm before all of their RIGOR-X data is deleted. */
-export const ACCOUNT_DELETE_CONFIRMATION = "DELETE ALL MY RIGOR-X DATA";
+export const ACCOUNT_DELETE_CONFIRMATION = "DELETE ALL MY AETHERICA DATA";
 /** Recent actions returned in a run view; the full count and unresolved IDs are always returned. */
 export const RECENT_ACTIONS = 10;
 const USAGE_RETENTION_DAYS = 35;
