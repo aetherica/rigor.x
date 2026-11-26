@@ -18,3 +18,13 @@ test("word units for scripts without spaces", () => {
 	assert.equal(words("Mixed 混合 text"), 4); // Mixed, text + 2 Han
 	assert.equal(words("𠀀𠀁"), 2); // CJK Extension B (supplementary plane)
 });
+
+test("minimum length: logographic and syllabic characters count as two units", async () => {
+	const { charUnits } = await import("../src/text.ts");
+	assert.equal(charUnits("每次发布前必须运行全部测试"), 26); // 13 Han characters
+	assert.equal(charUnits("テスト"), 6);
+	assert.equal(charUnits("배포"), 4);
+	assert.equal(charUnits("আমরা"), 4); // Bengali: one per code point
+	assert.equal(charUnits("ข้อมูล"), 6); // Thai: one per code point
+	assert.equal(charUnits("abc"), 3);
+});

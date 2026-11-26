@@ -20,6 +20,7 @@ import {
 import { ACTION, COMPUTE, ENGINE_TYPES, GATE_VERSION, SOURCE_CHECK, parseAnswers, runGate, unresolvedActions } from "./gate.ts";
 import { ComputeError, compute, type ComputeInput } from "./compute.ts";
 import type { SourceCheck } from "./source.ts";
+import { KINDS, TRUST, type DecidedBy, type MemoryStore } from "./memory.ts";
 import {
 	TERMINAL, advance, assertActive, cancel, completeStage, event, isRunState, newRun, optimizeOutcome,
 	pauseStage, raiseLevel, reenter, resume, type EvidenceRecord, type RunState,
@@ -62,7 +63,7 @@ export const DEFAULT_LIMITS: QuotaLimits = { callsPerDay: 2_000, runsPerDay: 100
 /** Operations that change stored state and therefore count against the quotas. */
 export const METERED_OPERATIONS: ReadonlySet<string> = new Set([
 	"start_run", "submit_stage", "record_evidence", "report_action", "verify", "reenter", "cancel_run",
-	"compute", "record_source_check",
+	"compute", "record_source_check", "memory_topic", "memory_write",
 ]);
 /** Recent actions returned in a run view; the full count and unresolved IDs are always returned. */
 export const RECENT_ACTIONS = 10;
@@ -87,6 +88,8 @@ export interface EngineOptions {
 	limits?: Partial<QuotaLimits>;
 	/** Clock for quota windows and freshness checks; tests inject one. */
 	now?: () => Date;
+	/** Topic memory on the same storage (WS32 P2). */
+	memory?: MemoryStore;
 }
 
 interface Loaded { run: RunState; meta: JsonObject; revision: number; owner: string }
@@ -100,11 +103,13 @@ export class HostEngine {
 	readonly limits: QuotaLimits;
 
 	private readonly store: RunStore;
+	private readonly memory: MemoryStore | null;
 	private readonly now: () => Date;
 	private readonly burst = new Map<string, { windowStart: number; count: number }>();
 
 	constructor(store: RunStore, options: EngineOptions = {}) {
 		this.store = store;
+		this.memory = options.memory ?? null;
 		this.limits = { ...DEFAULT_LIMITS, ...options.limits };
 		this.now = options.now ?? (() => new Date());
 		this.maxReentries = options.maxReentries ?? 6;
@@ -440,6 +445,94 @@ export class HostEngine {
 		return this.captureEngineReceipt(ownerId, args.run_id, SOURCE_CHECK, check.final_url ?? check.requested, details);
 	}
 
+	// ---------------------------------------------------------------- topic memory (WS32 P2, ADR-008)
+
+	private mem(): MemoryStore {
+		if (!this.memory) throw new EngineError("Topic memory is not available on this server");
+		return this.memory;
+	}
+
+	private decidedBy(value: unknown): DecidedBy {
+		if (value !== "user" && value !== "host") throw invalid('decided_by must be "user" (the user asked for this) or "host" (your own proposal)');
+		return value;
+	}
+
+	memoryTopic(ownerId: unknown, args: Record<string, unknown>): JsonObject {
+		const owner = this.owner(ownerId);
+		const m = this.mem();
+		const action = args.action;
+		if (action === "list") return { topics: m.topics(owner) as unknown as Json[] };
+		const by = this.decidedBy(args.decided_by);
+		const id = () => text("topic_id", args.topic_id, 64);
+		const parent = () => (args.parent_id === undefined || args.parent_id === null ? null : text("parent_id", args.parent_id, 64));
+		switch (action) {
+			case "create": return m.createTopic(owner, text("name", args.name, 120), parent(), by);
+			case "rename": return m.renameTopic(owner, id(), text("name", args.name, 120), by);
+			case "move": return m.moveTopic(owner, id(), parent(), by);
+			case "merge": return m.mergeTopic(owner, id(), text("into_id", args.into_id, 64), by);
+			case "delete": return m.deleteTopic(owner, id(), by);
+			default: throw invalid('action must be one of "list", "create", "rename", "move", "merge", "delete"');
+		}
+	}
+
+	memoryWrite(ownerId: unknown, args: Record<string, unknown>): JsonObject {
+		const owner = this.owner(ownerId);
+		const m = this.mem();
+		const body = text("text", args.text, 8_000);
+		substantial("text", body, this.textPolicy.minNoteChars, this.textPolicy.minNoteWords, "write the fact, decision or note in a sentence");
+		const kind = args.kind === undefined || args.kind === null ? "note" : (KINDS as readonly string[]).includes(String(args.kind)) ? String(args.kind) : (() => { throw invalid(`kind must be one of ${JSON.stringify(KINDS)}`); })();
+		const keywords = (Array.isArray(jsonish(args.keywords)) ? (jsonish(args.keywords) as unknown[]) : args.keywords === undefined || args.keywords === null ? [] : (() => { throw invalid("keywords must be a list"); })());
+		if (keywords.length > 32) throw limit("At most 32 keywords");
+		const kws = keywords.map((k, i) => text(`keywords[${i}]`, k, 64));
+		const trust = (TRUST as readonly string[]).includes(String(args.trust ?? "host_inferred")) ? (String(args.trust ?? "host_inferred") as (typeof TRUST)[number]) : (() => { throw invalid(`trust must be one of ${JSON.stringify(TRUST)}`); })();
+		const by = this.decidedBy(args.decided_by ?? "host");
+		if (trust === "user_confirmed" && by !== "user") throw invalid('trust "user_confirmed" needs decided_by "user"');
+		const prov = args.provenance === undefined || args.provenance === null ? {} : object("provenance", jsonish(args.provenance));
+		const provenance: JsonObject = {};
+		if (prov.run_id !== undefined && prov.run_id !== null) provenance.run_id = text("provenance.run_id", prov.run_id, 80);
+		if (prov.evidence_id !== undefined && prov.evidence_id !== null) provenance.evidence_id = text("provenance.evidence_id", prov.evidence_id, 16);
+		if (prov.stage !== undefined && prov.stage !== null) provenance.stage = text("provenance.stage", prov.stage, 32);
+		if (trust === "run_validated") {
+			if (!provenance.run_id) throw invalid('trust "run_validated" needs provenance.run_id of a validated run');
+			const l = this.load(owner, provenance.run_id);
+			const last = l.run.verifications[l.run.verifications.length - 1];
+			if (!(l.run.stage_status.VALIDATE === "COMPLETED" && last?.passed)) throw invalid(`Run ${String(provenance.run_id)} has not passed validation, so its results are not run_validated`);
+		}
+		const lang = args.lang === undefined || args.lang === null ? null : text("lang", args.lang, 35);
+		if (lang !== null && !/^[A-Za-z]{2,3}(-[A-Za-z0-9]{1,8})*$/.test(lang)) throw invalid("lang must be a BCP 47 tag such as bn, en or zh-Hans");
+		const conflicts = Array.isArray(jsonish(args.conflicts_with)) ? (jsonish(args.conflicts_with) as unknown[]).map((c, i) => text(`conflicts_with[${i}]`, c, 64)) : [];
+		if (conflicts.length > 20) throw limit("At most 20 conflicting items");
+		return m.write(owner, {
+			topic_id: text("topic_id", args.topic_id, 64), text: body, kind: kind as (typeof KINDS)[number], keywords: kws, lang, trust, decided_by: by, provenance,
+			as_of: this.asOf(args.as_of), supersedes: args.supersedes === undefined || args.supersedes === null ? null : text("supersedes", args.supersedes, 64),
+			conflicts_with: conflicts, host_memory_conflict: args.host_memory_conflict === undefined || args.host_memory_conflict === null ? null : text("host_memory_conflict", args.host_memory_conflict, 2_000),
+		});
+	}
+
+	memoryRecall(ownerId: unknown, args: Record<string, unknown>): JsonObject {
+		const owner = this.owner(ownerId);
+		const raw = jsonish(args.queries);
+		const queries = (Array.isArray(raw) ? raw : typeof raw === "string" ? [raw] : []).map((q, i) => text(`queries[${i}]`, q, 500));
+		if (!queries.length || queries.length > 10) throw invalid("queries must be 1 to 10 texts (several phrasings or keywords, any language)");
+		let n = 8;
+		if (args.limit !== undefined && args.limit !== null) {
+			if (typeof args.limit !== "number" || !Number.isInteger(args.limit) || args.limit < 1 || args.limit > 20) throw invalid("limit must be an integer from 1 to 20");
+			n = args.limit;
+		}
+		const kinds = Array.isArray(jsonish(args.kinds)) ? (jsonish(args.kinds) as unknown[]).map(String) : undefined;
+		return this.mem().recall(owner, queries, {
+			topic_id: args.topic_id === undefined || args.topic_id === null ? null : text("topic_id", args.topic_id, 64),
+			...(kinds ? { kinds } : {}), limit: n, include_superseded: args.include_superseded === true,
+		});
+	}
+
+	memoryDelete(ownerId: unknown, args: Record<string, unknown>): JsonObject {
+		const owner = this.owner(ownerId);
+		const raw = jsonish(args.item_ids);
+		if (!Array.isArray(raw) || !raw.length || raw.length > 100) throw invalid("item_ids must be a list of 1 to 100 memory item IDs");
+		return this.mem().deleteItems(owner, raw.map((x, i) => text(`item_ids[${i}]`, x, 64)), this.decidedBy(args.decided_by));
+	}
+
 	// ---------------------------------------------------------------- quotas, listing, profile (WS32 P0.3, P0.5, P0.8)
 
 	/** Count one metered call, or refuse it. Called by dispatch() before the operation runs. */
@@ -483,6 +576,7 @@ export class HostEngine {
 			stored_runs: { used: this.store.countRuns(owner), limit: l.storedRuns },
 			burst_per_minute: l.burstPerMinute,
 			storage_bytes: this.store.databaseBytes(),
+			memory_bytes: this.memory ? { used: this.memory.bytesUsed(owner), limit: this.memory.limitBytes } : null,
 			limits_provisional: true,
 		};
 	}
@@ -674,6 +768,7 @@ function v1View(snapshot: JsonObject, meta: JsonObject): JsonObject {
 export const RUN_OPERATIONS = new Set([
 	"start_run", "get_run", "submit_stage", "record_evidence", "report_action", "verify", "reenter", "cancel_run", "delete_run",
 	"list_runs", "usage", "profile", "compute", "evidence_for_check", "record_source_check",
+	"memory_topic", "memory_write", "memory_recall", "memory_delete",
 ]);
 
 function encodeCursor(updatedAt: string, runId: string): string {
@@ -720,6 +815,10 @@ export function dispatch(engine: HostEngine, ownerId: string, operation: string,
 				case "compute": return engine.computeOp(ownerId, a);
 				case "evidence_for_check": return engine.evidenceForCheck(ownerId, a);
 				case "record_source_check": return engine.recordSourceCheck(ownerId, a);
+				case "memory_topic": return engine.memoryTopic(ownerId, a);
+				case "memory_write": return engine.memoryWrite(ownerId, a);
+				case "memory_recall": return engine.memoryRecall(ownerId, a);
+				case "memory_delete": return engine.memoryDelete(ownerId, a);
 				default: return engine.deleteRun(ownerId, a.run_id);
 			}
 		})();

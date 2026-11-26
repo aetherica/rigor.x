@@ -54,9 +54,20 @@ export function fingerprint(value: string): string {
 	return digest(v);
 }
 
+// Logographic and syllabic scripts (Han, Hiragana, Katakana, Hangul syllables) carry about a word's
+// worth of meaning in one or two characters, so for the minimum length each of their characters
+// counts as two character units (heuristic, WS32 WP7: a full 13-character Chinese sentence failed the
+// 15-character note minimum). Alphabets and abugidas (Latin, Bengali, Thai, …) count one per character.
+const DENSE = /[\u3040-\u30FF\u31F0-\u31FF\u3400-\u4DBF\u4E00-\u9FFF\uF900-\uFAFF\uFF66-\uFF9F\uAC00-\uD7AF\u{20000}-\u{3134F}]/u;
+export function charUnits(value: string): number {
+	let n = 0;
+	for (const c of value) n += DENSE.test(c) ? 2 : 1;
+	return n;
+}
+
 export function substantial(name: string, value: string, minChars: number, minWords: number, hint: string): void {
 	const trimmed = value.trim();
-	if (chars(trimmed) < minChars || words(trimmed) < minWords) {
+	if (charUnits(trimmed) < minChars || words(trimmed) < minWords) {
 		throw invalid(`${name} is too short: use at least ${minChars} characters and ${minWords} words (${hint})`);
 	}
 }

@@ -17,6 +17,7 @@ import { limitsFromEnv, type LimitVars } from "./limits.ts";
 import { handleHttp, type EngineBackend } from "./mcp.ts";
 import { buildProvider, type AuthEnv } from "./auth.ts";
 import { checkSource } from "./source.ts";
+import { MemoryStore } from "./memory.ts";
 import type { JsonObject } from "./text.ts";
 
 export interface Env extends AuthEnv, LimitVars {
@@ -28,7 +29,8 @@ export class OwnerRuns extends DurableObject<Env> {
 
 	constructor(ctx: DurableObjectState, env: Env) {
 		super(ctx, env);
-		this.engine = new HostEngine(new DurableObjectRunStore(ctx.storage.sql), { limits: limitsFromEnv(env) });
+		const store = new DurableObjectRunStore(ctx.storage.sql); // runs the schema migrations, memory tables included
+		this.engine = new HostEngine(store, { limits: limitsFromEnv(env), memory: new MemoryStore(ctx.storage.sql) });
 	}
 
 	call(ownerId: string, operation: string, payloadJson: string): string {

@@ -32,7 +32,7 @@ try {
 	await ready();
 	await check("migration from a hand-written version-1 database on workerd SQLite", async () => {
 		const r = JSON.parse(await (await fetch(`${base}/migration`)).text());
-		assert.equal(r.version, "2");
+		assert.equal(r.version, "3");
 		assert.equal(r.listed.length, 1);
 		assert.equal(r.listed[0].run_id, "rx_legacyrun0000000000");
 		assert.equal(r.listed[0].current_stage, "INTENT"); // json_extract works in Durable Object SQLite
@@ -63,6 +63,23 @@ try {
 		const p2 = await call(owner, "profile");
 		assert.match(p1.result.id, /^[0-9a-f]{32}$/);
 		assert.equal(p1.result.id, p2.result.id);
+	});
+	await check("topic memory on workerd: FTS5 trigram recall in two scripts, deletion", async () => {
+		const owner = "google:it-memory";
+		const topic = (await call(owner, "memory_topic", { action: "create", name: "storage", decided_by: "host" })).result.topic_id;
+		const zh = await call(owner, "memory_write", { topic_id: topic, text: "我们决定使用全文检索和三元组分词器", keywords: ["分词器", "全文检索"], kind: "decision" });
+		assert.equal(zh.ok, true, JSON.stringify(zh));
+		const bn = await call(owner, "memory_write", { topic_id: topic, text: "প্রতিটি ব্যবহারকারীর ডেটা আলাদা ভাবে রাখা হবে", keywords: ["ব্যবহারকারী", "ডেটা"], kind: "decision" });
+		assert.equal(bn.ok, true, JSON.stringify(bn));
+		const r1 = await call(owner, "memory_recall", { queries: ["用什么分词器"] });
+		assert.equal(r1.result.items[0]?.id, zh.result.item_id, JSON.stringify(r1));
+		const r2 = await call(owner, "memory_recall", { queries: ["ব্যবহারকারীর ডেটা কোথায়"] });
+		assert.equal(r2.result.items[0]?.id, bn.result.item_id, JSON.stringify(r2));
+		assert.equal((await call(owner, "memory_recall", { queries: ["chocolate cake recipe"] })).result.items.length, 0);
+		assert.equal((await call(owner, "memory_delete", { item_ids: [zh.result.item_id], decided_by: "user" })).result.deleted_items, 1);
+		assert.equal((await call(owner, "memory_recall", { queries: ["用什么分词器"] })).result.items.length, 0);
+		const usage = await call(owner, "usage");
+		assert.ok(usage.result.memory_bytes.used > 0 && usage.result.memory_bytes.limit === 125829120, JSON.stringify(usage.result.memory_bytes));
 	});
 	await check("rows written per call (recorded for the quota decision)", async () => {
 		const rows = JSON.parse(await (await fetch(`${base}/rows-written`)).text());

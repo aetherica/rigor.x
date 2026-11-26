@@ -121,6 +121,7 @@ export const PRIVACY_PAGE = `<!doctype html>
 <ul>
 <li>Task text, stage summaries, objectives, requirement and claim texts, assumptions, scenarios and evidence claims: stored only as SHA-256 digests and lengths, not as text.</li>
 <li>Stored as text, because they are the record of the run: source references (for example URLs), reasons given for pausing, re-entering or cancelling a stage, requirement, operation, claim and capability IDs and names, the names and receipt references of actions your assistant reports, the inputs and results of calculations made with <code>rigorx_compute</code> in a run, and, for sources checked with <code>rigorx_check_source</code>, the address fetched, its status, size and SHA-256 hash (not the page content).</li>
+<li>Topic memory (only what your assistant saves with <code>rigorx_memory_write</code> about the topics RIGOR-X works on): stored as text with its keywords, so it can be searched; kept until you delete it (<code>rigorx_memory_delete</code>, or a whole topic with <code>rigorx_memory_topic</code>). Deletion removes the text and its search index; a record of the deletion (when, how many items) is kept without the content. Up to 120 MB per account.</li>
 <li>Sign-in records (registered apps, grants, tokens): stored hashed or encrypted.</li>
 </ul>
 <p>Each account's runs live in separate storage on Cloudflare. RIGOR-X does not sell data, show ads or use your data to train models, and does not call any AI model itself. It fetches a web page only when your assistant asks it to check that source.</p>

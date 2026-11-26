@@ -4,6 +4,7 @@
 // Durable Object SQL is synchronous, so load → mutate → save in one call is atomic.
 
 import type { Json, JsonObject } from "./text.ts";
+import { MEMORY_STATEMENTS } from "./memory.ts";
 
 export class RunStoreError extends Error {
 	override name = "RunStoreError";
@@ -89,6 +90,7 @@ export const MIGRATIONS: readonly { version: number; statements: readonly string
 			"CREATE TABLE IF NOT EXISTS owner_profile (owner_id TEXT PRIMARY KEY, profile_id TEXT NOT NULL UNIQUE, created_at TEXT NOT NULL)",
 		],
 	},
+	{ version: 3, statements: MEMORY_STATEMENTS }, // topic memory (WS32 P2, src/memory.ts)
 ];
 export const SCHEMA_VERSION = MIGRATIONS[MIGRATIONS.length - 1]!.version;
 

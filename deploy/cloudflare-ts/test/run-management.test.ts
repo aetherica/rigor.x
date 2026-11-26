@@ -142,13 +142,13 @@ test("schema migrations upgrade a version-1 database in place and refuse newer o
 		String(row.snapshot_json), String(row.meta_json), String(row.created_at), String(row.updated_at));
 
 	const engine = new HostEngine(new DurableObjectRunStore(sql));
-	assert.equal(SCHEMA_VERSION, 2);
-	assert.equal(String(sql.exec("SELECT value FROM host_store_meta WHERE key = 'schema_version'").toArray()[0]!.value), "2");
+	assert.equal(SCHEMA_VERSION, 3);
+	assert.equal(String(sql.exec("SELECT value FROM host_store_meta WHERE key = 'schema_version'").toArray()[0]!.value), "3");
 	const get = JSON.parse(dispatch(engine, "google:a", "get_run", JSON.stringify({ run_id: run })));
 	assert.equal(get.ok, true);
-	assert.equal(migrate(sql), 2); // idempotent
-	sql.exec("UPDATE host_store_meta SET value = '3' WHERE key = 'schema_version'");
-	assert.throws(() => new DurableObjectRunStore(sql), /Unsupported host store schema version 3/);
+	assert.equal(migrate(sql), 3); // idempotent
+	sql.exec("UPDATE host_store_meta SET value = '4' WHERE key = 'schema_version'");
+	assert.throws(() => new DurableObjectRunStore(sql), /Unsupported host store schema version 4/);
 });
 
 test("usage reports storage bytes when the runtime provides them", () => {
