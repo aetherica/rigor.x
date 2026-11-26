@@ -37,12 +37,16 @@ test("notifications get no response; discover and unknown methods are method-not
 	assert.equal(((await handleMessage({ id: 5, method: "ping" }, b, null))!.error as any).code, -32600);
 });
 
-test("tools/list is complete, ordered and annotated like the Python server", async () => {
+test("tools/list is complete, ordered and annotated (Python's 12 plus the Worker-only run tools)", async () => {
 	const r = await handleMessage({ jsonrpc: "2.0", id: 1, method: "tools/list" }, localBackend(), null);
 	const tools = (r!.result as any).tools as any[];
-	assert.equal(tools.length, 12);
+	assert.deepEqual(tools.map((t) => t.name), [
+		"rigorx_route", "rigorx_resolve_commands", "rigorx_start_run", "rigorx_get_run", "rigorx_submit_stage",
+		"rigorx_record_evidence", "rigorx_report_action", "rigorx_verify", "rigorx_reenter", "rigorx_cancel_run",
+		"rigorx_delete_run", "rigorx_list_runs", "rigorx_usage", "rigorx_profile",
+	]);
 	assert.deepEqual(tools.map((t) => t.name), TOOLS.map((t) => t.name));
-	const readOnly = new Set(["rigorx_route", "rigorx_resolve_commands", "rigorx_get_run", "rigorx_profile"]);
+	const readOnly = new Set(["rigorx_route", "rigorx_resolve_commands", "rigorx_get_run", "rigorx_list_runs", "rigorx_usage", "rigorx_profile"]);
 	const destructive = new Set(["rigorx_cancel_run", "rigorx_delete_run"]);
 	for (const t of tools) {
 		assert.ok(t.title && t.description, t.name);

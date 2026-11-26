@@ -7,6 +7,7 @@ import { STAGE_ORDER, InvalidTransition, PipelineRun, isStage, type Json, type J
 import { route } from "./router.ts";
 import { RunNotFound, type RunStore } from "./store.ts";
 
+
 export const ENGINE_PROTOCOL_VERSION = "1.0.0";
 export const GATE_VERSION = "1.1.0";
 const ACTION_EVIDENCE_TYPE = "HOST_REPORTED_ACTION";
@@ -98,6 +99,42 @@ function newRunId(): string {
 
 interface Action { id: string; tool_name: string; status: string; resolves?: string }
 
+/**
+ * Per-owner limits (WS32 P0.3). The values are PROVISIONAL: the owner sets the final numbers with
+ * the move to Workers Paid; the Worker reads them from its `vars` (wrangler.jsonc).
+ * - callsPerDay: every metered (mutating) tool call in one UTC day, including failed attempts.
+ * - runsPerDay: rigorx_start_run calls in one UTC day.
+ * - storedRuns: runs kept at once; the user frees space with rigorx_delete_run.
+ * - burstPerMinute: metered calls per 60-second window, held in memory only (best effort: the
+ *   count restarts when the Durable Object is evicted); the daily counters are exact.
+ */
+export interface QuotaLimits {
+	callsPerDay: number;
+	runsPerDay: number;
+	storedRuns: number;
+	burstPerMinute: number;
+}
+export const DEFAULT_LIMITS: QuotaLimits = { callsPerDay: 2_000, runsPerDay: 100, storedRuns: 500, burstPerMinute: 120 };
+
+/** Operations that change stored state and therefore count against the quotas. */
+export const METERED_OPERATIONS: ReadonlySet<string> = new Set([
+	"start_run", "submit_stage", "record_evidence", "report_action", "verify", "reenter", "cancel_run",
+]);
+/** Recent actions returned in a run view; the full count and unresolved IDs are always returned. */
+export const RECENT_ACTIONS = 10;
+const USAGE_RETENTION_DAYS = 35;
+const LIST_MAX = 50;
+
+const utcDay = (d: Date) => d.toISOString().slice(0, 10);
+const nextUtcMidnight = (d: Date) => new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + 1)).toISOString();
+const quota = (m: string) => new EngineError(m, "QUOTA_EXCEEDED");
+
+function randomHex(bytes: number): string {
+	const b = new Uint8Array(bytes);
+	crypto.getRandomValues(b);
+	return [...b].map((x) => x.toString(16).padStart(2, "0")).join("");
+}
+
 export interface EngineOptions {
 	maxReentries?: number;
 	maxEvidencePerRun?: number;
@@ -105,6 +142,9 @@ export interface EngineOptions {
 	maxRefChars?: number;
 	maxCriteria?: number;
 	textPolicy?: TextPolicy;
+	limits?: Partial<QuotaLimits>;
+	/** Clock for quota windows; tests inject one. */
+	now?: () => Date;
 }
 
 export class HostEngine {
@@ -114,11 +154,16 @@ export class HostEngine {
 	readonly maxRefChars: number;
 	readonly maxCriteria: number;
 	readonly textPolicy: TextPolicy;
+	readonly limits: QuotaLimits;
 
 	private readonly store: RunStore;
+	private readonly now: () => Date;
+	private readonly burst = new Map<string, { windowStart: number; count: number }>();
 
 	constructor(store: RunStore, options: EngineOptions = {}) {
 		this.store = store;
+		this.limits = { ...DEFAULT_LIMITS, ...options.limits };
+		this.now = options.now ?? (() => new Date());
 		this.maxReentries = options.maxReentries ?? 6;
 		this.maxEvidencePerRun = options.maxEvidencePerRun ?? 500;
 		this.maxTextChars = options.maxTextChars ?? 20_000;
@@ -283,6 +328,78 @@ export class HostEngine {
 		return { run_id: id, deleted: true };
 	}
 
+	// ---------------------------------------------------------------- quotas, listing, profile (WS32 P0.3, P0.5, P0.8)
+
+	/** Count one metered call, or refuse it. Called by dispatch() before the operation runs. */
+	meter(ownerId: unknown, operation: string): void {
+		if (!METERED_OPERATIONS.has(operation)) return;
+		const owner = this.owner(ownerId);
+		const at = this.now();
+		const day = utcDay(at);
+		const reset = nextUtcMidnight(at);
+		const used = this.store.usage(owner, day);
+		const l = this.limits;
+		if (used.calls >= l.callsPerDay) throw quota(`Daily limit of ${l.callsPerDay} tool calls reached; it resets at ${reset}`);
+		if (operation === "start_run") {
+			if (used.runs_started >= l.runsPerDay) throw quota(`Daily limit of ${l.runsPerDay} new runs reached; it resets at ${reset}`);
+			if (this.store.countRuns(owner) >= l.storedRuns) {
+				throw quota(`At most ${l.storedRuns} stored runs: delete finished runs with rigorx_delete_run (see rigorx_list_runs)`);
+			}
+		}
+		const ms = at.getTime();
+		const window = this.burst.get(owner);
+		if (window && ms - window.windowStart < 60_000) {
+			if (window.count >= l.burstPerMinute) throw quota(`More than ${l.burstPerMinute} tool calls in one minute; wait a minute and retry`);
+			window.count += 1;
+		} else {
+			this.burst.set(owner, { windowStart: ms, count: 1 });
+		}
+		const keepFrom = utcDay(new Date(ms - USAGE_RETENTION_DAYS * 86_400_000));
+		this.store.addUsage(owner, day, 1, operation === "start_run" ? 1 : 0, keepFrom);
+	}
+
+	usage(ownerId: unknown): JsonObject {
+		const owner = this.owner(ownerId);
+		const at = this.now();
+		const used = this.store.usage(owner, utcDay(at));
+		const l = this.limits;
+		return {
+			day: utcDay(at),
+			resets_at: nextUtcMidnight(at),
+			calls: { used: used.calls, limit: l.callsPerDay },
+			runs_started: { used: used.runs_started, limit: l.runsPerDay },
+			stored_runs: { used: this.store.countRuns(owner), limit: l.storedRuns },
+			burst_per_minute: l.burstPerMinute,
+			storage_bytes: this.store.databaseBytes(),
+			limits_provisional: true,
+		};
+	}
+
+	listRuns(ownerId: unknown, args: { limit?: unknown; cursor?: unknown }): JsonObject {
+		const owner = this.owner(ownerId);
+		let limit = 20;
+		if (args.limit !== undefined && args.limit !== null) {
+			if (typeof args.limit !== "number" || !Number.isInteger(args.limit) || args.limit < 1 || args.limit > LIST_MAX) {
+				throw invalid(`limit must be an integer from 1 to ${LIST_MAX}`);
+			}
+			limit = args.limit;
+		}
+		let after: { updated_at: string; run_id: string } | undefined;
+		if (args.cursor !== undefined && args.cursor !== null) after = decodeCursor(text("cursor", args.cursor, 512));
+		const runs = this.store.list(owner, limit + 1, after);
+		const page = runs.slice(0, limit);
+		const last = page[page.length - 1];
+		return {
+			runs: page as unknown as Json[],
+			next_cursor: runs.length > limit && last ? encodeCursor(last.updated_at, last.run_id) : null,
+		};
+	}
+
+	profile(ownerId: unknown): JsonObject {
+		// A random ID stored per owner: stable for the account, not derivable from the Google subject.
+		return { id: this.store.profileId(this.owner(ownerId), () => randomHex(16)) };
+	}
+
 	// ---------------------------------------------------------------- verification gate
 
 	private gate(run: PipelineRun, meta: JsonObject, criteria: unknown): { checks: JsonObject[]; recorded: JsonObject[] } {
@@ -299,8 +416,7 @@ export class HostEngine {
 
 		if (meta.intent === "RESEARCH") checks.push({ check: "research_has_sources", passed: evidence.size > 0, detail: evidence.size });
 		if (meta.intent === "EXECUTION") {
-			const resolved = new Set(actions.filter((a) => a.resolves && a.status === "EXECUTED").map((a) => a.resolves as string));
-			const unresolved = actions.filter((a) => a.status !== "EXECUTED" && !resolved.has(a.id)).map((a) => a.id);
+			const unresolved = unresolvedActions(actions);
 			checks.push({ check: "execution_has_actions", passed: actions.length > 0, detail: actions.length });
 			checks.push({ check: "no_unresolved_failed_actions", passed: unresolved.length === 0, detail: unresolved });
 		}
@@ -433,6 +549,7 @@ export class HostEngine {
 	}
 
 	private view(run: PipelineRun, meta: JsonObject): JsonObject {
+		const actions = this.actions(run);
 		const active = run.status !== "COMPLETED" && run.status !== "CANCELLED";
 		const verifications = (meta.verifications as Json[] | undefined) ?? [];
 		let guidance: string | null = null;
@@ -447,7 +564,9 @@ export class HostEngine {
 			route: { intent: meta.intent ?? null, level: meta.level ?? null, modes: meta.modes ?? [] },
 			reentries: { used: run.reentry_count, max: run.max_reentries },
 			evidence_count: this.evidence(run).length,
-			actions: this.actions(run) as unknown as Json[],
+			actions: actions.slice(-RECENT_ACTIONS) as unknown as Json[],
+			actions_total: actions.length,
+			actions_unresolved: unresolvedActions(actions),
 			verified: run.verification_accepted,
 			last_verification: verifications.length ? verifications[verifications.length - 1]! : null,
 		};
@@ -458,7 +577,30 @@ export class HostEngine {
 
 export const RUN_OPERATIONS = new Set([
 	"start_run", "get_run", "submit_stage", "record_evidence", "report_action", "verify", "reenter", "cancel_run", "delete_run",
+	"list_runs", "usage", "profile",
 ]);
+
+/** FAILED or BLOCKED actions that no later EXECUTED action resolves. */
+function unresolvedActions(actions: Action[]): string[] {
+	const resolved = new Set(actions.filter((a) => a.resolves && a.status === "EXECUTED").map((a) => a.resolves as string));
+	return actions.filter((a) => a.status !== "EXECUTED" && !resolved.has(a.id)).map((a) => a.id);
+}
+
+function encodeCursor(updatedAt: string, runId: string): string {
+	return btoa(JSON.stringify([updatedAt, runId])).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+function decodeCursor(cursor: string): { updated_at: string; run_id: string } {
+	try {
+		const padded = cursor.replace(/-/g, "+").replace(/_/g, "/") + "===".slice((cursor.length + 3) % 4);
+		const value = JSON.parse(atob(padded)) as unknown;
+		if (Array.isArray(value) && value.length === 2 && typeof value[0] === "string" && typeof value[1] === "string") {
+			return { updated_at: value[0], run_id: value[1] };
+		}
+	} catch {
+		// fall through
+	}
+	throw invalid("cursor is not valid: pass next_cursor from a previous rigorx_list_runs result");
+}
 
 /** Durable Object side: run one allow-listed operation; always returns a JSON envelope string. */
 export function dispatch(engine: HostEngine, ownerId: string, operation: string, payloadJson: string): string {
@@ -467,6 +609,7 @@ export function dispatch(engine: HostEngine, ownerId: string, operation: string,
 		const p = JSON.parse(payloadJson) as unknown;
 		if (typeof p !== "object" || p === null || Array.isArray(p)) throw new EngineError("Payload must be a JSON object");
 		const a = p as Record<string, unknown>;
+		engine.meter(ownerId, operation);
 		const result = (() => {
 			switch (operation) {
 				case "start_run": return engine.startRun(ownerId, a.task);
@@ -477,6 +620,9 @@ export function dispatch(engine: HostEngine, ownerId: string, operation: string,
 				case "verify": return engine.verify(ownerId, a.run_id, a.criteria);
 				case "reenter": return engine.reenter(ownerId, a.run_id, a);
 				case "cancel_run": return engine.cancelRun(ownerId, a.run_id, a.reason);
+				case "list_runs": return engine.listRuns(ownerId, a);
+				case "usage": return engine.usage(ownerId);
+				case "profile": return engine.profile(ownerId);
 				default: return engine.deleteRun(ownerId, a.run_id);
 			}
 		})();

@@ -1,11 +1,10 @@
 // Dependency-free MCP server over Streamable HTTP (handshake era, protocol 2025-11-25
-// and earlier). Same 12 tools, titles, descriptions and annotations as
-// src/rigorx/mcp_server.py. The server keeps no session: every POST is answered
-// with a single JSON response, which the Streamable HTTP transport allows.
+// and earlier). The first 12 tools match src/rigorx/mcp_server.py (frozen Python reference);
+// rigorx_list_runs and rigorx_usage are Worker-only (WS32). The server keeps no session: every
+// POST is answered with a single JSON response, which the Streamable HTTP transport allows.
 // `server/discover` (2026-07-28) is answered with "method not found", which makes
 // modern clients fall back to `initialize`.
 
-import { createHash } from "node:crypto";
 import { EngineError } from "./engine.ts";
 import type { Json, JsonObject } from "./pipeline.ts";
 
@@ -56,7 +55,7 @@ export const TOOLS: ToolSpec[] = [
 		description: "Start a run for a task. Returns run_id, the first stage and what it requires. The task text is stored only as a digest.",
 		properties: { task: str() }, required: ["task"] },
 	{ name: "rigorx_get_run", title: "Get run state", hint: "read", operation: "get_run",
-		description: "Current stage, stage statuses, guidance, evidence count, reported actions and re-entry budget.",
+		description: "Current stage, stage statuses, guidance, evidence count, the 10 most recent reported actions (with the total and the IDs of unresolved failures) and re-entry budget.",
 		properties: { run_id: str() }, required: ["run_id"] },
 	{ name: "rigorx_submit_stage", title: "Submit stage result", hint: "additive", operation: "submit_stage",
 		description: "Submit the result of the current stage. outcome: completed, partial, blocked or skipped (partial, blocked and skipped need a reason of at least 15 characters and 3 words). A completed stage needs a summary of what was done in it: at least 40 characters and 6 words, not a repeat of another stage's summary. VERIFICATION is passed only with rigorx_verify.",
@@ -79,8 +78,14 @@ export const TOOLS: ToolSpec[] = [
 	{ name: "rigorx_delete_run", title: "Delete run data", hint: "destructive", operation: "delete_run",
 		description: "Permanently delete one of your runs and its ledger.",
 		properties: { run_id: str() }, required: ["run_id"] },
-	{ name: "rigorx_profile", title: "Account profile", hint: "read",
-		description: "Stable, opaque identifier of the signed-in account.",
+	{ name: "rigorx_list_runs", title: "List your runs", hint: "read", operation: "list_runs",
+		description: "Your runs, newest first: run_id, status, current stage, intent, level, created and updated times. limit 1-50 (default 20); pass next_cursor as cursor for the next page.",
+		properties: { limit: { anyOf: [{ type: "integer", minimum: 1, maximum: 50 }, { type: "null" }], default: null }, cursor: optStr() }, required: [] },
+	{ name: "rigorx_usage", title: "Usage and limits", hint: "read", operation: "usage",
+		description: "Today's tool calls, new runs and stored runs against your limits (UTC day), when they reset, and the storage your account uses. Limits are provisional.",
+		properties: {}, required: [] },
+	{ name: "rigorx_profile", title: "Account profile", hint: "read", operation: "profile",
+		description: "Stable, opaque identifier of the signed-in account (random, not derived from your Google account).",
 		properties: {}, required: [], meta: { "openai/profile": true },
 		outputSchema: { type: "object", properties: { id: { type: "string" } }, required: ["id"] } },
 ];
@@ -119,8 +124,6 @@ function toolError(message: string): JsonObject {
 	return { content: [{ type: "text", text: message }], isError: true };
 }
 
-const opaqueId = (owner: string) => createHash("sha256").update(owner, "utf8").digest("hex").slice(0, 32);
-
 /** Handle one JSON-RPC message; returns the response, or null for notifications. */
 export async function handleMessage(message: unknown, backend: EngineBackend, owner: string | null): Promise<JsonObject | null> {
 	if (typeof message !== "object" || message === null || Array.isArray(message)) return rpcError(null, -32600, "Invalid Request");
@@ -155,7 +158,6 @@ export async function handleMessage(message: unknown, backend: EngineBackend, ow
 				if (tool.name === "rigorx_route") return rpcResult(m.id, toolResult(backend.route(args.task)));
 				if (tool.name === "rigorx_resolve_commands") return rpcResult(m.id, toolResult(backend.resolveCommands(args.text)));
 				if (!owner) return rpcResult(m.id, toolError("AUTH_REQUIRED: sign in to use this tool"));
-				if (tool.name === "rigorx_profile") return rpcResult(m.id, toolResult({ id: opaqueId(owner) }));
 				return rpcResult(m.id, toolResult(await backend.run(owner, tool.operation!, args)));
 			} catch (e) {
 				if (e instanceof EngineError) return rpcResult(m.id, toolError(`${e.code}: ${e.message}`));

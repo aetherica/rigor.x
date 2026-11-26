@@ -33,6 +33,13 @@
 			]
 		}
 	],
+	// Provisional per-owner limits (WS32 P0.3); final numbers come with the move to Workers Paid.
+	"vars": {
+		"RIGORX_CALLS_PER_DAY": "2000",
+		"RIGORX_RUNS_PER_DAY": "100",
+		"RIGORX_STORED_RUNS": "500",
+		"RIGORX_BURST_PER_MINUTE": "120"
+	},
 	"observability": {
 		"enabled": true,
 		"issues": {

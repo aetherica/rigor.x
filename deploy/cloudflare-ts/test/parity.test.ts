@@ -16,6 +16,19 @@ const fixture = JSON.parse(readFileSync(new URL("./fixtures/parity.json", import
 
 const sorted = (value: unknown) => JSON.parse(canonicalJson(value)) as unknown;
 
+/**
+ * Fields the TypeScript engine adds to run views since WS32 (the Python engine is a frozen v1
+ * reference). Parity covers every shared field; these are tested in run-management.test.ts.
+ */
+const TS_ONLY_VIEW_FIELDS = ["actions_total", "actions_unresolved"];
+function withoutTsOnly(value: unknown): unknown {
+	if (Array.isArray(value)) return value.map(withoutTsOnly);
+	if (value && typeof value === "object") {
+		return Object.fromEntries(Object.entries(value).filter(([k]) => !TS_ONLY_VIEW_FIELDS.includes(k)).map(([k, v]) => [k, withoutTsOnly(v)]));
+	}
+	return value;
+}
+
 test("router profiles match Python for every fixture prompt", () => {
 	for (const { prompt, profile } of fixture.router) {
 		assert.deepEqual(sorted(route(prompt)), sorted(profile), prompt);
@@ -32,7 +45,7 @@ for (const [name, scenario] of Object.entries(fixture.scenarios)) {
 				{ ok: boolean; code?: string; result?: Record<string, unknown> };
 			if (operation === "start_run" && envelope.ok) runId = String(envelope.result!.run_id);
 			const actual = envelope.ok
-				? { ok: true, result: JSON.parse(canonicalJson(envelope.result).split(runId ?? "\u0000").join("$RUN")) }
+				? { ok: true, result: withoutTsOnly(JSON.parse(canonicalJson(envelope.result).split(runId ?? "\u0000").join("$RUN"))) }
 				: { ok: false, code: envelope.code };
 			assert.deepEqual(sorted(actual), sorted(scenario.expected[index]), `${name} step ${index}: ${operation}`);
 		});

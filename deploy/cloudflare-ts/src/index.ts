@@ -13,11 +13,12 @@
 import { DurableObject } from "cloudflare:workers";
 import { DurableObjectRunStore } from "./store.ts";
 import { EngineError, HostEngine, dispatch } from "./engine.ts";
+import { limitsFromEnv, type LimitVars } from "./limits.ts";
 import { handleHttp, type EngineBackend } from "./mcp.ts";
 import { buildProvider, type AuthEnv } from "./auth.ts";
 import type { JsonObject } from "./pipeline.ts";
 
-export interface Env extends AuthEnv {
+export interface Env extends AuthEnv, LimitVars {
 	OWNER_RUNS: DurableObjectNamespace<OwnerRuns>;
 }
 
@@ -26,7 +27,7 @@ export class OwnerRuns extends DurableObject<Env> {
 
 	constructor(ctx: DurableObjectState, env: Env) {
 		super(ctx, env);
-		this.engine = new HostEngine(new DurableObjectRunStore(ctx.storage.sql));
+		this.engine = new HostEngine(new DurableObjectRunStore(ctx.storage.sql), { limits: limitsFromEnv(env) });
 	}
 
 	call(ownerId: string, operation: string, payloadJson: string): string {
@@ -36,7 +37,8 @@ export class OwnerRuns extends DurableObject<Env> {
 
 // The Worker's local engine serves only stateless tools and never touches storage.
 const localEngine = new HostEngine({
-	create: refuse, load: refuse, save: refuse, delete: refuse,
+	create: refuse, load: refuse, save: refuse, delete: refuse, list: refuse, countRuns: refuse,
+	usage: refuse, addUsage: refuse, profileId: refuse, databaseBytes: refuse,
 });
 function refuse(): never {
 	throw new Error("Run storage is only available inside the owner's Durable Object");
