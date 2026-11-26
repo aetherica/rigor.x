@@ -139,3 +139,30 @@ jobs:
           python examples/mcp_smoke.py --url http://127.0.0.1:8787/mcp --token ci-token --mode auto --expect-version 2026-07-28
           python examples/mcp_smoke.py --url http://127.0.0.1:8787/mcp --token ci-token --mode legacy --expect-version 2025-11-25
           python examples/mcp_smoke.py --url http://127.0.0.1:8787/mcp --token ci-token --mode 2026-07-28 --expect-version 2026-07-28
+      - name: "Portable Node runtime: KV TTL, owner isolation, OAuth with real tokens, MCP, SSRF guard, shutdown"
+        env:
+          RIGORX_NET_TESTS: "1"
+        run: node --import ./deploy/node/register.mjs --experimental-strip-types --disable-warning=ExperimentalWarning --test deploy/node/test/*.test.ts
+      - name: "Portable Node runtime: the Worker's auth probe, unchanged, against node:http"
+        working-directory: deploy/cloudflare-ts
+        run: node test/integration/auth-probe.mjs --node
+      - name: "Portable Node runtime: official MCP SDK client with a real OAuth token (three protocol modes)"
+        run: |
+          TOKEN_FILE="$RUNNER_TEMP/node-token"
+          node --import ./deploy/node/register.mjs --experimental-strip-types --disable-warning=ExperimentalWarning deploy/node/test/sdk-smoke-server.ts 8797 "$TOKEN_FILE" &
+          for i in $(seq 50); do [ -s "$TOKEN_FILE" ] && break; sleep 0.2; done
+          python examples/mcp_smoke.py --url http://127.0.0.1:8797/mcp --token "$(cat "$TOKEN_FILE")" --mode auto --expect-version 2026-07-28
+          python examples/mcp_smoke.py --url http://127.0.0.1:8797/mcp --token "$(cat "$TOKEN_FILE")" --mode legacy --expect-version 2025-11-25
+          python examples/mcp_smoke.py --url http://127.0.0.1:8797/mcp --token "$(cat "$TOKEN_FILE")" --mode 2026-07-28 --expect-version 2026-07-28
+          kill %1
+      - name: "Portable Node runtime: container builds, starts as non-root, answers health and 401, stops cleanly"
+        run: |
+          docker build -f deploy/node/Dockerfile -t aetherica-node:ci .
+          docker run -d --name aeth -p 8790:8787 -e PUBLIC_ORIGIN=http://localhost:8790 -e GOOGLE_CLIENT_ID=ci-client -e GOOGLE_CLIENT_SECRET=ci-not-a-secret aetherica-node:ci
+          for i in $(seq 60); do curl -fsS http://localhost:8790/health >/dev/null && break; sleep 0.5; done
+          curl -fsS http://localhost:8790/health
+          test "$(curl -s -o /dev/null -w '%{http_code}' -X POST http://localhost:8790/mcp -H 'content-type: application/json' -d '{}')" = 401
+          test "$(docker exec aeth id -un)" = node
+          docker stop -t 15 aeth
+          test "$(docker inspect aeth --format '{{.State.ExitCode}}')" = 0
+          docker logs aeth 2>&1 | grep '"phase":"complete"'

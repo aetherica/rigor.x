@@ -1,19 +1,27 @@
 // Tests the REAL Worker authentication path (src/index.ts + auth.ts + the OAuth provider) under
 // `wrangler dev` (WS32 P0.6). A static bearer token is configured as a Worker var to prove that a
 // configured shared token is still not accepted (regression test for P0.1).
-// Usage (from deploy/cloudflare-ts): node test/integration/auth-probe.mjs
+// Usage (from deploy/cloudflare-ts): node test/integration/auth-probe.mjs [--node]
 import { spawn } from "node:child_process";
 import { mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import assert from "node:assert/strict";
 
-const port = 8795;
+// With --node the same checks run against the portable Node runtime (deploy/node) instead.
+const NODE = process.argv.includes("--node");
+const port = NODE ? 8796 : 8795;
 const base = `http://127.0.0.1:${port}`;
 const STATIC = "static-token-that-must-not-work-0001";
-const dev = spawn("./node_modules/.bin/wrangler", ["dev", "--port", String(port), "--ip", "127.0.0.1",
-	"--var", `RIGORX_SPIKE_TOKEN:${STATIC}`, "--var", "GOOGLE_CLIENT_ID:probe-client", "--var", "GOOGLE_CLIENT_SECRET:probe-secret", "--var", "RIGORX_RETRY_MAX_ATTEMPTS:99", "--persist-to", mkdtempSync(join(tmpdir(), "rigorx-auth-"))],
-	{ env: { ...process.env, WRANGLER_SEND_METRICS: "false", CI: "1" }, stdio: ["ignore", "pipe", "pipe"] });
+const dev = NODE
+	? spawn(process.execPath, ["--import", "../node/register.mjs", "--experimental-strip-types", "--disable-warning=ExperimentalWarning", "../node/server.ts"], {
+		env: { PATH: process.env.PATH, PUBLIC_ORIGIN: base, PORT: String(port), HOST: "127.0.0.1", DATA_DIR: mkdtempSync(join(tmpdir(), "rigorx-auth-node-")),
+			RIGORX_SPIKE_TOKEN: STATIC, GOOGLE_CLIENT_ID: "probe-client", GOOGLE_CLIENT_SECRET: "probe-secret", RIGORX_RETRY_MAX_ATTEMPTS: "99" },
+		stdio: ["ignore", "pipe", "pipe"] })
+	: spawn("./node_modules/.bin/wrangler", ["dev", "--port", String(port), "--ip", "127.0.0.1",
+		"--var", `RIGORX_SPIKE_TOKEN:${STATIC}`, "--var", "GOOGLE_CLIENT_ID:probe-client", "--var", "GOOGLE_CLIENT_SECRET:probe-secret", "--var", "RIGORX_RETRY_MAX_ATTEMPTS:99", "--persist-to", mkdtempSync(join(tmpdir(), "rigorx-auth-"))],
+		{ env: { ...process.env, WRANGLER_SEND_METRICS: "false", CI: "1" }, stdio: ["ignore", "pipe", "pipe"] });
+console.log(`auth probe target: ${NODE ? "Node runtime (deploy/node)" : "wrangler dev (workerd)"}`);
 let log = "";
 dev.stdout.on("data", (d) => { log += d; });
 dev.stderr.on("data", (d) => { log += d; });
