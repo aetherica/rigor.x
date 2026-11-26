@@ -7,9 +7,8 @@
 //   (@cloudflare/workers-oauth-provider: PKCE, Client ID Metadata Documents, dynamic client
 //   registration, tokens bound to this /mcp resource). Users sign in with Google; the owner is
 //   "google:<sub>". Every /mcp request needs a token: without one the answer is 401 with a
-//   resource_metadata pointer, which is how MCP hosts discover sign-in. See auth.ts.
-// - The spike bearer token (Worker secret RIGORX_SPIKE_TOKEN) still works, for Claude Code and
-//   the smoke test; it maps to one development owner.
+//   resource_metadata pointer, which is how MCP hosts discover sign-in. There is no static or
+//   shared token: Claude Code, Claude, ChatGPT and scripts all sign in with OAuth. See auth.ts.
 
 import { DurableObject } from "cloudflare:workers";
 import { DurableObjectRunStore } from "./store.ts";

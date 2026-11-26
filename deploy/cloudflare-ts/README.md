@@ -1,12 +1,12 @@
 # RIGOR-X MCP server on Cloudflare — TypeScript Worker
 
-The plugin server for ChatGPT, Claude and other MCP hosts. It replaces the Python Worker in `../cloudflare` for deployment, because the Python Worker cannot run on the Workers Free plan: importing the MCP SDK alone costs ~0.7 s CPU on CPython and ~2 s on the Workers runtime, against a 10 ms per-request limit (Free) and a 1 s startup limit (all plans).
+The plugin server for ChatGPT, Claude and other MCP hosts. It replaced the Python Worker spike (removed in WS32 P0.1; see `engineering/ai-system/24-HOST-PLUGIN-ARCHITECTURE.md` for its history), because the Python Worker cannot run on the Workers Free plan: importing the MCP SDK alone costs ~0.7 s CPU on CPython and ~2 s on the Workers runtime, against a 10 ms per-request limit (Free) and a 1 s startup limit (all plans).
 
 - **One runtime dependency:** Cloudflare's `@cloudflare/workers-oauth-provider` for sign-in. MCP is implemented directly (`src/mcp.ts`) for the Streamable HTTP transport, handshake era (protocol `2025-11-25`, `2025-06-18`, `2025-03-26`). `server/discover` (2026-07-28) answers "method not found", which makes modern clients fall back to `initialize`. Every POST gets one JSON response; there is no session or server-initiated stream.
 - **Same engine as Python.** `src/pipeline.ts`, `src/router.ts`, `src/engine.ts`, `src/store.ts` port the Python modules. The same 12 tools, titles, descriptions and annotations; the same Durable Object class (`OwnerRuns`), table layout and JSON snapshots.
 - **Parity is tested, not assumed.** `scripts/parity_fixtures.py` records router profiles and five engine scenarios (75 steps) from the Python engine into `test/fixtures/parity.json`; `test/parity.test.ts` replays them on the TypeScript engine; `tests/test_ts_parity.py` fails if the Python engine drifts from the fixtures.
-- **Conformance is tested with the official MCP SDK client.** CI starts `scripts/dev-server.ts` (the same handler over `node:http` with `node:sqlite`) and runs `examples/mcp_smoke.py --url` against it: handshake, tool list, a full run to COMPLETED, wrong token → 401.
-- **Sign-in (phase P4):** OAuth with Google — see below. The spike token (secret `RIGORX_SPIKE_TOKEN`, one development owner) still works for Claude Code and the smoke test. Every `/mcp` request needs a token; without one the answer is `401` with a `resource_metadata` pointer.
+- **Conformance is tested with the official MCP SDK client.** CI starts `scripts/dev-server.ts` (the same MCP handler over `node:http` with `node:sqlite`) and runs `examples/mcp_smoke.py --url` against it: handshake, tool list, a full run to COMPLETED, wrong token → 401. The dev server is a local test harness with its own local test token; it is never deployed and does not exercise the Worker's OAuth path.
+- **Sign-in:** OAuth with Google only — see below. Every `/mcp` request needs an access token issued by this Worker; without one the answer is `401` with a `resource_metadata` pointer. There is no static or shared token (the spike token was removed in WS32 P0.1), so Claude Code signs in with OAuth like every other host.
 - Not yet available here: `rigorx_resolve_commands` (the 999-entry catalogue is not bundled; the tool reports this).
 
 Local CPU measurement (Node 22, per call): `tools/list` 0.01 ms, `rigorx_route` 0.1 ms, `rigorx_start_run` 0.3 ms, engine construction 0.9 ms. Workers-runtime figures will be recorded after deployment.
@@ -37,27 +37,23 @@ Setup (once):
 
 Add to a host with the URL `https://rigorx-mcp.<subdomain>.workers.dev/mcp` and no token: Claude (Settings → Connectors → Add custom connector) and ChatGPT (developer mode, authentication OAuth) discover sign-in from the `401`.
 
-Verified locally under `wrangler dev`: metadata documents, `401` challenges, spike token, dynamic registration, consent page (escaping, no framing, browser-bound single-use handle), Deny and Google-error redirects with `state` and `iss`, redirect to Google with PKCE. Not verifiable locally: the Google token exchange and the end-to-end sign-in from Claude and ChatGPT.
+Verified locally under `wrangler dev`: metadata documents, `401` challenges, a static bearer token is rejected (WS32 P0.1), dynamic registration, consent page (escaping, no framing, browser-bound single-use handle), Deny and Google-error redirects with `state` and `iss`, redirect to Google with PKCE. Not verifiable locally: the Google token exchange and the end-to-end sign-in from Claude and ChatGPT.
 
-## Deploy with Cloudflare Workers Builds (switching from the Python Worker)
+## Deploy with Cloudflare Workers Builds
 
 In the Cloudflare dashboard: **Workers & Pages → rigorx-mcp → Settings → Build**, change:
 
 | Setting | Value |
 |---|---|
 | Root directory (Path) | `deploy/cloudflare-ts` |
-| Build command | *(empty)* |
-| Deploy command | `npx wrangler deploy` |
+| Build command | `npm test` |
+| Deploy command | `npm run deploy` |
 
-Then **Retry** the latest build or push to `main`. The Worker name, Durable Object binding and migration tag are unchanged, so existing runs and the `RIGORX_SPIKE_TOKEN` secret stay in place.
+Push to `main` (a Retry rebuilds the same commit; see below). The Worker name, Durable Object binding and migration tag are unchanged, so existing runs stay in place.
 
-Check: `https://rigorx-mcp.<subdomain>.workers.dev/` returns the banner, and
+Check: `https://rigorx-mcp.<subdomain>.workers.dev/` returns the banner; `POST /mcp` without a token returns `401` with `WWW-Authenticate: Bearer … resource_metadata=…`; a signed-in host (for example the Claude connector) can call `rigorx_profile` and run `rigorx_start_run` → `rigorx_delete_run`.
 
-```bash
-python examples/mcp_smoke.py --url https://rigorx-mcp.<subdomain>.workers.dev/mcp --token <token>
-```
-
-ends with `Run status: COMPLETED`.
+After WS32 P0.1 is deployed, delete the leftover Worker secrets `RIGORX_SPIKE_TOKEN` and `ALLOWED_EMAILS` (Settings → Variables and Secrets); the code no longer reads either.
 
 ### If the Workers Build fails with `root directory not found` or `can't cd to deploy/cloudflare-ts`
 

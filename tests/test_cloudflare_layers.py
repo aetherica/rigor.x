@@ -153,38 +153,3 @@ class RemoteEngineOverMcpTests(unittest.IsolatedAsyncioTestCase):
 
 if __name__ == "__main__":
     unittest.main()
-
-
-class WorkerBundleTests(unittest.TestCase):
-    """The Worker bundle must import without sqlite3 and with only the Workers API stubs."""
-
-    @unittest.skipUnless(HAS_MCP, "MCP SDK not installed")
-    def test_synced_bundle_imports_without_sqlite3(self):
-        import subprocess
-        import sys
-        import tempfile
-        from pathlib import Path
-
-        repo = Path(__file__).resolve().parents[1]
-        worker = repo / "deploy" / "cloudflare"
-        subprocess.run([sys.executable, str(worker / "sync_engine.py")], check=True, capture_output=True)
-        probe = (
-            "import sys, types\n"
-            "sys.modules['sqlite3'] = None\n"
-            "w = types.ModuleType('workers')\n"
-            "class _Base:\n"
-            "    def __init__(self, ctx, env): self.ctx, self.env = ctx, env\n"
-            "w.DurableObject = w.WorkerEntrypoint = _Base\n"
-            "w.Response = lambda *a, **k: (a, k)\n"
-            "w.asgi = types.SimpleNamespace(fetch=None)\n"
-            "sys.modules['workers'] = w\n"
-            f"sys.path.insert(0, {str(worker / 'src')!r})\n"
-            "import entry, rigorx\n"
-            "assert rigorx.__file__.startswith(" + repr(str(worker / "src")) + ")\n"
-            "assert 'rigorx.storage' not in sys.modules and 'rigorx.cli' not in sys.modules\n"
-            "print('ok')\n"
-        )
-        with tempfile.TemporaryDirectory() as tmp:
-            result = subprocess.run([sys.executable, "-I", "-c", probe], cwd=tmp, capture_output=True, text=True, check=False)
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("ok", result.stdout)
