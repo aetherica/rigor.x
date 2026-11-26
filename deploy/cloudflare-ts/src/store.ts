@@ -162,16 +162,21 @@ export class DurableObjectRunStore implements RunStore {
 
 	save(ownerId: string, runId: string, snapshot: JsonObject, meta: JsonObject, expectedRevision: number): number {
 		const rows = this.sql.exec(
-			"SELECT revision, snapshot_json FROM host_runs WHERE run_id = ? AND owner_id = ?", runId, ownerId,
+			"SELECT revision, snapshot_json, json_array_length(snapshot_json, '$.events') AS stored_events FROM host_runs WHERE run_id = ? AND owner_id = ?", runId, ownerId,
 		).toArray();
 		if (rows.length === 0) throw new RunNotFound(runId);
 		const row = rows[0]!;
 		if (Number(row.revision) !== expectedRevision) {
 			throw new RevisionConflict(`Expected revision ${expectedRevision}, found ${String(row.revision)}`);
 		}
-		const previous = (JSON.parse(String(row.snapshot_json)) as { events: Json[] }).events;
+		// Append-only check without parsing the stored snapshot again (2026-11-26 audit, §09): the stored
+		// row is canonical JSON, so its top-level events array is exactly canonicalJson(previous events).
+		// The first `stored` events of the new snapshot must serialize to that same text. Same guarantee
+		// as comparing event by event; one serialization instead of a parse plus two.
+		const stored = Number(row.stored_events);
 		const events = snapshot.events as Json[];
-		if (!Array.isArray(events) || events.length < previous.length || previous.some((e, i) => canonicalJson(e) !== canonicalJson(events[i]))) {
+		if (!Array.isArray(events) || !Number.isInteger(stored) || events.length < stored ||
+			!String(row.snapshot_json).includes(`"events":${canonicalJson(events.slice(0, stored))}`)) {
 			throw new EventIntegrityError("Event history must remain append-only");
 		}
 		const revision = expectedRevision + 1;

@@ -106,11 +106,16 @@ test("source references: URLs and DOIs resolve, private hosts and other schemes 
 	}
 });
 
+/** Answers like a server under redirect: "manual": a 301 to finalUrl first (if it differs), then the body. */
 function fakeFetch(status: number, body: string, finalUrl: string): typeof fetch {
-	return (async () => {
-		const r = new Response(body, { status, headers: { "content-type": "text/html" } });
-		Object.defineProperty(r, "url", { value: finalUrl });
-		return r;
+	return (async (input: RequestInfo | URL, init?: RequestInit) => {
+		assert.equal(init?.redirect, "manual"); // every hop is checked by RIGOR-X, never followed by the runtime
+		if (String(input) !== finalUrl && !String(input).startsWith("https://api.crossref.org/") && !String(input).startsWith("https://archive.org/")) {
+			return new Response(null, { status: 301, headers: { Location: finalUrl } });
+		}
+		if (String(input).startsWith("https://api.crossref.org/")) return new Response("{}", { status: 404 });
+		if (String(input).startsWith("https://archive.org/")) return Response.json({ archived_snapshots: {} });
+		return new Response(body, { status, headers: { "content-type": "text/plain" } });
 	}) as unknown as typeof fetch;
 }
 
@@ -119,6 +124,7 @@ test("source check: status, final URL, size and SHA-256 are recorded as a SOURCE
 	assert.equal(ok.ok, true);
 	assert.equal(ok.resolved_url, "https://doi.org/10.1103/PhysRev.89.977");
 	assert.equal(ok.final_url, "https://journals.example.org/prd/89/977");
+	assert.deepEqual(ok.redirects, ["https://journals.example.org/prd/89/977"]);
 	assert.equal(ok.bytes, 5);
 	assert.equal(ok.sha256, "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"); // SHA-256("hello")
 	const missing = await checkSource("https://example.org/gone", fakeFetch(404, "no", "https://example.org/gone"));

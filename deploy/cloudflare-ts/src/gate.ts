@@ -5,10 +5,14 @@
 // rigorx_check_source) raise the reported verification level.
 import { DISQUALIFYING_STATUSES, SUPPORTING_STATUSES, levelRank, type VerificationLevel } from "./protocol.ts";
 import type { EvidenceRecord, RunState } from "./run.ts";
-import { UNKNOWN_VALUES, type Requirement } from "./ledger.ts";
+import { UNKNOWN_VALUES, approvalProblems, dependencyProblems, type Claim, type Requirement } from "./ledger.ts";
 import { evidenceIds, ident, invalid, list, object, type Json, type JsonObject } from "./text.ts";
+import { ComputeError, dimString, parseUnit } from "./compute.ts";
+import { checkSummary, independenceGroups, latestChecks, sourceIdentity } from "./sources.ts";
 
-export const GATE_VERSION = "2.0.0";
+/** 2.1.0 (2026-11-26 audit): claims linked by evidence, value-bound compute receipts, single-use approvals,
+ * dependency integrity, canonical source independence, retraction and fringe-corroboration checks. */
+export const GATE_VERSION = "2.1.0";
 export const ACTION = "HOST_REPORTED_ACTION";
 export const COMPUTE = "COMPUTE_RECEIPT";
 export const SOURCE_CHECK = "SOURCE_CHECK";
@@ -16,6 +20,33 @@ export const SOURCE_CHECK = "SOURCE_CHECK";
 export const USER_APPROVAL = "USER_APPROVAL";
 /** Evidence types only the engine creates. */
 export const ENGINE_TYPES: ReadonlySet<string> = new Set([ACTION, COMPUTE, SOURCE_CHECK]);
+
+/** Relative tolerance for "the receipt computed the number the claim states" (both in SI). */
+export const CLAIM_MATCH_TOL = 1e-9;
+
+/**
+ * Does a compute receipt support this numeric claim (audit finding B2)? The receipt must have
+ * succeeded AND carry a passed `expect` check (an unchecked computation is not bound to any claimed
+ * number), and the checked value must be the claim's own value: same dimension, same SI value within
+ * CLAIM_MATCH_TOL. A unit rigorx_compute does not know (for example USD or users) is a label: the
+ * receipt must then be dimensionless and check the same number.
+ */
+export function receiptSupportsClaim(claim: Claim, receipt: EvidenceRecord | undefined): boolean {
+	if (!receipt || receipt.type !== COMPUTE || receipt.details.ok !== true) return false;
+	const check = receipt.details.check as { passed?: unknown; expected_si?: unknown; expected_value?: unknown } | null | undefined;
+	if (!check || check.passed !== true || typeof check.expected_si !== "number") return false;
+	const v = claim.value;
+	if (!v || v.number === null) return false;
+	const close = (a: number, b: number) => Math.abs(a - b) <= CLAIM_MATCH_TOL * Math.max(Math.abs(a), Math.abs(b), Number.MIN_VALUE);
+	let unit: { v: number; dim: ReturnType<typeof parseUnit>["dim"] } | null = null;
+	try {
+		unit = parseUnit(v.unit ?? "1");
+	} catch (e) {
+		if (!(e instanceof ComputeError)) throw e;
+	}
+	if (!unit) return receipt.details.unit_si === "1" && typeof check.expected_value === "number" && close(check.expected_value, v.number);
+	return dimString(unit.dim) === receipt.details.unit_si && close(check.expected_si, v.number * unit.v);
+}
 
 export interface Answer {
 	id: string;
@@ -47,16 +78,6 @@ export function unresolvedActions(evidence: EvidenceRecord[]): string[] {
 	const resolved = new Set(actions.filter((a) => a.details.status === "EXECUTED" && a.details.resolves).map((a) => String(a.details.resolves)));
 	return actions.filter((a) => a.details.status !== "EXECUTED" && !resolved.has(a.id)).map((a) => a.id);
 }
-
-const origin = (ref: string): string => {
-	try {
-		const u = new URL(ref);
-		return u.host ? `${u.protocol}//${u.host.toLowerCase().replace(/^www\./, "")}` : ref;
-	} catch {
-		const doi = /^(?:doi:)?(10\.\d{4,9})\//i.exec(ref);
-		return doi ? `doi:${doi[1]}` : ref.trim().toLowerCase();
-	}
-};
 
 export interface GateResult {
 	passed: boolean;
@@ -158,6 +179,11 @@ export function runGate(run: RunState, answers: Answer[], at: Date): GateResult 
 	}
 	add("evidence_fresh", fresh);
 
+	// 10b. A met requirement does not rest on a retracted work (Crossref / Retraction Watch, recorded by rigorx_check_source).
+	const sourceChecks = latestChecks(run.evidence);
+	const retracted = supported.flatMap((a) => [...allOf(a)].filter((id) => checkSummary(sourceChecks.get(id))?.retracted).map((id) => `${a.id} cites ${id}, a retracted work`));
+	if (retracted.length || [...sourceChecks.values()].some((c) => c.crossref)) add("cited_sources_not_retracted", retracted);
+
 	// 11. Engine receipts cited as support must not have failed (unit or check errors).
 	add("cited_receipts_ok", supported.flatMap((a) => [...allOf(a)].filter((id) => {
 		const e = evidence.get(id)!;
@@ -165,17 +191,30 @@ export function runGate(run: RunState, answers: Answer[], at: Date): GateResult 
 	}).map((id) => `${a.id} cites ${id}, a ${evidence.get(id)!.type} that failed`)));
 
 	const claims = run.ledger.evaluation?.claims ?? [];
+	// One resolver for "which claims bear on a met requirement" (audit finding B3): a claim is linked
+	// to a requirement it names in requirement_ids OR whose cited evidence it rests on. Omitting
+	// requirement_ids therefore never takes a claim out of the checks below.
+	const metAnswers = [...answered.values()].filter((a) => a.met === true);
+	const linked = (a: Answer) => {
+		const cited = allOf(a);
+		return claims.filter((c) => c.requirement_ids.includes(a.id) || c.evidence_ids.some((id) => cited.has(id)));
+	};
+	const linkedToMet = new Map<string, string[]>(); // claim id -> met requirements it bears on
+	for (const a of metAnswers) for (const c of linked(a)) linkedToMet.set(c.id, [...(linkedToMet.get(c.id) ?? []), a.id]);
 	// 11b. An unknown value never supports a met requirement (directive §2.2: unknown is not zero).
 	if (claims.some((c) => c.value)) {
-		add("unknown_values_not_supporting", claims.filter((c) => c.value && UNKNOWN_VALUES.has(c.value.status) && c.requirement_ids.some((r) => answered.get(r)?.met === true))
-			.map((c) => `claim ${c.id} has a ${c.value!.status} value, so ${c.requirement_ids.filter((r) => answered.get(r)?.met === true).join(", ")} cannot be met on it`));
+		add("unknown_values_not_supporting", claims.filter((c) => c.value && UNKNOWN_VALUES.has(c.value.status) && linkedToMet.has(c.id))
+			.map((c) => `claim ${c.id} has a ${c.value!.status} value, so ${linkedToMet.get(c.id)!.join(", ")} cannot be met on it`));
 	}
-	// 11c. Approved consequential operations (A4/A5) cite the user's approval.
+	// 11c. Approved consequential operations (A4/A5) cite a valid, single-use approval bound to them.
 	const gated = plan.filter((op) => op.tier === "A4" || op.tier === "A5");
 	if (gated.length) {
-		add("approvals_recorded", gated.filter((op) => reports.get(op.id)?.status === "done" && !(reports.get(op.id)?.evidence_ids ?? []).some((id) => evidence.get(id)?.type === USER_APPROVAL))
-			.map((op) => `${op.id} (${op.tier}) has no USER_APPROVAL evidence`));
+		const usedBy = new Map<string, string>();
+		add("approvals_recorded", gated.filter((op) => reports.get(op.id)?.status === "done")
+			.map((op) => approvalProblems(op, reports.get(op.id)?.evidence_ids ?? [], evidence, at, usedBy)).filter((p): p is string => p !== null));
 	}
+	// 11d. Dependency integrity: a done operation's prerequisites are done (audit finding D).
+	if (plan.some((op) => op.depends_on.length)) add("dependencies_done", dependencyProblems(plan, (id) => reports.get(id)?.status ?? "unreported"));
 	// 12. L03+ (ADR-003 "claim status required for cited evidence"): every evidence ID a met requirement
 	// cites (actions and engine receipts excepted) is given a status by some claim; at least one cited
 	// source rests on an ESTABLISHED, VERIFIED or SUPPORTED claim; disqualified claims block it.
@@ -188,28 +227,43 @@ export function runGate(run: RunState, answers: Answer[], at: Date): GateResult 
 			for (const id of cited) {
 				if (!ENGINE_TYPES.has(evidence.get(id)!.type) && !statused.has(id)) problems.push(`${a.id}: ${id} is cited but no claim gives it a status`);
 			}
-			const linked = claims.filter((c) => c.requirement_ids.includes(a.id) || c.evidence_ids.some((id) => cited.has(id)));
-			if (!linked.some((c) => SUPPORTING_STATUSES.has(c.status) && c.evidence_ids.some((id) => cited.has(id)))) {
+			const bearing = linked(a);
+			if (!bearing.some((c) => SUPPORTING_STATUSES.has(c.status) && c.evidence_ids.some((id) => cited.has(id)))) {
 				problems.push(`${a.id}: no ESTABLISHED, VERIFIED or SUPPORTED claim rests on its cited evidence`);
 			}
-			for (const c of linked.filter((c) => DISQUALIFYING_STATUSES.has(c.status))) problems.push(`${a.id}: claim ${c.id} is ${c.status}`);
+			for (const c of bearing.filter((c) => DISQUALIFYING_STATUSES.has(c.status))) problems.push(`${a.id}: claim ${c.id} is ${c.status}`);
 		}
 		add("claims_support_requirements", problems);
 		const contradictions = run.ledger.evaluation?.contradictions ?? [];
-		add("contradictions_resolved", contradictions.filter((x) => !x.resolved && x.claim_ids.some((id) => claims.find((c) => c.id === id)?.requirement_ids.some((r) => answered.get(r)?.met === true)))
+		// Fringe or unverified sources (declared D09) never carry a requirement alone (directive §05, D09).
+		const fringe = metAnswers.filter((a) => {
+			const ids = [...allOf(a)].map((id) => evidence.get(id)!).filter((e) => !ENGINE_TYPES.has(e.type) && e.type !== USER_APPROVAL).map((e) => sourceIdentity(e, sourceChecks.get(e.id)));
+			return ids.length > 0 && ids.some((i) => i.domain === "D09") && ids.every((i) => i.domain === "D09");
+		});
+		if (fringe.length || run.evidence.some((e) => e.details.source_domain === "D09")) add("fringe_corroborated", fringe.map((a) => `${a.id} rests only on fringe or unverified (D09) sources: corroborate it from another domain`));
+		add("contradictions_resolved", contradictions.filter((x) => !x.resolved && x.claim_ids.some((id) => linkedToMet.has(id)))
 			.map((x) => `unresolved contradiction between ${x.claim_ids.join(" and ")}`));
 	}
 	// 13. L04+: the assumptions register was submitted.
 	if (rank >= 4) add("assumptions_registered", run.ledger.evaluation?.assumptions ? [] : ["EVALUATE_EVIDENCE submitted no assumptions register"]);
-	// 14. L06: two independent sources per met requirement; numeric claims cite computation receipts.
+	// 14. L06: two independent source groups per met requirement (canonical source identity: the
+	// same DOI, the same canonical article, mirrors, syndicated copies and one wire story count once;
+	// sources.ts), and every numeric claim bearing on a met requirement cites a computation receipt
+	// that checked the claim's own value (B2).
 	if (rank >= 6) {
-		add("independent_sources", [...answered.values()].filter((a) => a.met === true).filter((a) => {
-			const origins = new Set([...allOf(a)].map((id) => evidence.get(id)!).filter((e) => !ENGINE_TYPES.has(e.type)).map((e) => origin(e.source_ref)));
-			return origins.size < 2;
-		}).map((a) => `${a.id} cites fewer than two independent sources`));
-		add("numeric_claims_computed", claims.filter((c) => c.numeric && c.requirement_ids.some((r) => answered.get(r)?.met === true))
-			.filter((c) => !c.evidence_ids.some((id) => evidence.get(id)?.type === COMPUTE && evidence.get(id)?.details.ok === true))
-			.map((c) => `numeric claim ${c.id} cites no successful rigorx_compute receipt`));
+		add("independent_sources", metAnswers.map((a) => {
+			const records = [...allOf(a)].map((id) => evidence.get(id)!).filter((e) => !ENGINE_TYPES.has(e.type) && e.type !== USER_APPROVAL);
+			const groups = independenceGroups(records.map((e) => sourceIdentity(e, sourceChecks.get(e.id))));
+			return groups.length < 2 ? `${a.id} cites fewer than two independent sources (${groups.length} independent group${groups.length === 1 ? "" : "s"}: ${groups.map((g) => g.key).join("; ") || "none"})` : null;
+		}).filter((p): p is string => p !== null));
+		add("numeric_claims_computed", claims.filter((c) => c.numeric && linkedToMet.has(c.id)).map((c) => {
+			if (!c.value || c.value.number === null) return `numeric claim ${c.id} states no value {status, number, unit}, so no receipt can be checked against it`;
+			if (c.evidence_ids.some((id) => receiptSupportsClaim(c, evidence.get(id)))) return null;
+			const any = c.evidence_ids.some((id) => evidence.get(id)?.type === COMPUTE && evidence.get(id)?.details.ok === true);
+			return any
+				? `numeric claim ${c.id} cites no rigorx_compute receipt whose checked value (expect) is the claimed ${c.value.number} ${c.value.unit ?? ""}`.trim()
+				: `numeric claim ${c.id} cites no successful rigorx_compute receipt`;
+		}).filter((p): p is string => p !== null));
 	}
 
 	const passed = checks.every((c) => c.passed === true);
@@ -228,8 +282,9 @@ function verificationLevels(requirements: Requirement[], answered: Map<string, A
 		const cited = [...new Set([...a.evidence_ids, ...a.items.flatMap((i) => i.evidence_ids)])].map((id) => evidence.get(id)!);
 		const sources = cited.filter((e) => !ENGINE_TYPES.has(e.type));
 		const resolved = sources.length > 0 && sources.every((e) => checkedRefs.has(e.id));
-		const numeric = claims.filter((c) => c.numeric && c.requirement_ids.includes(r.id));
-		const computed = numeric.length > 0 && numeric.every((c) => c.evidence_ids.some((id) => evidence.get(id)?.type === COMPUTE && evidence.get(id)?.details.ok === true));
+		const citedIds = new Set(cited.map((e) => e.id));
+		const numeric = claims.filter((c) => c.numeric && (c.requirement_ids.includes(r.id) || c.evidence_ids.some((id) => citedIds.has(id))));
+		const computed = numeric.length > 0 && numeric.every((c) => c.evidence_ids.some((id) => receiptSupportsClaim(c, evidence.get(id))));
 		out[r.id] = resolved && computed ? "computations_checked" : resolved ? "sources_resolved" : "structural";
 	}
 	return out;

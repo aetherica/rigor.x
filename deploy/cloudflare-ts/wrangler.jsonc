@@ -9,6 +9,14 @@
 	// global_fetch_strictly_public: required by the OAuth provider to fetch Client ID Metadata Documents.
 	"compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
 	"workers_dev": true,
+	// Static assets (2026-11-26): the circular Aetherica icons (/icon-<size>.png, /favicon.ico) are
+	// served by the asset layer without running the Worker (free, cached). Every other path runs the
+	// Worker first, exactly as before, so OAuth navigations (/authorize, the Google callback) and
+	// /mcp never depend on asset routing.
+	"assets": {
+		"directory": "./public",
+		"run_worker_first": ["/*", "!/icon-*", "!/favicon.ico"]
+	},
 	"preview_urls": false,
 	"durable_objects": {
 		"bindings": [

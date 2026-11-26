@@ -7,8 +7,8 @@
 //   MCP-Protocol-Version header is not a handshake version takes this path, which validates it
 //   in the order of the reference SDK (mcp 2.3.0, mcp/shared/inbound.py): envelope (-32602),
 //   headers (-32020), supported version (-32022 with data.supported).
-// The first 12 tools match src/rigorx/mcp_server.py (frozen Python reference); rigorx_list_runs
-// and rigorx_usage are Worker-only. The server keeps no session: every POST is answered with a
+// The first 12 tools match src/rigorx/mcp_server.py (frozen Python reference); the others are
+// Worker-only. The server keeps no session: every POST is answered with a
 // single JSON response, which the Streamable HTTP transport allows.
 
 import { EngineError } from "./engine.ts";
@@ -22,6 +22,17 @@ export const SUPPORTED_VERSIONS = ["2025-11-25", "2025-06-18", "2025-03-26"];
 export const MODERN_VERSIONS = ["2026-07-28"];
 const LATEST = SUPPORTED_VERSIONS[0]!;
 const SERVER_INFO = { name: "rigor-x", title: "RIGOR-X", version: SERVER_VERSION };
+/** Circular Aetherica emblem in the sizes the Worker serves (brand.ts); hosts show it in their connector UI. */
+export const ICON_SIZES = [48, 96, 192, 448] as const;
+/** serverInfo with absolute icon URLs on this origin (MCP 2025-11-25 Implementation.icons). */
+export function serverInfo(origin?: string): JsonObject {
+	const info: JsonObject = { ...SERVER_INFO, description: "Control-plane engine for rigorous multi-step work: staged runs, pre-registered requirements, evidence ledger, verification gate, source intelligence, topic memory." };
+	if (origin && /^https?:\/\//.test(origin)) {
+		info.websiteUrl = "https://github.com/aetherica/rigor.x";
+		info.icons = ICON_SIZES.map((n) => ({ src: `${origin}/icon-${n}.png`, mimeType: "image/png", sizes: [`${n}x${n}`] }));
+	}
+	return info;
+}
 
 // Reserved _meta keys and error codes of the 2026-07-28 revision (reference: mcp-types 2.3.0).
 export const META_PROTOCOL_VERSION = "io.modelcontextprotocol/protocolVersion";
@@ -91,13 +102,17 @@ export const TOOLS: ToolSpec[] = [
 		description: "Submit the current stage. outcome: completed, partial or blocked (partial and blocked need a reason of at least 15 characters and 3 words); mandatory stages cannot be skipped. A completed stage needs a summary (at least 40 characters and 6 words, not a repeat of another stage's) and the stage's structured fields in data, as its guidance lists (for example CLASSIFY: objective, deliverable, requirements, level, stakes). VALIDATE is passed only with rigorx_verify.",
 		properties: { run_id: str(), stage: str(), outcome: str(), summary: str(), reason: optStr(), data: { anyOf: [{ type: "object", additionalProperties: true }, { type: "null" }], default: null, description: "Stage-specific structured fields (see the stage guidance)." } }, required: ["run_id", "stage", "outcome", "summary"] },
 	{ name: "rigorx_record_evidence", title: "Record evidence", hint: "additive", operation: "record_evidence",
-		description: "Record a source (URL, DOI, document ID, receipt) and the claim it supports (at least 15 characters and 3 words). as_of: the date the source's information refers to (ISO 8601), needed when a requirement sets max_age_days. Returns an evidence_id (ev-N) to cite in data and rigorx_verify. IDs are ledger sequence numbers, so they are not consecutive.",
-		properties: { run_id: str(), source_ref: str(), claim: str(), evidence_type: { type: "string", default: "SOURCE" }, as_of: optStr("ISO 8601 date, for example 2026-11-26") }, required: ["run_id", "source_ref", "claim"] },
+		description: "Record a source (URL, DOI, arXiv/PMID, document ID, field:<id>, receipt) and the claim it supports (at least 15 characters and 3 words). as_of: the date the source's information refers to (ISO 8601), needed when a requirement sets max_age_days. Source intelligence (optional): source_domain D01 surface web, D02 specialist, D03 restricted, D04 local/field, D05 archive, D06 social, D07 mainstream media, D08 alternative/advocacy, D09 fringe/unverified (inferred from the reference when omitted; D04 and D09 must be declared); derived_from: evidence IDs this source copies, quotes or reposts; origin_ref: the original it reports (wire story, post URL); publisher; access public|authenticated|restricted|field; primary: true for primary evidence. A category never adds credibility: copies of one origin count once. evidence_type USER_APPROVAL needs approves=<A4/A5 operation id> (bound to that operation, single use, expires after 24 h; host-declared). Returns an evidence_id (ev-N) to cite in data and rigorx_verify.",
+		properties: { run_id: str(), source_ref: str(), claim: str(), evidence_type: { type: "string", default: "SOURCE" }, as_of: optStr("ISO 8601 date, for example 2026-11-26"),
+			source_domain: optStr("D01-D09 or surface_web, specialist, restricted, local, archive, social, mainstream_media, alternative, fringe"),
+			derived_from: { anyOf: [{ type: "array", items: { type: "string" } }, { type: "null" }], default: null }, origin_ref: optStr(), publisher: optStr(),
+			access: optStr("public, authenticated, restricted or field"), primary: { type: "boolean", default: false }, approves: optStr("USER_APPROVAL only: the planned operation ID it approves") },
+		required: ["run_id", "source_ref", "claim"] },
 	{ name: "rigorx_report_action", title: "Report a host action", hint: "additive", operation: "report_action",
 		description: "Report an action you performed with another tool. status: EXECUTED, FAILED or BLOCKED. Use resolves=<ev-N> when a later action fixes an earlier failure. Recorded as host-reported, not verified.",
 		properties: { run_id: str(), tool_name: str(), status: str(), receipt_ref: optStr(), resolves: optStr() }, required: ["run_id", "tool_name", "status"] },
 	{ name: "rigorx_verify", title: "Run verification gate", hint: "additive", operation: "verify",
-		description: "Run the deterministic gate at VALIDATE. requirements: one answer per requirement registered at CLASSIFY: {id, met: true|false|\"partial\", evidence_ids, items?: [{id, evidence_ids}]}. Must-requirements must be met; each met requirement and each enumerated item needs evidence of its own; failed actions must be resolved; higher levels add claim-status, assumption, freshness, independent-source and computation checks. Reports a verification level per requirement; 'structurally verified' at most, never a truth guarantee.",
+		description: "Run the deterministic gate (2.1.0) at VALIDATE. requirements: one answer per requirement registered at CLASSIFY: {id, met: true|false|\"partial\", evidence_ids, items?: [{id, evidence_ids}]}. Must-requirements must be met; each met requirement and each enumerated item needs evidence of its own; failed actions must be resolved; done operations need done prerequisites; A4/A5 operations need their own approval; cited works must not be retracted. Claims bear on a requirement through requirement_ids OR shared evidence. Higher levels add claim-status, assumption, freshness, fringe-corroboration, independent-origin (copies count once) and computation checks (L06: a numeric claim needs a rigorx_compute receipt whose expect checked the claim's own value). 'structurally verified' at most, never a truth guarantee.",
 		properties: { run_id: str(), requirements: { type: "array", items: { type: "object", additionalProperties: true } } }, required: ["run_id", "requirements"] },
 	{ name: "rigorx_reenter", title: "Return to an earlier stage", hint: "additive", operation: "reenter",
 		description: "Return to the current or an earlier stage within the re-entry budget, for example after a failed validation; stages from the target on are done again. Changing the requirements means re-entering CLASSIFY (recorded as a revision).",
@@ -119,13 +134,16 @@ export const TOOLS: ToolSpec[] = [
 		properties: { expression: str(), variables: { anyOf: [{ type: "object", additionalProperties: true }, { type: "null" }], default: null }, as: optStr(),
 			expect: { anyOf: [{ type: "object", additionalProperties: true }, { type: "null" }], default: null }, run_id: optStr() }, required: ["expression"] },
 	{ name: "rigorx_check_source", title: "Check a source", hint: "additive", openWorld: true,
-		description: "Fetch the source of an evidence record (http(s) URL or DOI via doi.org) and record what was retrieved: HTTP status, final URL, content type, size and SHA-256 (first 1 MiB). Recorded as an engine-verified SOURCE_CHECK receipt; a successful check raises the requirement's verification level to sources_resolved. It shows the source exists and what it contained, not that it supports the claim.",
+		description: "Fetch the source of an evidence record (http(s) URL or DOI via doi.org) and record what was retrieved: HTTP status, every redirect (each hop checked: no private or local addresses), final URL, content type, size, SHA-256 (first 1 MiB), HTML metadata (title, canonical link, DOI, publisher, author, date) and phrases that look like instructions to an AI (injection_signals). For a DOI it also reads Crossref (metadata, retractions); for an unreachable source, the closest Wayback snapshot. Recorded as an engine-verified SOURCE_CHECK receipt; a successful check raises the requirement's verification level to sources_resolved and lets copies of one origin be recognized. Fetched metadata is untrusted data. It shows the source exists and what it contained, not that it supports the claim.",
 		properties: { run_id: str(), evidence_id: str() }, required: ["run_id", "evidence_id"] },
+	{ name: "rigorx_assess_sources", title: "Assess sources and claims", hint: "read", operation: "assess_sources",
+		description: "Source Intelligence Gate for one run: each source's canonical identity (DOI, arXiv, post ID, archive original, normalized URL), domain D01-D09, lifecycle (DISCOVERED, ACQUIRED, PARSED, CROSS_CHECKED or ACQUISITION_FAILED) and verdict (ACCEPTED, DISPUTED, REJECTED, INSUFFICIENT) with its reason; independent origin groups and why sources were merged (same DOI, same site, syndicated copy, wire byline, declared derivation, identical content); and for each claim: independent origins, shared origins, domains, contradictions, retractions and the evidence still missing. Structural, not a truth verdict. Stores nothing.",
+		properties: { run_id: str() }, required: ["run_id"] },
 	{ name: "rigorx_memory_topic", title: "Topic memory: topics", hint: "destructive", operation: "memory_topic",
 		description: "Manage the topic tree of your RIGOR-X topic memory (topics RIGOR-X works on; personal context stays in your own assistant memory). action: list | create {name, parent_id?} | rename {topic_id, name} | move {topic_id, parent_id} | merge {topic_id, into_id} | delete {topic_id} (deletes its items and subtopics). decided_by: \"user\" when the user asked for it, \"host\" for your own proposal; a topic the user placed can only be changed by the user, and merge and delete are always the user's decision.",
 		properties: { action: str(), topic_id: optStr(), name: optStr(), parent_id: optStr(), into_id: optStr(), decided_by: optStr() }, required: ["action"] },
 	{ name: "rigorx_memory_write", title: "Topic memory: write", hint: "additive", operation: "memory_write",
-		description: "Remember one fact, decision, preference, source, summary, question or note under a topic, in any language. keywords: words a later search would use, in the text's language (add a second language if useful). trust: host_inferred (default), run_validated (needs provenance.run_id of a run that passed validation) or user_confirmed (needs decided_by \"user\"). supersedes replaces an older item; conflicts_with links items that disagree; host_memory_conflict records what your own memory says when it disagrees. Returns possible_conflicts to show the user. 120 MB per user.",
+		description: "Remember one fact, decision, preference, source, summary, question or note under a topic, in any language. keywords: words a later search would use, in the text's language (add a second language if useful). trust: host_inferred (default), run_validated (needs provenance.run_id of a run that passed validation and provenance.claim_id or provenance.evidence_id: the text must be exactly that validated claim's text, checked by SHA-256) or user_confirmed (needs decided_by \"user\"). supersedes replaces an older item of the same topic (an item the user placed, or of higher trust, only with decided_by \"user\"); conflicts_with links items that disagree; host_memory_conflict records what your own memory says when it disagrees. Returns possible_conflicts to show the user. 120 MB per user.",
 		properties: { topic_id: str(), text: str(), kind: optStr(), keywords: { anyOf: [{ type: "array", items: { type: "string" } }, { type: "null" }], default: null }, lang: optStr(), trust: optStr(),
 			decided_by: optStr(), provenance: { anyOf: [{ type: "object", additionalProperties: true }, { type: "null" }], default: null }, as_of: optStr(), supersedes: optStr(),
 			conflicts_with: { anyOf: [{ type: "array", items: { type: "string" } }, { type: "null" }], default: null }, host_memory_conflict: optStr() }, required: ["topic_id", "text"] },
@@ -181,7 +199,7 @@ function toolError(message: string): JsonObject {
 }
 
 /** Handle one JSON-RPC message; returns the response, or null for notifications. */
-export async function handleMessage(message: unknown, backend: EngineBackend, owner: string | null): Promise<JsonObject | null> {
+export async function handleMessage(message: unknown, backend: EngineBackend, owner: string | null, origin?: string): Promise<JsonObject | null> {
 	if (typeof message !== "object" || message === null || Array.isArray(message)) return rpcError(null, -32600, "Invalid Request");
 	const m = message as Partial<RpcRequest>;
 	if (m.jsonrpc !== "2.0" || typeof m.method !== "string") return rpcError(m.id, -32600, "Invalid Request");
@@ -195,7 +213,7 @@ export async function handleMessage(message: unknown, backend: EngineBackend, ow
 			return rpcResult(m.id, {
 				protocolVersion: SUPPORTED_VERSIONS.includes(requested) ? requested : LATEST,
 				capabilities: { tools: { listChanged: false } },
-				serverInfo: { name: "rigor-x", title: "RIGOR-X", version: SERVER_VERSION },
+				serverInfo: serverInfo(origin),
 				instructions: SERVER_INSTRUCTIONS,
 			});
 		}
@@ -303,13 +321,13 @@ export function classifyModern(body: Record<string, unknown>, headers: Headers):
 	return null;
 }
 
-const withServerInfo = (result: JsonObject): JsonObject => {
+const withServerInfo = (result: JsonObject, origin?: string): JsonObject => {
 	const meta = result._meta && typeof result._meta === "object" && !Array.isArray(result._meta) ? (result._meta as JsonObject) : {};
-	return { ...result, _meta: { ...meta, [META_SERVER_INFO]: { ...SERVER_INFO } } };
+	return { ...result, _meta: { ...meta, [META_SERVER_INFO]: serverInfo(origin) } };
 };
 
 /** Serve one validated stateless-era request. */
-export async function handleModernMessage(body: Record<string, unknown>, backend: EngineBackend, owner: string | null): Promise<JsonObject> {
+export async function handleModernMessage(body: Record<string, unknown>, backend: EngineBackend, owner: string | null, origin?: string): Promise<JsonObject> {
 	const id = body.id;
 	switch (body.method) {
 		case "server/discover":
@@ -318,13 +336,13 @@ export async function handleModernMessage(body: Record<string, unknown>, backend
 				capabilities: { tools: {} },
 				instructions: SERVER_INSTRUCTIONS,
 				resultType: "complete", ttlMs: LIST_TTL_MS, cacheScope: "public",
-			}));
+			}, origin));
 		case "tools/list":
-			return rpcResult(id, withServerInfo({ tools: toolList(), resultType: "complete", ttlMs: LIST_TTL_MS, cacheScope: "public" }));
+			return rpcResult(id, withServerInfo({ tools: toolList(), resultType: "complete", ttlMs: LIST_TTL_MS, cacheScope: "public" }, origin));
 		case "tools/call": {
 			// Same dispatch as the handshake era; the result gains resultType and the server stamp.
-			const legacy = await handleMessage({ jsonrpc: "2.0", id: id as Json, method: "tools/call", params: body.params as Json }, backend, owner);
-			if (legacy && legacy.result) return rpcResult(id, withServerInfo({ ...(legacy.result as JsonObject), resultType: "complete" }));
+			const legacy = await handleMessage({ jsonrpc: "2.0", id: id as Json, method: "tools/call", params: body.params as Json }, backend, owner, origin);
+			if (legacy && legacy.result) return rpcResult(id, withServerInfo({ ...(legacy.result as JsonObject), resultType: "complete" }, origin));
 			return legacy ?? rpcError(id, -32603, "Internal error");
 		}
 		default:
@@ -333,18 +351,74 @@ export async function handleModernMessage(body: Record<string, unknown>, backend
 	}
 }
 
+// ---------------------------------------------------------------- request limits (audit finding G)
+
+/** Largest request body accepted (bytes). Stage submissions are far smaller; the cap bounds parse cost. */
+export const MAX_BODY_BYTES = 1_048_576;
+/** Deepest JSON nesting accepted; real payloads stay below 10. */
+export const MAX_JSON_DEPTH = 32;
+
+class BodyTooLarge extends Error {}
+
+/** Read the body as text, refusing it as soon as it exceeds `max` bytes (Content-Length is only a hint). */
+async function readBody(request: Request, max: number): Promise<string> {
+	const declared = Number(request.headers.get("content-length") ?? "");
+	if (Number.isFinite(declared) && declared > max) throw new BodyTooLarge();
+	if (!request.body) return "";
+	const reader = request.body.getReader();
+	const chunks: Uint8Array[] = [];
+	let total = 0;
+	for (;;) {
+		const { done, value } = await reader.read();
+		if (done) break;
+		total += value.byteLength;
+		if (total > max) {
+			await reader.cancel().catch(() => undefined);
+			throw new BodyTooLarge();
+		}
+		chunks.push(value);
+	}
+	const all = new Uint8Array(total);
+	let off = 0;
+	for (const c of chunks) { all.set(c, off); off += c.byteLength; }
+	return new TextDecoder().decode(all);
+}
+
+/** Maximum nesting depth of a parsed JSON value (iterative: a hostile document cannot overflow the stack). */
+export function jsonDepth(value: unknown, stopAt = Infinity): number {
+	let max = 0;
+	const stack: [unknown, number][] = [[value, 1]];
+	while (stack.length) {
+		const [v, d] = stack.pop()!;
+		if (v === null || typeof v !== "object") continue;
+		if (d > max) max = d;
+		if (max > stopAt) return max;
+		for (const child of Array.isArray(v) ? v : Object.values(v)) stack.push([child, d + 1]);
+	}
+	return max;
+}
+
+/** MCP requires request IDs to be strings or integers (never null, objects or fractions). */
+const validId = (id: unknown) => typeof id === "string" ? id.length <= 256 : typeof id === "number" && Number.isSafeInteger(id);
+
 /** Streamable HTTP endpoint: POST only, JSON responses, no server-initiated stream. */
 export async function handleHttp(request: Request, backend: EngineBackend, owner: string | null): Promise<Response> {
 	if (request.method !== "POST") {
 		return new Response("Method Not Allowed", { status: 405, headers: { Allow: "POST" } });
 	}
+	const origin = new URL(request.url).origin;
 	let body: unknown;
 	try {
-		body = await request.json();
-	} catch {
+		body = JSON.parse(await readBody(request, MAX_BODY_BYTES));
+	} catch (e) {
+		if (e instanceof BodyTooLarge) return Response.json(rpcError(null, -32600, `Request body exceeds ${MAX_BODY_BYTES} bytes`), { status: 413 });
 		return Response.json(rpcError(null, -32700, "Parse error"), { status: 400 });
 	}
 	if (Array.isArray(body)) return Response.json(rpcError(null, -32600, "Batch requests are not supported"), { status: 400 });
+	if (jsonDepth(body, MAX_JSON_DEPTH) > MAX_JSON_DEPTH) return Response.json(rpcError(null, -32600, `JSON nesting deeper than ${MAX_JSON_DEPTH} levels`), { status: 400 });
+	if (body && typeof body === "object" && "id" in body && (body as { id: unknown }).id !== undefined && !validId((body as { id: unknown }).id)) {
+		return Response.json(rpcError(null, -32600, "Invalid Request: id must be a string or an integer"), { status: 400 });
+	}
 	const version = request.headers.get("MCP-Protocol-Version");
 	if (version !== null && !SUPPORTED_VERSIONS.includes(version)) {
 		// Stateless era: anything that is not a handshake version is validated here (unknown values
@@ -354,11 +428,11 @@ export async function handleHttp(request: Request, backend: EngineBackend, owner
 		if (b.jsonrpc !== "2.0" || typeof b.method !== "string") return Response.json(rpcError(b.id, -32600, "Invalid Request"), { status: 400 });
 		if (!("id" in b) || b.id === undefined) return new Response(null, { status: 202 }); // notifications: acknowledged, no reply
 		const rejected = classifyModern(b, request.headers);
-		const response = rejected ?? await handleModernMessage(b, backend, owner);
+		const response = rejected ?? await handleModernMessage(b, backend, owner, origin);
 		return Response.json(response, { status: modernStatus(response) });
 	}
 	// Handshake era (no header before initialize, or a negotiated handshake version).
-	const response = await handleMessage(body, backend, owner);
+	const response = await handleMessage(body, backend, owner, origin);
 	if (response === null) return new Response(null, { status: 202 });
 	return Response.json(response);
 }

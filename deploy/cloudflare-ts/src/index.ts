@@ -16,7 +16,7 @@ import { EngineError, HostEngine, dispatch } from "./engine.ts";
 import { limitsFromEnv, type LimitVars } from "./limits.ts";
 import { handleHttp, type EngineBackend } from "./mcp.ts";
 import { buildProvider, type AuthEnv } from "./auth.ts";
-import { checkSource } from "./source.ts";
+import { runSourceCheck } from "./source.ts";
 import { MemoryStore } from "./memory.ts";
 import type { JsonObject } from "./text.ts";
 
@@ -30,7 +30,12 @@ export class OwnerRuns extends DurableObject<Env> {
 	constructor(ctx: DurableObjectState, env: Env) {
 		super(ctx, env);
 		const store = new DurableObjectRunStore(ctx.storage.sql); // runs the schema migrations, memory tables included
-		this.engine = new HostEngine(store, { limits: limitsFromEnv(env), memory: new MemoryStore(ctx.storage.sql) });
+		this.engine = new HostEngine(store, {
+			limits: limitsFromEnv(env),
+			memory: new MemoryStore(ctx.storage.sql),
+			// Each operation is one SQLite transaction: an operation that fails part-way changes nothing (audit finding C1).
+			transaction: (fn) => ctx.storage.transactionSync(fn),
+		});
 	}
 
 	call(ownerId: string, operation: string, payloadJson: string): string {
@@ -58,11 +63,7 @@ function backend(env: Env): EngineBackend {
 		resolveCommands: (text) => localEngine.resolveCommands(text),
 		compute: (args) => localEngine.computeOp(null, args),
 		run,
-		async checkSource(ownerId, args) {
-			const evidence = await run(ownerId, "evidence_for_check", args);
-			const check = await checkSource(String(evidence.source_ref));
-			return run(ownerId, "record_source_check", { run_id: args.run_id ?? null, evidence_id: args.evidence_id ?? null, check: check as unknown as JsonObject });
-		},
+		checkSource: (ownerId, args) => runSourceCheck((operation, a) => run(ownerId, operation, a), args),
 	};
 	async function run(ownerId: string, operation: string, args: JsonObject): Promise<JsonObject> {
 		const stub = env.OWNER_RUNS.get(env.OWNER_RUNS.idFromName(await ownerKey(ownerId)));

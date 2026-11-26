@@ -1,6 +1,6 @@
 {
  "name": "test-b-unit-error",
- "description": "P1 exit Test B (EUV acceptance test #2 failure mode): a conductivity computed in Gaussian units (s^-1) and labelled S/m. The rigorx_compute receipt fails its check (computed/expected = 4·pi·eps0), so an L06 validation citing it fails (cited_receipts_ok, numeric_claims_computed); with a correct SI receipt it passes. A reconstruction of the failure mode, not a replay of the original answer's numbers.",
+ "description": "P1 exit Test B (EUV acceptance test #2 failure mode): a conductivity computed in Gaussian units (s^-1) and labelled S/m. The rigorx_compute receipt fails its check (computed/expected = 4·pi·eps0), so an L06 validation citing it fails (cited_receipts_ok, numeric_claims_computed); with a correct SI receipt it passes. A reconstruction of the failure mode, not a replay of the original answer's numbers. Since gate 2.1.0 (audit finding B2) the numeric claim states its value, and the receipt must have checked that same value with expect: the first claim states the mislabelled Gaussian number, the corrected claim states 1.595e5 S/m.",
  "steps": [
   {
    "op": "start_run",
@@ -127,7 +127,7 @@
    "op": "record_evidence",
    "args": {
     "run_id": "$run",
-    "source_ref": "https://textbook.example.org/plasma",
+    "source_ref": "https://textbook.example.net/plasma",
     "claim": "The textbook gives the same temperature scaling of the resistivity"
    },
    "expect": {
@@ -251,7 +251,12 @@
        ],
        "requirement_ids": [
         "R1"
-       ]
+       ],
+       "value": {
+        "status": "KNOWN",
+        "number": 1433800000000000.0,
+        "unit": "S/m"
+       }
       }
      ],
      "assumptions": []
@@ -357,7 +362,12 @@
        ],
        "requirement_ids": [
         "R1"
-       ]
+       ],
+       "value": {
+        "status": "KNOWN",
+        "number": 159500.0,
+        "unit": "S/m"
+       }
       }
      ],
      "assumptions": []

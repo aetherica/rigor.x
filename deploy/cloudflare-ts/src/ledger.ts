@@ -9,6 +9,7 @@ import {
 	chars, digest, evidenceIds, fingerprint, ident, invalid, list, object, oneOf, storedNote, substantial, text,
 	type StoredText, type TextPolicy,
 } from "./text.ts";
+import type { EvidenceRecord } from "./run.ts";
 
 export interface RequirementItem { id: string; name: StoredText }
 export interface Requirement {
@@ -236,7 +237,40 @@ export function findCycle(ops: { id: string; depends_on: string[] }[]): string[]
 	return [...path.slice(path.indexOf(cur)), cur];
 }
 
-export function executeContract(data: Record<string, unknown>, ctx: ContractContext, approvals: ReadonlySet<string> = new Set()): NonNullable<Ledger["execution"]> {
+/** Single-use approvals (audit finding B1): which operation each cited USER_APPROVAL is bound to, and why it is not valid. */
+export function approvalProblems(op: Operation, cited: string[], evidence: ReadonlyMap<string, EvidenceRecord>, at: Date, usedBy: Map<string, string>): string | null {
+	const approvals = cited.map((id) => evidence.get(id)).filter((e): e is EvidenceRecord => e?.type === "USER_APPROVAL");
+	if (!approvals.length) return `${op.id} (${op.tier}) has no USER_APPROVAL evidence`;
+	const reasons: string[] = [];
+	for (const a of approvals) {
+		const d = a.details;
+		if (d.approves !== op.id) { reasons.push(`${a.id} approves ${d.approves === undefined ? "no operation (record it with approves=<operation id>)" : String(d.approves)}, not ${op.id}`); continue; }
+		if (d.operation_digest !== operationDigest(op)) { reasons.push(`${a.id} was given for an earlier version of ${op.id}; the plan changed after the approval`); continue; }
+		if (typeof d.expires_at === "string" && Date.parse(d.expires_at) < at.getTime()) { reasons.push(`${a.id} expired at ${d.expires_at}`); continue; }
+		const other = usedBy.get(a.id);
+		if (other && other !== op.id) { reasons.push(`${a.id} is already used by ${other} (an approval covers one operation)`); continue; }
+		usedBy.set(a.id, op.id);
+		return null;
+	}
+	return `${op.id} (${op.tier}): ${reasons.join("; ")}`;
+}
+
+/** What an approval is bound to: the planned operation as registered (ID, capability, condition, tier, requirements). */
+export function operationDigest(op: Operation): string {
+	return `op:${op.id}|${op.capability}|${op.completion_condition.sha256}|${op.tier ?? ""}|${[...op.requirement_ids].sort().join(",")}`;
+}
+
+/** Done operations whose prerequisites are not done (audit finding D). */
+export function dependencyProblems(plan: Operation[], status: (id: string) => string): string[] {
+	const out: string[] = [];
+	for (const op of plan) {
+		if (status(op.id) !== "done") continue;
+		for (const dep of op.depends_on) if (status(dep) !== "done") out.push(`${op.id} is done but depends on ${dep}, which is ${status(dep)}`);
+	}
+	return out;
+}
+
+export function executeContract(data: Record<string, unknown>, ctx: ContractContext, evidence: ReadonlyMap<string, EvidenceRecord> = new Map(), at: Date = new Date()): NonNullable<Ledger["execution"]> {
 	const planned = ctx.ledger.plan?.operations ?? [];
 	const raw = list("data.operations", data.operations, 100, planned.length > 0);
 	const reports = uniqueIds("data.operations", raw.map((r, i) => {
@@ -251,10 +285,17 @@ export function executeContract(data: Record<string, unknown>, ctx: ContractCont
 	if (unknown.length) throw invalid(`Not in the plan: ${unknown.join(", ")}`);
 	const missing = planned.filter((p) => !reported.has(p.id)).map((p) => p.id);
 	if (missing.length) throw invalid(`Report every planned operation; missing: ${missing.join(", ")}`);
+	// Dependency integrity (audit finding D): a done operation's prerequisites must be done too.
+	const statusOf = (id: string) => reports.find((r) => r.id === id)?.status ?? "unreported";
+	const broken = dependencyProblems(planned, statusOf);
+	if (broken.length) throw invalid(`Dependencies not satisfied: ${broken.join("; ")}. Report the dependent operation as failed or not_done, or re-run its prerequisite first.`);
+	// Consequential operations (A4/A5) cite a USER_APPROVAL bound to them, single-use and unexpired (audit finding B1).
+	const usedBy = new Map<string, string>();
 	for (const p of planned) {
 		const rep = reports.find((r) => r.id === p.id)!;
-		if ((p.tier === "A4" || p.tier === "A5") && rep.status === "done" && !rep.evidence_ids.some((e) => approvals.has(e))) {
-			throw invalid(`Operation ${p.id} is tier ${p.tier}: a done ${p.tier} operation must cite the user's approval, recorded with rigorx_record_evidence (evidence_type USER_APPROVAL)`);
+		if ((p.tier === "A4" || p.tier === "A5") && rep.status === "done") {
+			const problem = approvalProblems(p, rep.evidence_ids, evidence, at, usedBy);
+			if (problem) throw invalid(`Operation ${p.id} is tier ${p.tier}: a done ${p.tier} operation must cite the user's approval for it, recorded with rigorx_record_evidence (evidence_type USER_APPROVAL, approves="${p.id}"). ${problem}`);
 		}
 	}
 	return { operations: reports };

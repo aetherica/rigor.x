@@ -84,7 +84,13 @@ export interface ConsentFacts {
 	redirectIsLoopback: boolean;
 }
 
+/** Favicon and app icons: the circular Aetherica emblem, served as static assets (public/). */
+const HEAD_ICONS = `<link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48"><link rel="icon" type="image/png" href="/icon-192.png" sizes="192x192"><link rel="apple-touch-icon" href="/icon-192.png">`;
+/** The emblem above each page's title (decorative; the page text names RIGOR-X). */
+const EMBLEM = `<img class="emblem" src="/icon-192.png" width="72" height="72" alt="">`;
+
 const PAGE_STYLE = `body{font:16px/1.5 system-ui,sans-serif;max-width:32rem;margin:3rem auto;padding:0 1rem;color:#1a1a1a;background:#fff}
+.emblem{display:block;width:72px;height:72px;margin:0 0 1rem;border-radius:50%}
 @media (prefers-color-scheme:dark){body{color:#eee;background:#151515}}
 button{font:inherit;padding:.5rem 1.25rem;margin-right:.5rem;border-radius:.4rem;border:1px solid #888;cursor:pointer}
 button[value=approve]{background:#1a73e8;color:#fff;border-color:#1a73e8}.warn{padding:.75rem;border-left:4px solid #d93025}`;
@@ -96,7 +102,8 @@ export function consentPage(facts: ConsentFacts, handle: string): string {
 		: "This app registered itself; its name is not verified.";
 	return `<!doctype html>
 <html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Sign in to RIGOR-X</title><style>${PAGE_STYLE}</style>
+<title>Sign in to RIGOR-X</title>${HEAD_ICONS}<style>${PAGE_STYLE}</style>
+${EMBLEM}
 <h1>Allow ${name} to use RIGOR-X?</h1>
 <p>${origin} Access will be sent to <strong>${escapeHtml(facts.redirectHost)}</strong>.</p>
 ${facts.redirectIsLoopback ? '<p class="warn"><strong>This sends access to an app on your computer.</strong> Continue only if you just started signing in from it.</p>' : ""}
@@ -112,7 +119,8 @@ const REPO_URL = "https://github.com/aetherica/rigor.x";
 /** Public pages linked from the Google OAuth consent screen (Branding). Factual, early-development text. */
 export const PRIVACY_PAGE = `<!doctype html>
 <html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>RIGOR-X privacy</title><style>${PAGE_STYLE}</style>
+<title>RIGOR-X privacy</title>${HEAD_ICONS}<style>${PAGE_STYLE}</style>
+${EMBLEM}
 <h1>RIGOR-X privacy policy</h1>
 <p>RIGOR-X is an MCP server that AI assistants (such as ChatGPT and Claude) call to structure multi-step work. This page describes what it stores. Status: early development.</p>
 <h2>Sign-in</h2>
@@ -120,7 +128,7 @@ export const PRIVACY_PAGE = `<!doctype html>
 <h2>What is stored</h2>
 <ul>
 <li>Task text, stage summaries, objectives, requirement and claim texts, assumptions, scenarios and evidence claims: stored only as SHA-256 digests and lengths, not as text.</li>
-<li>Stored as text, because they are the record of the run: source references (for example URLs), reasons given for pausing, re-entering or cancelling a stage, requirement, operation, claim and capability IDs and names, the names and receipt references of actions your assistant reports, the inputs and results of calculations made with <code>rigorx_compute</code> in a run, and, for sources checked with <code>rigorx_check_source</code>, the address fetched, its status, size and SHA-256 hash (not the page content).</li>
+<li>Stored as text, because they are the record of the run: source references (for example URLs), reasons given for pausing, re-entering or cancelling a stage, requirement, operation, claim and capability IDs and names, the names and receipt references of actions your assistant reports, the inputs and results of calculations made with <code>rigorx_compute</code> in a run, and, for sources checked with <code>rigorx_check_source</code>, the addresses fetched (with redirects), status, size, SHA-256 hash and a few bibliographic fields (title, author, publisher, date, DOI, Crossref retraction status) — not the page content.</li>
 <li>Topic memory (only what your assistant saves with <code>rigorx_memory_write</code> about the topics RIGOR-X works on): stored as text with its keywords, so it can be searched; kept until you delete it (<code>rigorx_memory_delete</code>, or a whole topic with <code>rigorx_memory_topic</code>). Deletion removes the text and its search index; a record of the deletion (when, how many items) is kept without the content. Up to 120 MB per account.</li>
 <li>Sign-in records (registered apps, grants, tokens): stored hashed or encrypted.</li>
 </ul>
@@ -131,7 +139,8 @@ export const PRIVACY_PAGE = `<!doctype html>
 
 export const TERMS_PAGE = `<!doctype html>
 <html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>RIGOR-X terms</title><style>${PAGE_STYLE}</style>
+<title>RIGOR-X terms</title>${HEAD_ICONS}<style>${PAGE_STYLE}</style>
+${EMBLEM}
 <h1>RIGOR-X terms of service</h1>
 <p>RIGOR-X is an early-stage development service, provided as is, without warranty and without guaranteed availability. It may change or stop at any time, and stored runs may be deleted.</p>
 <p>Verification results are structural checks of what your assistant submitted ("structurally verified"); they do not guarantee that any claim is correct or true.</p>
@@ -141,6 +150,7 @@ export const TERMS_PAGE = `<!doctype html>
 export function messagePage(title: string, message: string): string {
 	return `<!doctype html>
 <html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${escapeHtml(title)}</title><style>${PAGE_STYLE}</style>
+<title>${escapeHtml(title)}</title>${HEAD_ICONS}<style>${PAGE_STYLE}</style>
+${EMBLEM}
 <h1>${escapeHtml(title)}</h1><p>${escapeHtml(message)}</p></html>`;
 }

@@ -3,7 +3,7 @@
 // configured shared token is still not accepted (regression test for P0.1).
 // Usage (from deploy/cloudflare-ts): node test/integration/auth-probe.mjs
 import { spawn } from "node:child_process";
-import { mkdtempSync } from "node:fs";
+import { mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import assert from "node:assert/strict";
@@ -68,9 +68,31 @@ try {
 		const { client_id } = await reg.json();
 		const q = new URLSearchParams({ response_type: "code", client_id, redirect_uri: "http://127.0.0.1:9999/cb", state: "s",
 			code_challenge: "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM", code_challenge_method: "S256", resource: `${base}/mcp` });
-		const consent = await fetch(`${base}/authorize?${q}`);
+		// A browser navigation (Sec-Fetch-Mode: navigate) must still reach the Worker with static assets configured.
+		const consent = await fetch(`${base}/authorize?${q}`, { headers: { "sec-fetch-mode": "navigate", "sec-fetch-dest": "document" } });
 		assert.equal(consent.status, 200);
-		assert.match(await consent.text(), /Continue with Google/);
+		const html = await consent.text();
+		assert.match(html, /Continue with Google/);
+		assert.match(html, /<img class="emblem" src="\/icon-192\.png"/);
+		assert.match(html, /<link rel="icon" href="\/favicon\.ico"/);
+		const csp = consent.headers.get("content-security-policy") ?? "";
+		assert.ok(!/img-src[^;]*'none'/.test(csp) && !/default-src[^;]*'none'/.test(csp) || /img-src[^;]*'self'/.test(csp), `CSP blocks the emblem: ${csp}`);
+		console.log(`  consent CSP: ${csp || "(none)"}`);
+	});
+	await check("icons are served by the static asset layer (PNG bytes as built, transparent corners)", async () => {
+		for (const n of [32, 48, 64, 96, 128, 192, 256, 448]) {
+			const r = await fetch(`${base}/icon-${n}.png`);
+			assert.equal(r.status, 200, `icon-${n}`);
+			assert.equal(r.headers.get("content-type"), "image/png", `icon-${n}`);
+			const bytes = new Uint8Array(await r.arrayBuffer());
+			assert.deepEqual(bytes, new Uint8Array(readFileSync(`public/icon-${n}.png`)), `icon-${n} bytes`);
+		}
+		const ico = await fetch(`${base}/favicon.ico`);
+		assert.equal(ico.status, 200);
+		assert.match(ico.headers.get("content-type") ?? "", /icon/);
+		const privacy = await fetch(`${base}/privacy`, { headers: { "sec-fetch-mode": "navigate" } });
+		assert.match(await privacy.text(), /RIGOR-X privacy policy/); // still the Worker's page, not an asset 404
+		assert.equal((await fetch(`${base}/icon-999.png`)).status, 404); // unknown icons fall through to the Worker's 404
 	});
 	await check("token endpoint rejects a forged authorization code", async () => {
 		const r = await fetch(`${base}/token`, { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" },

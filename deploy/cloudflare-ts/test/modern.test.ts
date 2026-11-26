@@ -35,13 +35,22 @@ test("server/discover advertises versions, tools capability, instructions, cache
 	assert.equal(r.resultType, "complete");
 	assert.equal(r.ttlMs, 3_600_000);
 	assert.equal(r.cacheScope, "public");
-	assert.deepEqual(r._meta["io.modelcontextprotocol/serverInfo"], { name: "rigor-x", title: "RIGOR-X", version: "0.4.0.dev0" });
+	const info = r._meta["io.modelcontextprotocol/serverInfo"];
+	assert.equal(info.name, "rigor-x");
+	assert.equal(info.title, "RIGOR-X");
+	assert.equal(info.version, "0.4.0.dev0");
+	// Icons (MCP 2025-11-25 Implementation.icons): absolute URLs on the request's origin, PNG, square sizes.
+	assert.deepEqual(info.icons.map((i: any) => i.sizes[0]), ["48x48", "96x96", "192x192", "448x448"]);
+	for (const icon of info.icons) {
+		assert.match(icon.src, /^https:\/\/x\/icon-\d+\.png$/);
+		assert.equal(icon.mimeType, "image/png");
+	}
 });
 
 test("tools/list and tools/call in the stateless era", async () => {
 	const list = await send(request("tools/list"));
 	assert.equal(list.status, 200);
-	assert.equal(list.body.result.tools.length, 21);
+	assert.equal(list.body.result.tools.length, 22);
 	assert.equal(list.body.result.resultType, "complete");
 	const routed = await send(request("tools/call", { name: "rigorx_route", arguments: { task: "Debug this code" } }, { "Mcp-Name": "rigorx_route" }));
 	assert.equal(routed.status, 200);
@@ -111,6 +120,6 @@ test("removed methods are 404 -32601; notifications get 202; the handshake era i
 	assert.equal(legacy.body.result.protocolVersion, "2025-11-25");
 	const legacyCall = await send(new Request("https://x/mcp", { method: "POST", headers: { "MCP-Protocol-Version": "2025-11-25" },
 		body: JSON.stringify({ jsonrpc: "2.0", id: 2, method: "tools/list" }) }));
-	assert.equal(legacyCall.body.result.tools.length, 21);
+	assert.equal(legacyCall.body.result.tools.length, 22);
 	assert.equal(legacyCall.body.result.resultType, undefined);
 });

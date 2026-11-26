@@ -1,6 +1,6 @@
 {
  "name": "unknown-is-not-low-risk",
- "description": "WS32 N2 and directive §2.2 (Unknown is not Zero): a task with no router signal (here Bengali) is UNKNOWN with seed L02; CLASSIFY requires a declared level and stakes; critical stakes raise the level to L05, where all twelve stages are mandatory and none can be skipped.",
+ "description": "WS32 N2 and directive §2.2 (Unknown is not Zero): a task with no English intent signal (here Bengali) is UNKNOWN, so CLASSIFY requires a declared level and stakes. Since the 2026-11-26 audit (finding F) its Bengali risk vocabulary (bank, password, leaked, permanently delete) is recognized by the multilingual risk lexicon, so the seed is already L05 and all twelve stages are mandatory; a declared lower level cannot lower it.",
  "steps": [
   {
    "op": "start_run",
@@ -11,14 +11,20 @@
     "ok": true,
     "fields": {
      "intent": "UNKNOWN",
-     "level": "L02_STANDARD",
+     "level": "L05_CRITICAL",
      "classification_unknown": true,
      "mandatory_stages": [
       "QUERY",
       "CLASSIFY",
+      "SELECT_METHODS",
+      "ASSESS_COMPLEXITY",
+      "IDENTIFY_CAPABILITIES",
       "PLAN",
       "EXECUTE",
+      "EVALUATE_EVIDENCE",
       "VALIDATE",
+      "STRESS_TEST",
+      "OPTIMIZE",
       "DELIVER"
      ]
     }
