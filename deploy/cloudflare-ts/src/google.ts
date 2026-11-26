@@ -103,8 +103,8 @@ const GOOGLE_G = `<svg class="g" viewBox="0 0 48 48" width="18" height="18" aria
 const PAGE_STYLE = `:root{--bg:#f6f7f9;--card:#fff;--text:#1f1f1f;--muted:#5f6368;--line:#dadce0;--accent:#0b57d0;--accent-text:#fff;--chip:#f1f3f4;--warn:#b3261e;--warn-bg:#fce8e6;color-scheme:light dark}
 @media (prefers-color-scheme:dark){:root{--bg:#111214;--card:#1e1f22;--text:#e8eaed;--muted:#9aa0a6;--line:#3c4043;--accent:#a8c7fa;--accent-text:#062e6f;--chip:#2a2b2f;--warn:#f2b8b5;--warn-bg:#3b1a19}}
 *{box-sizing:border-box}html,body{margin:0}
-body{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px 16px;background:var(--bg);color:var(--text);font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:antialiased}
-.card{width:100%;max-width:448px;background:var(--card);border:1px solid var(--line);border-radius:28px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.06),0 8px 24px rgba(0,0,0,.06)}
+body{position:relative;min-height:100vh;min-height:100svh;display:flex;flex-direction:column;align-items:center;padding:52px 16px;background:var(--bg);color:var(--text);font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:antialiased}
+.card{width:100%;max-width:448px;margin:auto 0;background:var(--card);border:1px solid var(--line);border-radius:28px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.06),0 8px 24px rgba(0,0,0,.06)}
 .bar{display:flex;align-items:center;gap:10px;padding:14px 24px;border-bottom:1px solid var(--line);font-size:14px;color:var(--muted)}
 .bar img{width:22px;height:22px;border-radius:50%}.bar b{color:var(--text);font-weight:600;letter-spacing:.01em}
 .body{padding:28px 28px 26px}
@@ -122,7 +122,7 @@ button:hover{background:var(--chip)}button.primary{background:var(--accent);bord
 button.primary:hover{filter:brightness(1.08)}button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 dl{margin:0 0 14px;padding:14px 16px;border:1px solid var(--line);border-radius:16px;font-size:14px}dt{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.04em}dd{margin:0 0 10px;word-break:break-word}dd:last-child{margin:0}
 ul{padding-left:20px}li{margin:0 0 8px}code{font-size:13px;padding:1px 5px;border-radius:6px;background:var(--chip)}
-footer{display:flex;gap:20px;justify-content:center;margin-top:18px;font-size:12px;color:var(--muted)}footer a{color:var(--muted)}
+footer{position:absolute;left:0;right:0;bottom:16px;display:flex;gap:20px;justify-content:center;font-size:12px;color:var(--muted)}footer a{color:var(--muted)}
 .doc{max-width:680px}`;
 
 /** Wraps page content in the shared layout: head, top bar with the emblem, card and footer links. */
