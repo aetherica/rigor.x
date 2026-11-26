@@ -303,6 +303,11 @@ test("F an explicit low-effort token cannot lower a risky task below its risk fl
 	assert.ok(["L05_CRITICAL", "L06_HYPER_RIGOROUS"].includes(route("/l01 delete the production database and rotate all credentials").level));
 	assert.ok(["L03_DEEP", "L04_COMPLEX", "L05_CRITICAL", "L06_HYPER_RIGOROUS"].includes(route("/l01 what is a password manager").level));
 	assert.equal(route("/l01 what is gravity").level, "L01_BASIC");
+	// Destructive action with no risk vocabulary (found on the live server after the 2.1.0 deploy).
+	assert.equal(route("/l01 delete production database and all backups").level, "L05_CRITICAL");
+	assert.equal(route("delete production database and all backups").level, "L05_CRITICAL");
+	assert.equal(route("/l01 wipe the server").level, "L05_CRITICAL");
+	assert.equal(route("/l01 how do I format a date in javascript").level, "L03_DEEP");
 	const bn = route("আমার ব্যাংক অ্যাকাউন্টের পাসওয়ার্ড কীভাবে রিসেট করব");
 	assert.ok(bn.risk_score >= 1, JSON.stringify(bn.signals));
 });
