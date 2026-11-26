@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="RIGOR-X workflow control mark">
+  <g fill="none" stroke="#171717" stroke-width="22" stroke-linecap="round">
+    <circle cx="256" cy="256" r="174" stroke-dasharray="56 35"/>
+    <path d="M256 82V54 M386 126l20-20 M430 256h28 M386 386l20 20 M256 430v28 M126 386l-20 20 M82 256H54 M126 126l-20-20"/>
+  </g>
+  <g fill="#C99B43">
+    <circle cx="256" cy="82" r="15"/><circle cx="386" cy="126" r="15"/>
+    <circle cx="430" cy="256" r="15"/><circle cx="386" cy="386" r="15"/>
+    <circle cx="256" cy="430" r="15"/><circle cx="126" cy="386" r="15"/>
+    <circle cx="82" cy="256" r="15"/><circle cx="126" cy="126" r="15"/>
+  </g>
+  <path d="m184 260 48 48 98-108" fill="none" stroke="#C99B43" stroke-width="30" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

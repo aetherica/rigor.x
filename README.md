@@ -46,6 +46,10 @@ A public GitHub repository is subject to GitHub's [Terms of Service](https://doc
 
 These inventories do not imply live functionality. Missing source material stays missing. No dummy handlers or fake connections.
 
+## ChatGPT and Codex Plugin
+
+A portable hybrid Plugin package is maintained in [`plugins/rigor-x/`](plugins/rigor-x/). It bundles focused Skills for structured runs, evidence research, unit-aware computation, and topic memory, and connects to the OAuth-protected Cloudflare MCP service. The package does not bundle or redeploy the hosted Worker. ChatGPT end-to-end OAuth acceptance and fresh-install smoke tests remain unverified; see the Plugin README before testing or submitting it.
+
 ## Live runtime
 See [WS21 Live Agent Runtime](engineering/ai-system/15-LIVE-AGENT-RUNTIME.md). A real model endpoint and plugin callbacks must be supplied by the integrating host. This repo does not automatically connect to ChatGPT's internal plugin runtime.
 

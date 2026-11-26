@@ -1,0 +1,55 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "rigor-x",
+  "version": "0.1.0",
+  "description": "A deterministic control plane for structured multi-stage work, evidence tracking, verification, computation, and topic memory.",
+  "author": {
+    "name": "Aetherica",
+    "url": "https://github.com/aetherica"
+  },
+  "homepage": "https://github.com/aetherica/rigor.x",
+  "repository": "https://github.com/aetherica/rigor.x",
+  "license": "Apache-2.0",
+  "keywords": [
+    "agent-orchestration",
+    "workflow",
+    "evidence",
+    "verification",
+    "research",
+    "dimensional-analysis",
+    "topic-memory",
+    "mcp"
+  ],
+  "extensions": {
+    "com.openai": {
+      "onboardingSkill": "./skills/structured-work/SKILL.md",
+      "interface": {
+        "displayName": "RIGOR-X",
+        "shortDescription": "Control rigorous workflows",
+        "longDescription": "RIGOR-X is a deterministic control-plane engine for multi-stage work. Use it to structure complex tasks, preregister requirements, record evidence and host-performed actions, run deterministic verification gates, perform unit-aware calculations, and maintain per-user topic memory. Task and stage text are stored as hashes and lengths; source references, action receipts, calculation inputs and results, and saved topic-memory content are retained as described in the privacy policy. Google OAuth is required for the remote MCP connection. Verification is structural: it checks workflow order and completeness, not whether submitted claims are true. The host AI performs the work and must report only actions it actually completed.",
+        "category": "Productivity",
+        "capabilities": [
+          "Structure and track multi-stage workflows",
+          "Record evidence and source-check receipts",
+          "Verify requirements and workflow completeness",
+          "Perform unit-aware calculations",
+          "Manage per-user topic memory"
+        ],
+        "websiteURL": "https://github.com/aetherica/rigor.x",
+        "supportURL": "https://github.com/aetherica/rigor.x/issues",
+        "privacyPolicyURL": "https://rigorx-mcp.aetherica.workers.dev/privacy",
+        "termsOfServiceURL": "https://rigorx-mcp.aetherica.workers.dev/terms",
+        "defaultPrompt": [
+          "Use RIGOR-X to plan and track this task through verification.",
+          "Research this question with RIGOR-X evidence records and source checks.",
+          "Check this calculation with RIGOR-X units and tolerances."
+        ],
+        "brandColor": "#C99B43",
+        "brandColorDark": "#D8AD58",
+        "composerIcon": "./assets/icon.svg",
+        "logo": "./assets/logo-light.svg",
+        "logoDark": "./assets/logo-dark.svg"
+      }
+    }
+  }
+}
