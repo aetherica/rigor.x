@@ -2497,6 +2497,358 @@
    ],
    "text_policy": "relaxed"
   },
+  "multilingual_text_policy": {
+   "expected": [
+    {
+     "ok": true,
+     "result": {
+      "actions": [],
+      "current_stage": "CONTEXT",
+      "evidence_count": 0,
+      "guidance": "Collect the context the task depends on: prior decisions, constraints, available tools, and what is missing. Submit a short summary.",
+      "last_verification": null,
+      "reentries": {
+       "max": 6,
+       "used": 0
+      },
+      "route": {
+       "intent": "INFORMATION",
+       "level": "L03_DEEP",
+       "modes": [
+        "DESCRIPTIVE"
+       ]
+      },
+      "run_id": "$RUN",
+      "stage_status": {
+       "CONTEXT": "IN_PROGRESS",
+       "DECISION": "NOT_STARTED",
+       "EVIDENCE": "NOT_STARTED",
+       "EXECUTION": "NOT_STARTED",
+       "FEEDBACK": "NOT_STARTED",
+       "INTENT": "NOT_STARTED",
+       "KNOWLEDGE": "NOT_STARTED",
+       "REASONING": "NOT_STARTED",
+       "RESEARCH": "NOT_STARTED",
+       "ROUTING": "NOT_STARTED",
+       "VERIFICATION": "NOT_STARTED"
+      },
+      "status": "IN_PROGRESS",
+      "verified": false
+     }
+    },
+    {
+     "code": "INVALID_REQUEST",
+     "ok": false
+    },
+    {
+     "ok": true,
+     "result": {
+      "actions": [],
+      "current_stage": "INTENT",
+      "evidence_count": 0,
+      "guidance": "State what the user actually wants, the expected output and the success criteria. Submit them as the summary.",
+      "last_verification": null,
+      "reentries": {
+       "max": 6,
+       "used": 0
+      },
+      "route": {
+       "intent": "INFORMATION",
+       "level": "L03_DEEP",
+       "modes": [
+        "DESCRIPTIVE"
+       ]
+      },
+      "run_id": "$RUN",
+      "stage_status": {
+       "CONTEXT": "COMPLETED",
+       "DECISION": "NOT_STARTED",
+       "EVIDENCE": "NOT_STARTED",
+       "EXECUTION": "NOT_STARTED",
+       "FEEDBACK": "NOT_STARTED",
+       "INTENT": "IN_PROGRESS",
+       "KNOWLEDGE": "NOT_STARTED",
+       "REASONING": "NOT_STARTED",
+       "RESEARCH": "NOT_STARTED",
+       "ROUTING": "NOT_STARTED",
+       "VERIFICATION": "NOT_STARTED"
+      },
+      "status": "IN_PROGRESS",
+      "verified": false
+     }
+    },
+    {
+     "ok": true,
+     "result": {
+      "actions": [],
+      "current_stage": "KNOWLEDGE",
+      "evidence_count": 0,
+      "guidance": "Identify the knowledge domains and known facts that apply, and what must still be looked up.",
+      "last_verification": null,
+      "reentries": {
+       "max": 6,
+       "used": 0
+      },
+      "route": {
+       "intent": "INFORMATION",
+       "level": "L03_DEEP",
+       "modes": [
+        "DESCRIPTIVE"
+       ]
+      },
+      "run_id": "$RUN",
+      "stage_status": {
+       "CONTEXT": "COMPLETED",
+       "DECISION": "NOT_STARTED",
+       "EVIDENCE": "NOT_STARTED",
+       "EXECUTION": "NOT_STARTED",
+       "FEEDBACK": "NOT_STARTED",
+       "INTENT": "COMPLETED",
+       "KNOWLEDGE": "IN_PROGRESS",
+       "REASONING": "NOT_STARTED",
+       "RESEARCH": "NOT_STARTED",
+       "ROUTING": "NOT_STARTED",
+       "VERIFICATION": "NOT_STARTED"
+      },
+      "status": "IN_PROGRESS",
+      "verified": false
+     }
+    },
+    {
+     "ok": true,
+     "result": {
+      "actions": [],
+      "current_stage": "RESEARCH",
+      "evidence_count": 0,
+      "guidance": "Acquire sources for anything that must be looked up. Record each source with rigorx_record_evidence. Skip with a reason if no research is needed.",
+      "last_verification": null,
+      "reentries": {
+       "max": 6,
+       "used": 0
+      },
+      "route": {
+       "intent": "INFORMATION",
+       "level": "L03_DEEP",
+       "modes": [
+        "DESCRIPTIVE"
+       ]
+      },
+      "run_id": "$RUN",
+      "stage_status": {
+       "CONTEXT": "COMPLETED",
+       "DECISION": "NOT_STARTED",
+       "EVIDENCE": "NOT_STARTED",
+       "EXECUTION": "NOT_STARTED",
+       "FEEDBACK": "NOT_STARTED",
+       "INTENT": "COMPLETED",
+       "KNOWLEDGE": "COMPLETED",
+       "REASONING": "NOT_STARTED",
+       "RESEARCH": "IN_PROGRESS",
+       "ROUTING": "NOT_STARTED",
+       "VERIFICATION": "NOT_STARTED"
+      },
+      "status": "IN_PROGRESS",
+      "verified": false
+     }
+    },
+    {
+     "code": "INVALID_REQUEST",
+     "ok": false
+    },
+    {
+     "ok": true,
+     "result": {
+      "actions": [],
+      "current_stage": "RESEARCH",
+      "evidence_count": 1,
+      "evidence_id": "ev-8",
+      "guidance": "Acquire sources for anything that must be looked up. Record each source with rigorx_record_evidence. Skip with a reason if no research is needed.",
+      "last_verification": null,
+      "reentries": {
+       "max": 6,
+       "used": 0
+      },
+      "route": {
+       "intent": "INFORMATION",
+       "level": "L03_DEEP",
+       "modes": [
+        "DESCRIPTIVE"
+       ]
+      },
+      "run_id": "$RUN",
+      "stage": "RESEARCH",
+      "stage_status": {
+       "CONTEXT": "COMPLETED",
+       "DECISION": "NOT_STARTED",
+       "EVIDENCE": "NOT_STARTED",
+       "EXECUTION": "NOT_STARTED",
+       "FEEDBACK": "NOT_STARTED",
+       "INTENT": "COMPLETED",
+       "KNOWLEDGE": "COMPLETED",
+       "REASONING": "NOT_STARTED",
+       "RESEARCH": "IN_PROGRESS",
+       "ROUTING": "NOT_STARTED",
+       "VERIFICATION": "NOT_STARTED"
+      },
+      "status": "IN_PROGRESS",
+      "verified": false
+     }
+    },
+    {
+     "ok": true,
+     "result": {
+      "actions": [],
+      "current_stage": "ROUTING",
+      "evidence_count": 1,
+      "guidance": "Choose which tools or methods will carry out the work and why. Note any capability that is unavailable.",
+      "last_verification": null,
+      "reentries": {
+       "max": 6,
+       "used": 0
+      },
+      "route": {
+       "intent": "INFORMATION",
+       "level": "L03_DEEP",
+       "modes": [
+        "DESCRIPTIVE"
+       ]
+      },
+      "run_id": "$RUN",
+      "stage_status": {
+       "CONTEXT": "COMPLETED",
+       "DECISION": "NOT_STARTED",
+       "EVIDENCE": "NOT_STARTED",
+       "EXECUTION": "NOT_STARTED",
+       "FEEDBACK": "NOT_STARTED",
+       "INTENT": "COMPLETED",
+       "KNOWLEDGE": "COMPLETED",
+       "REASONING": "NOT_STARTED",
+       "RESEARCH": "COMPLETED",
+       "ROUTING": "IN_PROGRESS",
+       "VERIFICATION": "NOT_STARTED"
+      },
+      "status": "IN_PROGRESS",
+      "verified": false
+     }
+    },
+    {
+     "ok": true,
+     "result": {
+      "actions": [],
+      "current_stage": "REASONING",
+      "evidence_count": 1,
+      "guidance": "Work out the answer or plan. Keep reasoning separate from actions: nothing is executed in this stage.",
+      "last_verification": null,
+      "reentries": {
+       "max": 6,
+       "used": 0
+      },
+      "route": {
+       "intent": "INFORMATION",
+       "level": "L03_DEEP",
+       "modes": [
+        "DESCRIPTIVE"
+       ]
+      },
+      "run_id": "$RUN",
+      "stage_status": {
+       "CONTEXT": "COMPLETED",
+       "DECISION": "NOT_STARTED",
+       "EVIDENCE": "NOT_STARTED",
+       "EXECUTION": "NOT_STARTED",
+       "FEEDBACK": "NOT_STARTED",
+       "INTENT": "COMPLETED",
+       "KNOWLEDGE": "COMPLETED",
+       "REASONING": "IN_PROGRESS",
+       "RESEARCH": "COMPLETED",
+       "ROUTING": "COMPLETED",
+       "VERIFICATION": "NOT_STARTED"
+      },
+      "status": "IN_PROGRESS",
+      "verified": false
+     }
+    }
+   ],
+   "steps": [
+    [
+     "start_run",
+     {
+      "task": "Summarize the context in several languages"
+     }
+    ],
+    [
+     "submit_stage",
+     {
+      "outcome": "completed",
+      "run_id": "$RUN",
+      "stage": "CONTEXT",
+      "summary": "\u6211\u4eec\u6536\u96c6\u4e86\u80cc\u666f\u8d44\u6599\u3002"
+     }
+    ],
+    [
+     "submit_stage",
+     {
+      "outcome": "completed",
+      "run_id": "$RUN",
+      "stage": "CONTEXT",
+      "summary": "\u6211\u4eec\u6536\u96c6\u4e86\u7528\u6237\u63d0\u4f9b\u7684\u6240\u6709\u80cc\u666f\u8d44\u6599\uff0c\u786e\u8ba4\u4e86\u73b0\u6709\u7684\u7ea6\u675f\u6761\u4ef6\u3001\u53ef\u7528\u5de5\u5177\u4ee5\u53ca\u4ecd\u7136\u7f3a\u5931\u7684\u4fe1\u606f\u3002"
+     }
+    ],
+    [
+     "submit_stage",
+     {
+      "outcome": "completed",
+      "run_id": "$RUN",
+      "stage": "INTENT",
+      "summary": "\u30e6\u30fc\u30b6\u30fc\u304c\u63d0\u4f9b\u3057\u305f\u80cc\u666f\u60c5\u5831\u3092\u3059\u3079\u3066\u53ce\u96c6\u3057\u3001\u65e2\u5b58\u306e\u5236\u7d04\u6761\u4ef6\u3068\u5229\u7528\u53ef\u80fd\u306a\u30c4\u30fc\u30eb\u3092\u78ba\u8a8d\u3057\u307e\u3057\u305f\u3002"
+     }
+    ],
+    [
+     "submit_stage",
+     {
+      "outcome": "completed",
+      "run_id": "$RUN",
+      "stage": "KNOWLEDGE",
+      "summary": "\u0e40\u0e23\u0e32\u0e44\u0e14\u0e49\u0e23\u0e27\u0e1a\u0e23\u0e27\u0e21\u0e02\u0e49\u0e2d\u0e21\u0e39\u0e25\u0e1e\u0e37\u0e49\u0e19\u0e10\u0e32\u0e19\u0e17\u0e31\u0e49\u0e07\u0e2b\u0e21\u0e14\u0e17\u0e35\u0e48\u0e1c\u0e39\u0e49\u0e43\u0e0a\u0e49\u0e43\u0e2b\u0e49\u0e21\u0e32\u0e41\u0e25\u0e30\u0e15\u0e23\u0e27\u0e08\u0e2a\u0e2d\u0e1a\u0e02\u0e49\u0e2d\u0e08\u0e33\u0e01\u0e31\u0e14\u0e17\u0e35\u0e48\u0e21\u0e35\u0e2d\u0e22\u0e39\u0e48\u0e41\u0e25\u0e49\u0e27"
+     }
+    ],
+    [
+     "record_evidence",
+     {
+      "claim": "\u0e02\u0e49\u0e2d\u0e21\u0e39\u0e25",
+      "run_id": "$RUN",
+      "source_ref": "https://example.org/th"
+     }
+    ],
+    [
+     "record_evidence",
+     {
+      "claim": "\u8be5\u6765\u6e90\u8bf4\u660e\u4e86\u6bcf\u4e2a\u79df\u6237\u7684\u5b58\u50a8\u4e0a\u9650",
+      "run_id": "$RUN",
+      "source_ref": "https://example.org/zh"
+     }
+    ],
+    [
+     "submit_stage",
+     {
+      "outcome": "completed",
+      "run_id": "$RUN",
+      "stage": "RESEARCH",
+      "summary": "\u0986\u09ae\u09b0\u09be \u09ac\u09cd\u09af\u09ac\u09b9\u09be\u09b0\u0995\u09be\u09b0\u09c0\u09b0 \u09a6\u09c7\u0993\u09af\u09bc\u09be \u09b8\u09ac \u09aa\u09cd\u09b0\u09c7\u0995\u09cd\u09b7\u09be\u09aa\u099f \u09b8\u0982\u0997\u09cd\u09b0\u09b9 \u0995\u09b0\u09c7\u099b\u09bf \u098f\u09ac\u0982 \u09b8\u09c0\u09ae\u09be\u09ac\u09a6\u09cd\u09a7\u09a4\u09be \u09af\u09be\u099a\u09be\u0987 \u0995\u09b0\u09c7\u099b\u09bf"
+     }
+    ],
+    [
+     "submit_stage",
+     {
+      "outcome": "completed",
+      "run_id": "$RUN",
+      "stage": "ROUTING",
+      "summary": "Mixed text \u6df7\u5408\u6587\u672c with English words and \u4e2d\u6587 characters in one summary line."
+     }
+    ]
+   ],
+   "text_policy": "default"
+  },
   "research_and_execution_intents": {
    "expected": [
     {

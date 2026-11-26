@@ -58,7 +58,19 @@ export interface TextPolicy {
 export const DEFAULT_TEXT_POLICY: TextPolicy = { minSummaryChars: 40, minSummaryWords: 6, minNoteChars: 15, minNoteWords: 3, distinctSummaries: true };
 export const RELAXED_TEXT_POLICY: TextPolicy = { minSummaryChars: 0, minSummaryWords: 0, minNoteChars: 0, minNoteWords: 0, distinctSummaries: false };
 
-const words = (value: string) => value.split(/\s+/).filter((t) => /[\p{L}\p{N}]/u.test(t)).length;
+// Scripts written without spaces between words (same Unicode blocks as _SPACELESS in the Python
+// engine): each of their characters counts as one word unit, so the word minimum reduces to the
+// character minimum for Chinese, Japanese, Thai, Lao, Khmer, Myanmar and Tibetan text.
+const SPACELESS = /[\u0E00-\u0EFF\u0F00-\u0FFF\u1000-\u109F\u1780-\u17FF\u19E0-\u19FF\u3040-\u30FF\u31F0-\u31FF\u3400-\u4DBF\u4E00-\u9FFF\uF900-\uFAFF\uFF66-\uFF9F\u{20000}-\u{3134F}]/gu;
+export function words(value: string): number {
+	let total = 0;
+	for (const token of value.split(/\s+/)) {
+		if (!token) continue;
+		const spaceless = token.match(SPACELESS)?.length ?? 0;
+		total += spaceless + (/[\p{L}\p{N}]/u.test(token.replace(SPACELESS, "")) ? 1 : 0);
+	}
+	return total;
+}
 const normalized = (value: string) => value.toLowerCase().split(/\s+/).filter(Boolean).join(" ");
 
 function substantial(name: string, value: string, minChars: number, minWords: number, hint: string): void {

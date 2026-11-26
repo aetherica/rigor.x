@@ -168,7 +168,21 @@ SCENARIOS["strict_text_policy"] = [
         {"criterion": "Latency trade-off is identified", "passed": True, "evidence_ids": ["ev-9"]},
     ]}],
 ]
-STRICT_SCENARIOS = {"strict_text_policy"}
+# Scripts without spaces between words: substantive summaries in Chinese, Japanese and Thai pass,
+# a short Chinese summary and a short Thai claim fail, Bengali and English behave as before.
+MULTI = "$RUN"
+SCENARIOS["multilingual_text_policy"] = [
+    ["start_run", {"task": "Summarize the context in several languages"}],
+    ["submit_stage", {"run_id": MULTI, "stage": "CONTEXT", "outcome": "completed", "summary": "我们收集了背景资料。"}],
+    ["submit_stage", {"run_id": MULTI, "stage": "CONTEXT", "outcome": "completed", "summary": "我们收集了用户提供的所有背景资料，确认了现有的约束条件、可用工具以及仍然缺失的信息。"}],
+    ["submit_stage", {"run_id": MULTI, "stage": "INTENT", "outcome": "completed", "summary": "ユーザーが提供した背景情報をすべて収集し、既存の制約条件と利用可能なツールを確認しました。"}],
+    ["submit_stage", {"run_id": MULTI, "stage": "KNOWLEDGE", "outcome": "completed", "summary": "เราได้รวบรวมข้อมูลพื้นฐานทั้งหมดที่ผู้ใช้ให้มาและตรวจสอบข้อจำกัดที่มีอยู่แล้ว"}],
+    ["record_evidence", {"run_id": MULTI, "source_ref": "https://example.org/th", "claim": "ข้อมูล"}],
+    ["record_evidence", {"run_id": MULTI, "source_ref": "https://example.org/zh", "claim": "该来源说明了每个租户的存储上限"}],
+    ["submit_stage", {"run_id": MULTI, "stage": "RESEARCH", "outcome": "completed", "summary": "আমরা ব্যবহারকারীর দেওয়া সব প্রেক্ষাপট সংগ্রহ করেছি এবং সীমাবদ্ধতা যাচাই করেছি"}],
+    ["submit_stage", {"run_id": MULTI, "stage": "ROUTING", "outcome": "completed", "summary": "Mixed text 混合文本 with English words and 中文 characters in one summary line."}],
+]
+STRICT_SCENARIOS = {"strict_text_policy", "multilingual_text_policy"}
 
 
 def normalize(envelope: dict, run_id: str | None) -> dict:

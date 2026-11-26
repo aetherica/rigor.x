@@ -317,3 +317,25 @@ class StrictTextPolicyTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class WordUnitTests(unittest.TestCase):
+    """Same cases as deploy/cloudflare-ts/test/textpolicy.test.ts (WS32 N3)."""
+
+    def test_word_units_match_the_typescript_engine(self):
+        from rigorx.host_engine import _words
+
+        cases = {
+            "We collected all the context.": 5,
+            "আমরা সব প্রেক্ষাপট সংগ্রহ করেছি": 5,
+            "  --  ...  ": 0,
+            "v2.1 is 3x faster": 4,
+            "我们收集了资料": 7,
+            "ユーザー": 4,
+            "ข้อมูล": 6,
+            "Mixed 混合 text": 4,
+            "\U00020000\U00020001": 2,
+        }
+        for text, expected in cases.items():
+            with self.subTest(text=text):
+                self.assertEqual(_words(text), expected)

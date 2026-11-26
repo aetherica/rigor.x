@@ -102,8 +102,25 @@ class TextPolicy:
 RELAXED_TEXT_POLICY = TextPolicy(0, 0, 0, 0, False)
 
 
+# Scripts written without spaces between words (Unicode blocks): Thai, Lao, Tibetan, Myanmar,
+# Khmer, Hiragana, Katakana, CJK ideographs (BMP and supplementary planes), halfwidth Katakana.
+# Whitespace does not separate their words, so each of their characters counts as one word unit;
+# for such text the word minimum reduces to the character minimum. The same block list is used by
+# the TypeScript engine (deploy/cloudflare-ts/src/engine.ts, SPACELESS); parity fixtures cover it.
+_SPACELESS = re.compile(
+    "[\u0E00-\u0EFF\u0F00-\u0FFF\u1000-\u109F\u1780-\u17FF\u19E0-\u19FF"
+    "\u3040-\u30FF\u31F0-\u31FF\u3400-\u4DBF\u4E00-\u9FFF\uF900-\uFAFF\uFF66-\uFF9F"
+    "\U00020000-\U0003134F]"
+)
+
+
 def _words(text: str) -> int:
-    return sum(1 for token in text.split() if any(ch.isalnum() for ch in token))
+    total = 0
+    for token in text.split():
+        spaceless = len(_SPACELESS.findall(token))
+        rest = _SPACELESS.sub("", token)
+        total += spaceless + (1 if any(ch.isalnum() for ch in rest) else 0)
+    return total
 
 
 def _normalized(text: str) -> str:
