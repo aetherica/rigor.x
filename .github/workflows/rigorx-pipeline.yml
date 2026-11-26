@@ -104,6 +104,9 @@ jobs:
       - name: Install Worker dependencies (locked)
         working-directory: deploy/cloudflare-ts
         run: npm ci --no-audit --no-fund
+      - name: Audit production dependency tree
+        working-directory: deploy/cloudflare-ts
+        run: npm audit --omit=dev --audit-level=high
       - name: Type check (tsc --strict, Workers and Node types)
         working-directory: deploy/cloudflare-ts
         run: npm run typecheck
