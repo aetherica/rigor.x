@@ -19,6 +19,17 @@ This project is in pre-release development. Entries summarize notable changes; t
 - Root README, contributor guidance, and repository licensing policy consistently identify RIGOR-X as Apache-2.0 open-source software; paid services are optional and do not restrict open-source rights.
 - Removed the superseded proprietary subscription license and deployment addenda from the active repository document set.
 
+### Added (WS32, Cloudflare Worker — the canonical engine)
+- Engine protocol 2: twelve distinct stages, six levels with level-dependent mandatory stages, pre-registered requirements, coverage gate 2.0.0, plan graph, assumptions, stress test, OPTIMIZE loop guard, disclosures at DELIVER, value statuses, autonomy tiers.
+- Tools: `rigorx_list_runs`, `rigorx_usage`, `rigorx_compute` (SI dimensional analysis), `rigorx_check_source`, topic memory (`rigorx_memory_topic`, `_write`, `_recall`, `_delete`), `rigorx_humor_policy`; `rigorx_resolve_commands` now works on the Worker.
+- MCP 2026-07-28 (stateless) alongside the handshake era; per-owner quotas; schema migrations; random per-owner profile IDs.
+- CI: real Worker auth path and Durable Object storage under `wrangler dev`, type check, conformance suite, memory benchmarks, compute differential test against pint, slash catalogue sync.
+
+### Changed (WS32)
+- Text policy accepts Chinese, Japanese and Thai text; dense scripts count two units for minimum length.
+- Tasks without a router signal are UNKNOWN and need a declared level and stakes.
+- The Python engine is the frozen protocol-1 reference (ADR-012); Python/TypeScript parity is replaced by the conformance suite.
+
 ### Removed
 - Static shared-token ("spike token") access to the Cloudflare MCP server: OAuth sign-in is the only credential for `/mcp` (WS32 P0.1).
 - The Python Cloudflare Worker spike (`deploy/cloudflare`), superseded by the TypeScript Worker and sharing its Worker name.

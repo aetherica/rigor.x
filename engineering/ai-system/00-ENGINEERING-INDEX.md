@@ -34,6 +34,8 @@
 - [WS32 Cognitive OS reassessment: audit, target architecture, roadmap (DRAFT, 2026-11-26)](27-COGNITIVE-OS-REASSESSMENT-2026-11-26.md)
 - [WS32 Engine protocol v2 specification and ADR-012 (implemented)](28-ENGINE-PROTOCOL-V2.md)
 - [WS32 Topic memory (ADR-008, implemented)](29-TOPIC-MEMORY.md)
+- [WS32 Threat model, autonomy, observability and evaluation](30-THREAT-MODEL-AND-OPERATIONS.md)
+- [Session handoff 2026-11-26 (WS32 status, open items, owner actions)](31-SESSION-HANDOFF-2026-11-26.md)
 
 ## Registry alignment (WS18)
 - The candidate slash-command library's 18 taxonomy groups are distinct from the canonical 18 Functional Groups.
