@@ -1,6 +1,6 @@
 # RIGOR-X MCP server on Cloudflare — TypeScript Worker
 
-The plugin server for ChatGPT, Claude and other MCP hosts. It replaces the Python Worker in `../cloudflare` for deployment, because the Python Worker cannot run on the Workers Free plan: importing the MCP SDK alone costs ~0.7 s CPU on CPython and ~2 s on the Workers runtime, against a 10 ms per-request limit (Free) and a 1 s startup limit (all plans).
+The plugin server for ChatGPT, Claude and other MCP hosts. It replaced the Python Worker spike (removed in WS32 P0.1; see `engineering/ai-system/24-HOST-PLUGIN-ARCHITECTURE.md` for its history), because the Python Worker cannot run on the Workers Free plan: importing the MCP SDK alone costs ~0.7 s CPU on CPython and ~2 s on the Workers runtime, against a 10 ms per-request limit (Free) and a 1 s startup limit (all plans).
 
 - **One runtime dependency:** Cloudflare's `@cloudflare/workers-oauth-provider` for sign-in. MCP is implemented directly (`src/mcp.ts`) for the Streamable HTTP transport, handshake era (protocol `2025-11-25`, `2025-06-18`, `2025-03-26`). `server/discover` (2026-07-28) answers "method not found", which makes modern clients fall back to `initialize`. Every POST gets one JSON response; there is no session or server-initiated stream.
 - **Same engine as Python.** `src/pipeline.ts`, `src/router.ts`, `src/engine.ts`, `src/store.ts` port the Python modules. The same 12 tools, titles, descriptions and annotations; the same Durable Object class (`OwnerRuns`), table layout and JSON snapshots.
@@ -39,7 +39,7 @@ Add to a host with the URL `https://rigorx-mcp.<subdomain>.workers.dev/mcp` and 
 
 Verified locally under `wrangler dev`: metadata documents, `401` challenges, a static bearer token is rejected (WS32 P0.1), dynamic registration, consent page (escaping, no framing, browser-bound single-use handle), Deny and Google-error redirects with `state` and `iss`, redirect to Google with PKCE. Not verifiable locally: the Google token exchange and the end-to-end sign-in from Claude and ChatGPT.
 
-## Deploy with Cloudflare Workers Builds (switching from the Python Worker)
+## Deploy with Cloudflare Workers Builds
 
 In the Cloudflare dashboard: **Workers & Pages → rigorx-mcp → Settings → Build**, change:
 
