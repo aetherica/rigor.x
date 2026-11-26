@@ -1,0 +1,218 @@
+// Portable Node runtime for the Aetherica (RIGOR-X) MCP server.
+//
+// The same application as the Cloudflare Worker (deploy/cloudflare-ts/src/app.ts: MCP, OAuth with
+// Google sign-in, approvals, quotas, account deletion) bound to node:http instead of workerd:
+//
+//   Cloudflare                         Node (this directory)
+//   Durable Object per owner      ->   SQLite file per owner          (owners.ts)
+//   KV namespace OAUTH_KV         ->   SQLite KV with TTL             (kv.ts)
+//   static assets (public/)       ->   icon and favicon files served here
+//   global_fetch_strictly_public  ->   connection-time address check  (guarded-fetch.ts)
+//   version metadata              ->   commit from the host's environment (config.ts)
+//
+// Start: node --import ./deploy/node/register.mjs --experimental-strip-types deploy/node/server.ts
+// (see README.md and .env.example). Stops gracefully on SIGTERM/SIGINT.
+import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
+import { readFileSync, existsSync } from "node:fs";
+import { join } from "node:path";
+import { Readable } from "node:stream";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import { createApp, type AppEnv, type Platform, type RequestContext } from "../cloudflare-ts/src/app.ts";
+import { ConfigError, loadConfig, type NodeConfig } from "./config.ts";
+import { SqliteKv } from "./kv.ts";
+import { OwnerStorage } from "./owners.ts";
+import { createGuardedFetch } from "./guarded-fetch.ts";
+
+const PUBLIC_DIR = fileURLToPath(new URL("../cloudflare-ts/public/", import.meta.url));
+/** The paths the Worker's asset layer serves before the application (wrangler.jsonc run_worker_first). */
+const STATIC_PATH = /^\/(icon-\d+\.png|favicon\.ico)$/;
+const STATIC_TYPES: Record<string, string> = { png: "image/png", ico: "image/vnd.microsoft.icon" };
+
+type NodeEnv = AppEnv & Record<string, unknown>;
+
+export interface RunningServer {
+	server: Server;
+	kv: SqliteKv;
+	owners: OwnerStorage;
+	url: string;
+	/** Stops accepting requests, waits for in-flight ones (up to the grace period), closes storage. */
+	shutdown(reason: string): Promise<void>;
+}
+
+function log(evt: string, fields: Record<string, unknown> = {}): void {
+	console.log(JSON.stringify({ evt, ...fields }));
+}
+
+function staticFile(pathname: string): { body: Buffer; type: string } | null {
+	const m = STATIC_PATH.exec(pathname);
+	if (!m) return null;
+	const file = join(PUBLIC_DIR, m[1]!);
+	if (!existsSync(file)) return null; // unknown icons fall through to the application's 404, as on Cloudflare
+	return { body: readFileSync(file), type: STATIC_TYPES[m[1]!.split(".").pop()!]! };
+}
+
+async function readBody(req: IncomingMessage, limit: number): Promise<Buffer | "too_large"> {
+	const chunks: Buffer[] = [];
+	let size = 0;
+	for await (const chunk of req) {
+		size += (chunk as Buffer).length;
+		if (size > limit) return "too_large";
+		chunks.push(chunk as Buffer);
+	}
+	return Buffer.concat(chunks);
+}
+
+async function writeResponse(res: ServerResponse, response: Response): Promise<void> {
+	const headers: Record<string, string | string[]> = {};
+	response.headers.forEach((value, key) => {
+		if (key !== "set-cookie") headers[key] = value;
+	});
+	const cookies = response.headers.getSetCookie();
+	if (cookies.length) headers["set-cookie"] = cookies;
+	res.writeHead(response.status, response.statusText || undefined, headers);
+	if (!response.body) {
+		res.end();
+		return;
+	}
+	const body = Readable.fromWeb(response.body as import("node:stream/web").ReadableStream);
+	res.on("close", () => body.destroy()); // client went away: stop producing (SSE)
+	await new Promise<void>((done) => {
+		body.on("error", () => { res.destroy(); done(); });
+		res.on("close", () => done());
+		body.pipe(res);
+	});
+}
+
+export function startServer(config: NodeConfig, deps: { fetcher?: typeof fetch; kv?: SqliteKv } = {}): Promise<RunningServer> {
+	const kv = deps.kv ?? new SqliteKv(join(config.dataDir, "oauth-kv.sqlite"));
+	const owners = new OwnerStorage(config.dataDir, config.appVars);
+	const platform: Platform<NodeEnv> = {
+		callOwner: async (_env, key, ownerId, operation, payloadJson) => owners.call(key, ownerId, operation, payloadJson),
+		version: () => config.version,
+		fetcher: deps.fetcher ?? createGuardedFetch(),
+	};
+	const app = createApp<NodeEnv>(platform);
+	const env = { ...config.appVars, OAUTH_KV: kv } as unknown as NodeEnv;
+
+	let inFlight = 0;
+	let draining = false;
+	const pending = new Set<Promise<unknown>>();
+	const purge = setInterval(() => {
+		try { kv.purgeExpired(); } catch (e) { log("rigorx_error", { where: "kv_purge", error: String(e) }); }
+	}, 10 * 60_000);
+	purge.unref();
+
+	async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> {
+		// Only origin-form request targets: an absolute-form target ("GET http://other/...") must not
+		// change the origin that OAuth URLs are built on.
+		if (!req.url || !req.url.startsWith("/")) {
+			res.writeHead(400, { "content-type": "text/plain; charset=utf-8" }).end("Bad request target");
+			return;
+		}
+		const url = new URL(req.url, config.origin);
+		if (draining && url.pathname === "/health") {
+			res.writeHead(503, { "content-type": "application/json", "cache-control": "no-store", connection: "close" }).end(JSON.stringify({ ok: false, draining: true }));
+			return;
+		}
+		if (req.method === "GET" || req.method === "HEAD") {
+			const file = staticFile(url.pathname);
+			if (file) {
+				res.writeHead(200, { "content-type": file.type, "content-length": file.body.length, "cache-control": "public, max-age=86400" });
+				res.end(req.method === "HEAD" ? undefined : file.body);
+				return;
+			}
+		}
+		const body = req.method === "GET" || req.method === "HEAD" ? null : await readBody(req, config.maxBodyBytes);
+		if (body === "too_large") {
+			res.writeHead(413, { "content-type": "application/json", connection: "close" }).end(JSON.stringify({ error: "request body too large" }));
+			return;
+		}
+		const headers = new Headers();
+		for (const [k, v] of Object.entries(req.headers)) {
+			if (v === undefined) continue;
+			if (Array.isArray(v)) for (const item of v) headers.append(k, item);
+			else headers.set(k, v);
+		}
+		const request = new Request(url, { method: req.method, headers, body: body && body.length ? body : null });
+		const ctx: RequestContext = {
+			waitUntil(p) {
+				pending.add(p);
+				p.finally(() => pending.delete(p)).catch(() => {});
+			},
+			passThroughOnException() {},
+		};
+		const response = await app.fetch(request, env, ctx);
+		await writeResponse(res, response);
+	}
+
+	const server = createServer((req, res) => {
+		inFlight++;
+		res.on("close", () => { inFlight--; });
+		handle(req, res).catch((e) => {
+			log("rigorx_error", { where: "http", error: e instanceof Error ? e.stack ?? e.message : String(e) });
+			if (!res.headersSent) res.writeHead(500, { "content-type": "application/json" }).end(JSON.stringify({ error: "internal error" }));
+			else res.destroy();
+		});
+	});
+	server.headersTimeout = 20_000;
+	server.requestTimeout = 60_000;
+	server.keepAliveTimeout = 5_000;
+
+	async function shutdown(reason: string): Promise<void> {
+		if (draining) return;
+		draining = true;
+		log("rigorx_shutdown", { phase: "draining", reason, in_flight: inFlight });
+		const closed = new Promise<void>((done) => server.close(() => done()));
+		server.closeIdleConnections();
+		const deadline = Date.now() + config.shutdownGraceMs;
+		while ((inFlight > 0 || pending.size > 0) && Date.now() < deadline) await new Promise((r) => setTimeout(r, 50));
+		const forced = inFlight;
+		server.closeAllConnections();
+		await closed;
+		clearInterval(purge);
+		owners.close();
+		kv.close();
+		log("rigorx_shutdown", { phase: "complete", forced_connections: forced });
+	}
+
+	return new Promise((ready, fail) => {
+		server.once("error", fail);
+		server.listen(config.port, config.host, () => {
+			const address = server.address();
+			const port = typeof address === "object" && address ? address.port : config.port;
+			log("rigorx_start", { origin: config.origin, listen: `${config.host}:${port}`, data_dir: config.dataDir, version: config.version.tag, warnings: config.warnings });
+			ready({ server, kv, owners, url: `http://127.0.0.1:${port}`, shutdown });
+		});
+	});
+}
+
+async function main(): Promise<void> {
+	let config: NodeConfig;
+	try {
+		config = loadConfig();
+	} catch (e) {
+		if (e instanceof ConfigError) {
+			console.error(JSON.stringify({ evt: "rigorx_config_error", error: e.message }));
+			process.exit(78); // EX_CONFIG
+		}
+		throw e;
+	}
+	const running = await startServer(config);
+	let signals = 0;
+	for (const sig of ["SIGTERM", "SIGINT"] as const) {
+		process.on(sig, () => {
+			if (++signals > 1) process.exit(1); // a second signal: stop now
+			running.shutdown(sig).then(() => process.exit(0), (e) => {
+				console.error(JSON.stringify({ evt: "rigorx_error", where: "shutdown", error: String(e) }));
+				process.exit(1);
+			});
+		});
+	}
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+	main().catch((e) => {
+		console.error(JSON.stringify({ evt: "rigorx_error", where: "startup", error: e instanceof Error ? e.stack ?? e.message : String(e) }));
+		process.exit(1);
+	});
+}
