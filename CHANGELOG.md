@@ -31,6 +31,9 @@ This project is in pre-release development. Entries summarize notable changes; t
 - Topic memory: atomic operations (storage transactions), merge preflight, move-collision check, whole-word short-token recall, scoped supersession, run_validated bound to a validated claim by SHA-256.
 - Router risk floor for explicit low levels and a multilingual risk lexicon; compute exponents validated (no runtime exceptions); MCP request limits (1 MiB, depth 32, string/integer IDs).
 
+### Release hardening (2026-11-27)
+- Resilience policy (retries, deadlines, circuit breakers, bulkhead), DNS-verified source fetches, idempotency keys, engine-verified user approvals (`rigorx_request_approval`), account data deletion, suspension, source-check quota, OIDC azp/iat/nonce, `/version` and `/health`, structured logs, commit-tagged deploys, discovery gap register; rollback-compatible storage; mutation test in CI.
+
 ### Added (2026-11-26 engineering audit)
 - Source Intelligence Gate (`src/sources.ts`, tool `rigorx_assess_sources`): canonical identity, nine source domains, independence groups, lifecycle verdicts, claim-level cross-checks; Crossref (metadata, retractions) and Wayback lookups in `rigorx_check_source`; HTML metadata and injection signals.
 - Circular transparent Aetherica icons (static assets, MCP `serverInfo.icons`, sign-in pages).

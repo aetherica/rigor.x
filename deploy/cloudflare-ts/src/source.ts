@@ -288,24 +288,39 @@ export type Resolver = (host: string) => Promise<DnsAnswer>;
  * to the checked address: the runtime resolves again when it connects (time-of-check/time-of-use).
  * The Cloudflare edge does not route to private networks, which is the second layer [B].
  */
+/** DNS-over-HTTPS providers with the same JSON answer format, tried in order (independent operators). */
+export const DOH_PROVIDERS: readonly { name: string; url: (host: string, type: string) => string }[] = [
+	{ name: "cloudflare", url: (h, t) => `https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(h)}&type=${t}` },
+	{ name: "google", url: (h, t) => `https://dns.google/resolve?name=${encodeURIComponent(h)}&type=${t}` },
+];
+
 export function dohResolver(fetcher: typeof fetch, reg: ResilienceRegistry, deadline: Deadline): Resolver {
-	return async (host) => {
+	const query = async (provider: (typeof DOH_PROVIDERS)[number], host: string): Promise<DnsAnswer> => {
 		const addresses: string[] = [];
 		for (const type of ["A", "AAAA"]) {
 			let res: Response;
 			try {
-				res = await resilientFetch(fetcher, `https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(host)}&type=${type}`,
-					{ headers: { Accept: "application/dns-json" }, redirect: "manual" }, { policy: reg.policy, deadline, breaker: reg.breaker("doh"), perAttemptMs: reg.policy.lookupTimeoutMs });
+				res = await resilientFetch(fetcher, provider.url(host, type), { headers: { Accept: "application/dns-json" }, redirect: "manual" },
+					{ policy: reg.policy, deadline, breaker: reg.breaker(`doh:${provider.name}`), perAttemptMs: reg.policy.lookupTimeoutMs });
 			} catch (e) {
-				return { addresses, error: `DNS lookup unavailable (${e instanceof Error ? e.name : "error"})` };
+				return { addresses, error: `DNS lookup unavailable at ${provider.name} (${e instanceof Error ? e.name : "error"})` };
 			}
-			if (!res.ok) return { addresses, error: `DNS lookup failed: HTTP ${res.status}` };
+			if (!res.ok) return { addresses, error: `DNS lookup failed at ${provider.name}: HTTP ${res.status}` };
 			const j = (await res.json().catch(() => null)) as { Status?: number; Answer?: { type: number; data: string }[] } | null;
-			if (!j || typeof j.Status !== "number") return { addresses, error: "DNS lookup returned an unreadable answer" };
-			if (j.Status !== 0 && j.Status !== 3) return { addresses, error: `DNS lookup failed (rcode ${j.Status})` };
+			if (!j || typeof j.Status !== "number") return { addresses, error: `DNS lookup at ${provider.name} returned an unreadable answer` };
+			if (j.Status !== 0 && j.Status !== 3) return { addresses, error: `DNS lookup failed at ${provider.name} (rcode ${j.Status})` };
 			for (const a of j.Answer ?? []) if ((a.type === 1 || a.type === 28) && typeof a.data === "string") addresses.push(a.data);
 		}
 		return { addresses, error: null };
+	};
+	return async (host) => {
+		const errors: string[] = [];
+		for (const p of DOH_PROVIDERS) {
+			const r = await query(p, host);
+			if (!r.error) return r; // a definite answer (including "no addresses") ends the search
+			errors.push(r.error);
+		}
+		return { addresses: [], error: errors.join("; ") };
 	};
 }
 

@@ -142,7 +142,11 @@ test("DNS check: a public name resolving to a private address is refused; DNS fa
 	assert.match(r.error!, /redirect refused: the host name resolves to a non-public address/);
 	const reg = new ResilienceRegistry(fast);
 	const down = dohResolver((async () => new Response("", { status: 503 })) as unknown as typeof fetch, reg, new Deadline(2_000));
-	assert.match((await checkResolved("a.example.com", down))!, /could not be verified/);
+	assert.match((await checkResolved("a.example.com", down))!, /could not be verified.*cloudflare.*google/);
+	// The second provider answers when the first is unreachable (for example blocked for Workers).
+	const fallback = dohResolver((async (input: RequestInfo | URL) => String(input).startsWith("https://cloudflare-dns.com/") ? new Response("", { status: 403 })
+		: Response.json({ Status: 0, Answer: new URL(String(input)).searchParams.get("type") === "A" ? [{ type: 1, data: "10.1.2.3" }] : [] })) as unknown as typeof fetch, new ResilienceRegistry(fast), new Deadline(2_000));
+	assert.match((await checkResolved("b.example.com", fallback))!, /non-public address \(private\)/);
 });
 
 test("property: private destinations are refused in every numeric and encoded spelling (2,000 seeded cases)", () => {

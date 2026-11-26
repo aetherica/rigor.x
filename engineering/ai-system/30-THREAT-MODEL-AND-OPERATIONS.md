@@ -49,3 +49,16 @@ A2A v1.0 [B-] is not implemented: RIGOR-X is a tool server for one host at a tim
 ## 6. Evaluation in CI (every push to main)
 
 Unit and contract tests (TypeScript 78), language-neutral conformance scenarios with hand-written expectations (5: Test A coverage, Test B unit error, unknown-is-not-low-risk, L01, value statuses), memory benchmarks (development and held-out, pre-registered thresholds), `rigorx_compute` against pint (23 cases), slash catalogue sync, real Worker auth path under `wrangler dev`, Durable Object storage on workerd, official MCP SDK smoke in three connection modes, type check, Python suite, ruff, CodeQL. [A]
+
+## 7. Release hardening (2026-11-27)
+
+| Area | Control | Evidence | Residual |
+|---|---|---|---|
+| SSRF / DNS | Every hop: URL policy, then DoH resolution of the host; any non-public answer, no answer or an unverifiable DNS result refuses the fetch | `test/release.test.ts`; live: `127.0.0.1.nip.io`, `10.0.0.1.sslip.io` refused | Connection not bound to the checked address (TOCTOU); edge non-routing is the second layer |
+| Approvals | Host-declared approvals: bound to one operation digest, single use, 24 h. Engine-verified approvals: the same Google account signs in on `/approve/<id>` (nonce, PKCE, single-use state, CSRF, session cookie), decision recorded in the owner's own Durable Object; required for A5 | release tests; workerd probe (redirect, no-session refusal) | The end-to-end Google sign-in cannot be run in CI |
+| Identity | Owner = `google:<sub>`; ID token iss, aud, azp, exp, iat, nonce (approval flow) | release tests | Signature check relies on the direct TLS token-endpoint exception (OIDC Core 3.1.3.7) |
+| Tenancy | One Durable Object per owner, every query filtered by owner, errors identical for missing and foreign objects | release tests; workerd two-DO probe | No organisations, roles or sharing exist: each Google account is a single-principal tenant |
+| Account lifecycle | Self-service deletion of all data; operator suspension list | release tests | Suspension does not revoke OAuth grants; it refuses every call |
+| Resilience | Retries only for transient failures of idempotent reads; breakers per adapter; deadlines; bulkhead; idempotency keys for writes; one transaction per operation | release tests, mutation test 15/15 | Breakers and limiter are per isolate (reset on restart) |
+| Observability | Request, operation, security, circuit and error log events with request IDs and version tag; `/version`, `/health` | auth probe | Metrics are derived from logs in the Cloudflare dashboard; no alerting is configured |
+| Rollback | Schema version unchanged (3); new tables additive | `scripts/rollback_compat.ts` PASS | Dashboard rollback or a revert commit; Durable Object data is not rolled back |

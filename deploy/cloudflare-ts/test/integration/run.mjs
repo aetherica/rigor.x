@@ -46,6 +46,22 @@ try {
 		assert.equal(merged.ok, false);
 		assert.deepEqual((await call(owner, "memory_topic", { action: "list" })).result.topics, before);
 	});
+	await check("tenant isolation across two real Durable Objects; idempotent replay on DO SQLite (release G08, G11)", async () => {
+		const A = "google:iso-a", B = "google:iso-b";
+		const run = (await call(A, "start_run", { task: "Prepare the list of options for the team" })).result.run_id;
+		const key = "workerd-idem-0001";
+		const e1 = await call(A, "record_evidence", { run_id: run, source_ref: "https://example.com/a", claim: "A private source of tenant A only", idempotency_key: key });
+		const e2 = await call(A, "record_evidence", { run_id: run, source_ref: "https://example.com/a", claim: "A private source of tenant A only", idempotency_key: key });
+		assert.equal(e2.result.idempotent_replay, true);
+		assert.equal(e2.result.evidence_id, e1.result.evidence_id);
+		assert.equal((await call(A, "get_run", { run_id: run })).result.evidence_count, 1);
+		for (const op of ["get_run", "delete_run", "assess_sources"]) {
+			const r = await call(B, op, { run_id: run });
+			assert.equal(r.ok, false, op);
+			assert.equal(r.code, "RUN_NOT_FOUND", op);
+		}
+		assert.equal((await call(A, "get_run", { run_id: run })).result.status, "IN_PROGRESS");
+	});
 	await check("migration from a hand-written version-1 database on workerd SQLite", async () => {
 		const r = JSON.parse(await (await fetch(`${base}/migration`)).text());
 		assert.equal(r.version, "3");

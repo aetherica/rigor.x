@@ -18,3 +18,6 @@ show("public redirect to loopback IPv6", brief(await checkSource("https://postma
 show("404 page", brief(await checkSource("https://example.com/this-page-does-not-exist-rigorx")));
 show("elsevier doi redirect chain", brief(await checkSource("doi:10.1016/S0140-6736(97)11096-0")));
 show("springer doi redirect chain", brief(await checkSource("doi:10.1007/978-3-540-74958-5_14")));
+// DNS verification (release §3.1): a public name that resolves to loopback must be refused.
+show("public name resolving to 127.0.0.1 (DNS rebinding pattern)", brief(await checkSource("http://127.0.0.1.nip.io/")));
+show("public name resolving to 10.0.0.1", brief(await checkSource("http://10.0.0.1.sslip.io/")));

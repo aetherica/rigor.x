@@ -110,6 +110,9 @@ jobs:
       - name: TypeScript unit and parity tests
         working-directory: deploy/cloudflare-ts
         run: npm test
+      - name: Mutation test of security guards (each disabled guard must fail the suite)
+        working-directory: deploy/cloudflare-ts
+        run: python3 scripts/mutation_test.py
       - name: Bundled slash-command catalogue matches the library
         run: python deploy/cloudflare-ts/scripts/build_commands.py --check
       - name: rigorx_compute against an independent units library (pint, CODATA 2022)
