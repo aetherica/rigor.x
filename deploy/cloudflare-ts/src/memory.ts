@@ -26,7 +26,7 @@
 // - Deletion is real (rows and index entries); an audit row records what was deleted, without content.
 
 import type { SqlLike } from "./store.ts"; // type-only: no runtime cycle with store.ts
-import { EngineError, chars, invalid, quota, text, type Json, type JsonObject } from "./text.ts";
+import { EngineError, chars, digest, invalid, quota, text, type Json, type JsonObject } from "./text.ts";
 
 export const MEMORY_LIMIT_BYTES = 120 * 1024 * 1024;
 export const MAX_ITEM_CHARS = 8_000;
@@ -34,6 +34,8 @@ export const MAX_DEPTH = 8;
 export const MAX_TOPICS = 1_000;
 export const WRITES_PER_TOPIC_PER_HOUR = 60;
 const SCAN_LIMIT = 5_000;
+/** Candidates considered for MMR diversification (at least 8 per requested result). */
+const MMR_POOL = 64;
 /** Minimum lexical coverage for an item to be returned (heuristic; see the benchmark). */
 export const MIN_LEXICAL = 0.3;
 
@@ -42,6 +44,7 @@ export type Kind = (typeof KINDS)[number];
 export const TRUST = ["user_confirmed", "run_validated", "host_inferred"] as const;
 export type Trust = (typeof TRUST)[number];
 const TRUST_WEIGHT: Record<Trust, number> = { user_confirmed: 1, run_validated: 0.7, host_inferred: 0.4 };
+const TRUST_RANK: Record<Trust, number> = { user_confirmed: 3, run_validated: 2, host_inferred: 1 };
 export type DecidedBy = "user" | "host";
 
 export const MEMORY_STATEMENTS = [
@@ -83,18 +86,27 @@ export function trigrams(s: string): string[] {
  * cannot match them), and short tokens only when the query has no trigram at all (for example "AI").
  * Short tokens of space-delimited text are not used otherwise: function words such as "de", "to" or
  * "we" occur inside unrelated words and gave false full matches in the benchmark.
+ * A short token of a space-delimited script is matched as a WHOLE WORD (prefix "\u0001w:"), never as
+ * a substring: "ai" must not match "chair" or "said" (audit finding C3).
  */
+export const WORD = "\u0001w:";
 export function shortTerms(s: string): string[] {
 	const out = new Set<string>();
-	const tokens = norm(s).split(/[\s\p{P}]+/u).filter(Boolean);
+	const tokens = norm(s).split(/[\s\p{P}\p{S}]+/u).filter(Boolean);
 	const noTrigram = trigrams(s).length === 0;
 	for (const tok of tokens) {
 		const c = [...tok];
 		if (CJK.test(tok)) for (let i = 0; i + 2 <= c.length; i++) out.add(c.slice(i, i + 2).join(""));
-		else if (noTrigram && c.length < 3) out.add(tok);
+		else if (noTrigram && c.length < 3) out.add(WORD + tok);
 	}
 	if (noTrigram) for (const tok of tokens) if (CJK.test(tok) && [...tok].length === 1) out.add(tok);
 	return [...out];
+}
+/** Word set of a normalized text (letters, marks and digits; for whole-word matching of short terms). */
+const wordSet = (hay: string) => new Set(hay.split(/[^\p{L}\p{M}\p{N}]+/u).filter(Boolean));
+/** Does the item text contain the term (CJK bigram as substring, short token as a whole word)? */
+export function hasTerm(hay: string, term: string, words?: Set<string>): boolean {
+	return term.startsWith(WORD) ? (words ?? wordSet(hay)).has(term.slice(WORD.length)) : hay.includes(term);
 }
 const jaccard = (a: Set<string>, b: Set<string>) => {
 	if (!a.size || !b.size) return 0;
@@ -209,6 +221,10 @@ export class MemoryStore {
 		}
 		const subtreeDepth = Math.max(...this.descendants(owner, id).map((d) => this.depth(owner, d) - this.depth(owner, id) + 1));
 		if (this.depth(owner, parent) + subtreeDepth > MAX_DEPTH) throw invalid(`Topics nest at most ${MAX_DEPTH} levels deep`);
+		// Names are unique per parent (audit finding C2): check before the update, not via the constraint.
+		if (this.sql.exec("SELECT 1 AS x FROM memory_topics WHERE owner_id = ? AND parent_id = ? AND name = ? AND id != ?", owner, parent, t.name, id).toArray().length) {
+			throw invalid(`A topic named "${t.name}" already exists ${parent ? "under that parent" : "at the top level"}: rename one of them first`);
+		}
 		this.sql.exec("UPDATE memory_topics SET parent_id = ?, decided_by = ?, updated_at = ? WHERE owner_id = ? AND id = ?", parent, decidedBy, now(), owner, id);
 		return { topic_id: id, path: this.path(owner, id) };
 	}
@@ -219,13 +235,17 @@ export class MemoryStore {
 		this.topic(owner, id);
 		this.topic(owner, intoId);
 		if (this.descendants(owner, id).includes(intoId)) throw invalid("A topic cannot be merged into its own subtopic");
+		// Preflight (audit finding C1): every check runs before the first write, so a refused merge
+		// changes nothing. The engine also runs each operation in a storage transaction.
+		const children = this.sql.exec("SELECT id, name FROM memory_topics WHERE owner_id = ? AND parent_id = ?", owner, id).toArray();
+		const clashes = children.filter((child) => this.sql.exec("SELECT 1 AS x FROM memory_topics WHERE owner_id = ? AND parent_id = ? AND name = ?", owner, intoId, String(child.name)).toArray().length);
+		if (clashes.length) throw invalid(`Both topics have a subtopic named ${clashes.map((c) => `"${String(c.name)}"`).join(", ")}: merge or rename ${clashes.length > 1 ? "them" : "it"} first`);
+		const intoDepth = this.depth(owner, intoId);
+		const deepest = Math.max(0, ...children.flatMap((c) => this.descendants(owner, String(c.id)).map((d) => this.depth(owner, d) - this.depth(owner, id))));
+		if (intoDepth + deepest > MAX_DEPTH) throw invalid(`Merging would nest topics more than ${MAX_DEPTH} levels deep`);
 		const moved = Number(this.sql.exec("SELECT COUNT(*) AS n FROM memory_items WHERE owner_id = ? AND topic_id = ?", owner, id).toArray()[0]!.n);
 		this.sql.exec("UPDATE memory_items SET topic_id = ? WHERE owner_id = ? AND topic_id = ?", intoId, owner, id);
-		for (const child of this.sql.exec("SELECT id, name FROM memory_topics WHERE owner_id = ? AND parent_id = ?", owner, id).toArray()) {
-			const clash = this.sql.exec("SELECT 1 AS x FROM memory_topics WHERE owner_id = ? AND parent_id = ? AND name = ?", owner, intoId, String(child.name)).toArray().length;
-			if (clash) throw invalid(`Both topics have a subtopic named "${String(child.name)}": merge or rename it first`);
-			this.sql.exec("UPDATE memory_topics SET parent_id = ?, updated_at = ? WHERE owner_id = ? AND id = ?", intoId, now(), owner, String(child.id));
-		}
+		for (const child of children) this.sql.exec("UPDATE memory_topics SET parent_id = ?, updated_at = ? WHERE owner_id = ? AND id = ?", intoId, now(), owner, String(child.id));
 		this.sql.exec("DELETE FROM memory_topics WHERE owner_id = ? AND id = ?", owner, id);
 		this.audit(owner, "merge_topic", `${id}->${intoId}`, moved, 1, decidedBy);
 		return { topic_id: intoId, moved_items: moved, path: this.path(owner, intoId) };
@@ -269,8 +289,14 @@ export class MemoryStore {
 		if (used + bytes > this.limitBytes) throw quota(`Topic memory is full (${used} of ${this.limitBytes} bytes): delete items or topics to make room`);
 		for (const c of input.conflicts_with) this.item(owner, c);
 		if (input.supersedes) {
+			// Supersession is scoped (audit finding C4): same topic, and an item the user placed or a
+			// higher-trust item can only be replaced by the user.
 			const old = this.item(owner, input.supersedes);
 			if (old.status !== "active") throw invalid(`${input.supersedes} is already superseded`);
+			if (old.topic_id !== topic.id) throw invalid(`${input.supersedes} belongs to another topic; an item can only supersede items of its own topic`);
+			if ((old.decided_by === "user" || TRUST_RANK[old.trust] > TRUST_RANK[input.trust]) && input.decided_by !== "user") {
+				throw new EngineError(`${input.supersedes} was placed by the user or has higher trust (${old.trust}); only the user can replace it (decided_by "user")`, "FORBIDDEN");
+			}
 		}
 		// Possible conflicts: active items of the same topic and kind with high overlap, not identical.
 		const kw = new Set(keywords.map(norm));
@@ -340,11 +366,17 @@ export class MemoryStore {
 			}
 		}
 		// 2. Candidates for short terms and CJK bigrams (trigrams cannot match them): bounded substring scan.
+		// SQLite's instr() prefilters in C (a superset: whole-word terms are checked in JS afterwards), so
+		// only rows that contain a term reach JavaScript (2026-11-26 audit, §09).
 		const terms = [...new Set(queries.flatMap(shortTerms))].slice(0, 64);
 		if (terms.length) {
-			for (const r of this.sql.exec("SELECT id, text_norm, keywords_norm FROM memory_items WHERE owner_id = ? ORDER BY created_at DESC LIMIT ?", owner, SCAN_LIMIT).toArray()) {
+			const raw = terms.map((t) => (t.startsWith(WORD) ? t.slice(WORD.length) : t));
+			const where = raw.map(() => "instr(text_norm, ?) > 0 OR instr(keywords_norm, ?) > 0").join(" OR ");
+			const bind = raw.flatMap((t) => [t, t]);
+			for (const r of this.sql.exec(`SELECT id, text_norm, keywords_norm FROM (SELECT id, text_norm, keywords_norm FROM memory_items WHERE owner_id = ? ORDER BY created_at DESC LIMIT ?) WHERE ${where}`, owner, SCAN_LIMIT, ...bind).toArray()) {
 				const hay = `${String(r.text_norm)}\n${String(r.keywords_norm)}`;
-				if (terms.some((x) => hay.includes(x))) candidateIds.add(String(r.id));
+				const words = wordSet(hay);
+				if (terms.some((x) => hasTerm(hay, x, words))) candidateIds.add(String(r.id));
 			}
 		}
 		// 3. Lexical score = best coverage of one query by the item (trigrams, or short terms/bigrams).
@@ -355,10 +387,11 @@ export class MemoryStore {
 			for (const r of this.sql.exec(`SELECT id, text_norm, keywords_norm FROM memory_items WHERE owner_id = ? AND id IN (${chunk.map(() => "?").join(",")})`, owner, ...chunk).toArray()) {
 				const hay = `${String(r.text_norm)}\n${String(r.keywords_norm)}`;
 				const itemGrams = new Set(trigrams(hay));
+				const words = wordSet(hay);
 				let best = 0;
 				for (const q of perQuery) {
 					const tri = q.grams.length ? q.grams.filter((g) => itemGrams.has(g)).length / q.grams.length : 0;
-					const sh = q.shorts.length ? q.shorts.filter((x) => hay.includes(x)).length / q.shorts.length : 0;
+					const sh = q.shorts.length ? q.shorts.filter((x) => hasTerm(hay, x, words)).length / q.shorts.length : 0;
 					best = Math.max(best, tri, sh);
 				}
 				if (best >= (opts.minLexical ?? MIN_LEXICAL)) lexical.set(String(r.id), best);
@@ -372,16 +405,20 @@ export class MemoryStore {
 			rows.push(...(this.sql.exec(`SELECT * FROM memory_items WHERE owner_id = ? AND id IN (${chunk.map(() => "?").join(",")})`, owner, ...chunk).toArray() as unknown as ItemRow[]));
 		}
 		const at = this.clock().getTime();
-		const candidates = rows
+		const ranked = rows
 			.filter((r) => (opts.include_superseded || r.status === "active") && (!scope || scope.has(r.topic_id)) && (!opts.kinds?.length || opts.kinds.includes(r.kind)))
 			.map((r) => {
 				const age = Math.max(0, (at - Date.parse(r.created_at)) / 86_400_000);
-				const score = 0.6 * lexical.get(r.id)! + 0.2 * Math.exp(-age / 180) + 0.2 * TRUST_WEIGHT[r.trust];
-				return { r, score, kw: new Set(String(r.keywords_norm).split("\n").filter(Boolean)), tri: new Set(trigrams(r.text_norm)) };
+				return { r, score: 0.6 * lexical.get(r.id)! + 0.2 * Math.exp(-age / 180) + 0.2 * TRUST_WEIGHT[r.trust] };
 			})
 			// Deterministic order: score, then newer first, then ID (equal scores must not depend on timing).
 			.sort((a, b) => b.score - a.score || b.r.created_at.localeCompare(a.r.created_at) || a.r.id.localeCompare(b.r.id));
-		// 3. Maximal marginal relevance: avoid returning near-duplicates.
+		// 3. Maximal marginal relevance over the best MMR_POOL candidates (bounded cost: similarity sets are
+		// built only for the pool, not for every match; 2026-11-26 audit, §09). Lower-ranked matches are
+		// counted in more_candidates.
+		const pool = Math.max(limit * 8, MMR_POOL);
+		const candidates = ranked.slice(0, pool).map((c) => ({ ...c, kw: new Set(String(c.r.keywords_norm).split("\n").filter(Boolean)), tri: new Set(trigrams(c.r.text_norm)) }));
+		const beyond = ranked.length - candidates.length;
 		const picked: typeof candidates = [];
 		while (picked.length < limit && candidates.length) {
 			let bestIdx = 0;
@@ -393,7 +430,7 @@ export class MemoryStore {
 			});
 			picked.push(candidates.splice(bestIdx, 1)[0]!);
 		}
-		return this.envelope(picked.map((p) => this.view(owner, p.r, p.score)), candidates.length);
+		return this.envelope(picked.map((p) => this.view(owner, p.r, p.score)), candidates.length + beyond);
 	}
 
 	private envelope(items: JsonObject[], more: number): JsonObject {
@@ -406,13 +443,27 @@ export class MemoryStore {
 
 	private view(owner: string, r: ItemRow, score: number): JsonObject {
 		const conflicts = JSON.parse(r.conflicts_json) as string[];
+		const provenance = JSON.parse(r.provenance_json) as JsonObject;
+		// A run_validated item carries the SHA-256 of the validated text; a mismatch means the stored text changed.
+		const integrity = typeof provenance.content_sha256 === "string" ? (provenance.content_sha256 === digest(r.text) ? "ok" : "mismatch") : null;
 		return {
 			id: r.id, topic_id: r.topic_id, topic_path: this.path(owner, r.topic_id), kind: r.kind, text: r.text, keywords: JSON.parse(r.keywords_json) as Json[],
-			lang: r.lang || null, trust: r.trust, decided_by: r.decided_by, provenance: JSON.parse(r.provenance_json) as JsonObject, as_of: r.as_of || null,
+			lang: r.lang || null, trust: integrity === "mismatch" ? "host_inferred" : r.trust, decided_by: r.decided_by, provenance, ...(integrity ? { integrity } : {}), as_of: r.as_of || null,
 			created_at: r.created_at, status: r.status, superseded_by: r.superseded_by,
 			conflict: conflicts.length || r.host_memory_conflict ? { with_items: conflicts, host_memory_says: r.host_memory_conflict || null } : null,
 			score: Math.round(score * 1000) / 1000,
 		};
+	}
+
+	/** Delete all of this owner's topic memory (account data deletion); an audit row without content remains. */
+	deleteOwner(owner: string): { topics: number; items: number } {
+		const items = Number(this.sql.exec("SELECT COUNT(*) AS n FROM memory_items WHERE owner_id = ?", owner).toArray()[0]!.n);
+		const topics = Number(this.sql.exec("SELECT COUNT(*) AS n FROM memory_topics WHERE owner_id = ?", owner).toArray()[0]!.n);
+		this.sql.exec("DELETE FROM memory_fts WHERE owner_id = ?", owner);
+		this.sql.exec("DELETE FROM memory_items WHERE owner_id = ?", owner);
+		this.sql.exec("DELETE FROM memory_topics WHERE owner_id = ?", owner);
+		this.audit(owner, "delete_account_data", "all", items, topics, "user");
+		return { topics, items };
 	}
 
 	audits(owner: string): JsonObject[] {

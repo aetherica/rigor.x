@@ -52,3 +52,39 @@ and [LICENSING.md](../../LICENSING.md) §5.
 | `aetherica-emblem.png` | `1000044167.png` | `2567e338e60362cb6b9d7c7e364a06b1a4580a53a933e5a300f26e7f4d3f3c78` |
 | `aetherica-wordmark.png` | `1000044827.png` | `7b52a7adb1b4a07ab7298eb487827ec58abb193c1cc3947756d538542edd61eb` |
 | `aetherica-wordmark-no-tagline.png` | derived from `aetherica-wordmark.png` (crop box 0, 0, 614, 92) | `e12b4d93440a51c8fae4fa51987f2063e40199f1939ce064380008fe9eac8524` |
+
+## Circular icon family (2026-11-26, engineering audit §11)
+
+Made from `aetherica-emblem.png` (byte-identical to the emblem the owner attached on 2026-11-26,
+SHA-256 `2567e338…`) by `tools/make_circular_icon.py` (deterministic; run it again to reproduce the
+files byte for byte). The files live where the Worker serves them: `deploy/cloudflare-ts/public/`.
+
+- **Composition:** the largest circle that lies entirely inside the emblem image (diameter 456 px =
+  the image height, centre (240, 228)). Every pixel is the emblem's own; nothing is redrawn,
+  recoloured or synthesized. It keeps the ring, the halo with its flames, the bull, the side flames
+  and the molten drips.
+- **Trade-off (disclosed):** the small "0°" mark and the left end of the gold base line sit in the
+  lower-left corner, about 270 px from the centre, so they fall outside any circle that stays inside
+  the source. A wider circle was built and checked: it needs ~60 px of invented background, and the
+  halo flames, already cut by the source's top edge, then show a hard line. Including the "0°" mark
+  cleanly needs a larger or vector master of the emblem.
+- **Format:** PNG, RGBA 8-bit, transparent outside the circle (anti-aliased edge, 4x supersampled,
+  half a pixel of margin), only IHDR/IDAT/IEND chunks (no metadata). Sizes 32–448 px, never
+  upscaled (the source is 456 px tall). `favicon.ico` is an ICO container with 16, 32 and 48 px.
+- **Where it shows:** MCP `serverInfo.icons` (48, 96, 192, 448; hosts show it in their connector
+  list), the favicon and the emblem on the sign-in consent, privacy, terms and message pages.
+  Checked: `tests/test_brand_icons.py` (circle, transparency, chunks; standard library only),
+  `deploy/cloudflare-ts/test/integration/auth-probe.mjs` (served by the static asset layer with the
+  built bytes), `test/integration/ui-render.mjs` (rendered in Chromium, light and dark).
+
+| File | Size | SHA-256 |
+|---|---|---|
+| `icon-32.png` | 3236 B | `9116ab9bb0ad4181…` |
+| `icon-48.png` | 6898 B | `5c5a58e2e2e02ffc…` |
+| `icon-64.png` | 11648 B | `39abc1b642e524f1…` |
+| `icon-96.png` | 24400 B | `5c0ee4747db2df2a…` |
+| `icon-128.png` | 40763 B | `2230db1bad1dd127…` |
+| `icon-192.png` | 82451 B | `7bd95839afc23f2f…` |
+| `icon-256.png` | 135332 B | `d13327aae48b8df0…` |
+| `icon-448.png` | 342721 B | `af05490da0ce9d86…` |
+| `favicon.ico` | 10475 B | `fa4ff7dce4cba432…` |

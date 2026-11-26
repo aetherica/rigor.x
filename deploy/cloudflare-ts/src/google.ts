@@ -26,7 +26,7 @@ export async function s256(verifier: string): Promise<string> {
 	return base64url(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier))));
 }
 
-export function googleAuthorizeUrl(o: { clientId: string; redirectUri: string; state: string; codeChallenge: string }): string {
+export function googleAuthorizeUrl(o: { clientId: string; redirectUri: string; state: string; codeChallenge: string; nonce?: string }): string {
 	const url = new URL(GOOGLE_AUTHORIZE_URL);
 	url.search = new URLSearchParams({
 		client_id: o.clientId,
@@ -37,6 +37,7 @@ export function googleAuthorizeUrl(o: { clientId: string; redirectUri: string; s
 		code_challenge: o.codeChallenge,
 		code_challenge_method: "S256",
 		prompt: "select_account",
+		...(o.nonce ? { nonce: o.nonce } : {}),
 	}).toString();
 	return url.toString();
 }
@@ -57,7 +58,7 @@ export function googleTokenRequestBody(o: { code: string; clientId: string; clie
  * TLS in exchange for our client secret, so OpenID Connect Core 3.1.3.7 allows skipping the
  * signature check; issuer, audience and expiry are still checked.
  */
-export function parseGoogleIdToken(idToken: string, clientId: string, nowSeconds: number): GoogleIdentity {
+export function parseGoogleIdToken(idToken: string, clientId: string, nowSeconds: number, expectedNonce?: string): GoogleIdentity {
 	const parts = idToken.split(".");
 	if (parts.length !== 3) throw new Error("Malformed ID token");
 	let claims: Record<string, unknown>;
@@ -70,7 +71,12 @@ export function parseGoogleIdToken(idToken: string, clientId: string, nowSeconds
 	if (typeof claims.iss !== "string" || !GOOGLE_ISSUERS.has(claims.iss)) throw new Error("ID token issuer is not Google");
 	const aud = claims.aud;
 	if (!(aud === clientId || (Array.isArray(aud) && aud.includes(clientId)))) throw new Error("ID token audience mismatch");
+	// OIDC Core 3.1.3.7: with several audiences, azp must be present and be this client.
+	if (Array.isArray(aud) && aud.length > 1 && claims.azp !== clientId) throw new Error("ID token authorized party mismatch");
+	if (claims.azp !== undefined && claims.azp !== clientId) throw new Error("ID token authorized party mismatch");
 	if (typeof claims.exp !== "number" || claims.exp + 60 < nowSeconds) throw new Error("ID token expired");
+	if (typeof claims.iat === "number" && claims.iat > nowSeconds + 300) throw new Error("ID token issued in the future");
+	if (expectedNonce !== undefined && claims.nonce !== expectedNonce) throw new Error("ID token nonce mismatch");
 	if (typeof claims.sub !== "string" || claims.sub === "") throw new Error("ID token has no subject");
 	return { sub: claims.sub };
 }
@@ -84,7 +90,13 @@ export interface ConsentFacts {
 	redirectIsLoopback: boolean;
 }
 
+/** Favicon and app icons: the circular Aetherica emblem, served as static assets (public/). */
+const HEAD_ICONS = `<link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48"><link rel="icon" type="image/png" href="/icon-192.png" sizes="192x192"><link rel="apple-touch-icon" href="/icon-192.png">`;
+/** The emblem above each page's title (decorative; the page text names RIGOR-X). */
+const EMBLEM = `<img class="emblem" src="/icon-192.png" width="72" height="72" alt="">`;
+
 const PAGE_STYLE = `body{font:16px/1.5 system-ui,sans-serif;max-width:32rem;margin:3rem auto;padding:0 1rem;color:#1a1a1a;background:#fff}
+.emblem{display:block;width:72px;height:72px;margin:0 0 1rem;border-radius:50%}
 @media (prefers-color-scheme:dark){body{color:#eee;background:#151515}}
 button{font:inherit;padding:.5rem 1.25rem;margin-right:.5rem;border-radius:.4rem;border:1px solid #888;cursor:pointer}
 button[value=approve]{background:#1a73e8;color:#fff;border-color:#1a73e8}.warn{padding:.75rem;border-left:4px solid #d93025}`;
@@ -96,7 +108,8 @@ export function consentPage(facts: ConsentFacts, handle: string): string {
 		: "This app registered itself; its name is not verified.";
 	return `<!doctype html>
 <html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Sign in to RIGOR-X</title><style>${PAGE_STYLE}</style>
+<title>Sign in to RIGOR-X</title>${HEAD_ICONS}<style>${PAGE_STYLE}</style>
+${EMBLEM}
 <h1>Allow ${name} to use RIGOR-X?</h1>
 <p>${origin} Access will be sent to <strong>${escapeHtml(facts.redirectHost)}</strong>.</p>
 ${facts.redirectIsLoopback ? '<p class="warn"><strong>This sends access to an app on your computer.</strong> Continue only if you just started signing in from it.</p>' : ""}
@@ -112,7 +125,8 @@ const REPO_URL = "https://github.com/aetherica/rigor.x";
 /** Public pages linked from the Google OAuth consent screen (Branding). Factual, early-development text. */
 export const PRIVACY_PAGE = `<!doctype html>
 <html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>RIGOR-X privacy</title><style>${PAGE_STYLE}</style>
+<title>RIGOR-X privacy</title>${HEAD_ICONS}<style>${PAGE_STYLE}</style>
+${EMBLEM}
 <h1>RIGOR-X privacy policy</h1>
 <p>RIGOR-X is an MCP server that AI assistants (such as ChatGPT and Claude) call to structure multi-step work. This page describes what it stores. Status: early development.</p>
 <h2>Sign-in</h2>
@@ -120,7 +134,7 @@ export const PRIVACY_PAGE = `<!doctype html>
 <h2>What is stored</h2>
 <ul>
 <li>Task text, stage summaries, objectives, requirement and claim texts, assumptions, scenarios and evidence claims: stored only as SHA-256 digests and lengths, not as text.</li>
-<li>Stored as text, because they are the record of the run: source references (for example URLs), reasons given for pausing, re-entering or cancelling a stage, requirement, operation, claim and capability IDs and names, the names and receipt references of actions your assistant reports, the inputs and results of calculations made with <code>rigorx_compute</code> in a run, and, for sources checked with <code>rigorx_check_source</code>, the address fetched, its status, size and SHA-256 hash (not the page content).</li>
+<li>Stored as text, because they are the record of the run: source references (for example URLs), reasons given for pausing, re-entering or cancelling a stage, requirement, operation, claim and capability IDs and names, the names and receipt references of actions your assistant reports, the inputs and results of calculations made with <code>rigorx_compute</code> in a run, and, for sources checked with <code>rigorx_check_source</code>, the addresses fetched (with redirects), status, size, SHA-256 hash and a few bibliographic fields (title, author, publisher, date, DOI, Crossref retraction status) — not the page content.</li>
 <li>Topic memory (only what your assistant saves with <code>rigorx_memory_write</code> about the topics RIGOR-X works on): stored as text with its keywords, so it can be searched; kept until you delete it (<code>rigorx_memory_delete</code>, or a whole topic with <code>rigorx_memory_topic</code>). Deletion removes the text and its search index; a record of the deletion (when, how many items) is kept without the content. Up to 120 MB per account.</li>
 <li>Sign-in records (registered apps, grants, tokens): stored hashed or encrypted.</li>
 </ul>
@@ -131,16 +145,37 @@ export const PRIVACY_PAGE = `<!doctype html>
 
 export const TERMS_PAGE = `<!doctype html>
 <html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>RIGOR-X terms</title><style>${PAGE_STYLE}</style>
+<title>RIGOR-X terms</title>${HEAD_ICONS}<style>${PAGE_STYLE}</style>
+${EMBLEM}
 <h1>RIGOR-X terms of service</h1>
 <p>RIGOR-X is an early-stage development service, provided as is, without warranty and without guaranteed availability. It may change or stop at any time, and stored runs may be deleted.</p>
 <p>Verification results are structural checks of what your assistant submitted ("structurally verified"); they do not guarantee that any claim is correct or true.</p>
 <p>Do not use RIGOR-X for unlawful purposes or to attack the service. Source code and license: <a href="${REPO_URL}">${REPO_URL}</a>.</p>
 </html>`;
 
+/** The approval decision page (values come from the engine; host-written description is escaped). */
+export function approvalPage(v: Record<string, unknown>, csrf: string): string {
+	const e = (x: unknown) => escapeHtml(x === null || x === undefined ? "—" : String(x));
+	const open = v.status === "pending" && v.plan_changed !== true;
+	const reason = v.status !== "pending" ? `This request is ${e(v.status)}.` : v.plan_changed === true ? "The operation changed after this request; ask your assistant for a new one." : "";
+	return `<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Approve an action — RIGOR-X</title>${HEAD_ICONS}<style>${PAGE_STYLE}</style>
+${EMBLEM}
+<h1>Approve this action?</h1>
+<p>Your assistant asks for your approval of <strong>one</strong> planned operation. Approve only if you want it done.</p>
+<p><strong>What:</strong> ${e(v.description || "(no description given)")}</p>
+<p><strong>Operation:</strong> ${e(v.operation_id)} · tier ${e(v.tier)} · capability ${e(v.capability)}<br><strong>Run:</strong> ${e(v.run_id)}<br><strong>Valid until:</strong> ${e(v.expires_at)}</p>
+<p class="warn">The description was written by your assistant, not by RIGOR-X.</p>
+${open ? `<form method="post"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}">
+<p><button name="decision" value="approve">Approve this operation</button><button name="decision" value="deny">Deny</button></p></form>` : `<p>${reason}</p>`}
+</html>`;
+}
+
 export function messagePage(title: string, message: string): string {
 	return `<!doctype html>
 <html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${escapeHtml(title)}</title><style>${PAGE_STYLE}</style>
+<title>${escapeHtml(title)}</title>${HEAD_ICONS}<style>${PAGE_STYLE}</style>
+${EMBLEM}
 <h1>${escapeHtml(title)}</h1><p>${escapeHtml(message)}</p></html>`;
 }

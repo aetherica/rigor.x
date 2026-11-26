@@ -1,7 +1,15 @@
-// Deterministic, inspectable routing heuristics (seed only). The keyword lists are English, so a
-// task with no signal — every task in most other languages — is UNKNOWN, not "simple": its level
+// Deterministic, inspectable routing heuristics (seed only). Intent keywords are English, so a task
+// with no intent signal — every task in most other languages — is UNKNOWN, not "simple": its level
 // seed is L02_STANDARD and CLASSIFY must declare a level and stakes (WS32 N2, directive §2.2).
 // The level can only rise from here. Derived from src/rigorx/adaptive_router.py (frozen v1).
+//
+// Risk floor (2026-11-26 audit, finding F): risk vocabulary is matched in English and in ten other
+// widely used languages (the same categories in each: medical, legal, financial, security,
+// emergency), and an explicit level (a /l01-style token or an override argument) can lower the level
+// only down to the task's risk floor: L03_DEEP when any risk term appears, L05_CRITICAL when risk
+// meets a destructive or irreversible action (delete, transfer, deploy to production, …) or three or
+// more risk terms appear. Keyword lists are a heuristic: misspelt, spaced-out or paraphrased risk
+// language is not detected, which is why CLASSIFY stakes set a second, host-declared floor.
 
 export type TaskIntent =
 	| "INFORMATION" | "RESEARCH" | "ANALYSIS" | "DECISION" | "EXECUTION"
@@ -52,6 +60,46 @@ const RISK_PATTERNS = [
 	"authenticat", "authoriz", "bypass", "vulnerab", "exploit", "breach", "leak", "secret",
 	"tokens?\\b", "privilege", "malware", "incident", "encrypt",
 ];
+// Same risk categories in other languages (WS32 decision: language-agnostic, not one language special-cased).
+// Matched at a Unicode word start (a term may be a stem); Han and Kana terms are matched as substrings.
+const RISK_TERMS_MULTILINGUAL = [
+	// Bengali
+	"ব্যাংক", "পাসওয়ার্ড", "ওষুধ", "ডাক্তার", "চিকিৎসা", "রোগ", "ডোজ", "আইন", "মামলা", "আদালত", "বিনিয়োগ", "ঋণ", "নিরাপত্তা", "হ্যাক", "জরুরি", "গোপন",
+	// Hindi
+	"बैंक", "पासवर्ड", "दवा", "डॉक्टर", "इलाज", "कानून", "अदालत", "निवेश", "सुरक्षा", "आपातकाल", "कर्ज",
+	// Spanish, Portuguese, French, German
+	"médic", "medicament", "salud", "abogad", "contraseña", "inversi", "segurid", "emergencia", "diagnóstic",
+	"saúde", "advogad", "senha", "investiment", "seguranç", "emergência",
+	"santé", "avocat", "juridique", "banque", "mot de passe", "investiss", "sécurité", "urgence",
+	"medizin", "gesundheit", "rechtlich", "anwalt", "passwort", "kennwort", "investition", "sicherheit", "notfall",
+	// Russian, Arabic
+	"медицин", "лекарств", "врач", "юрид", "адвокат", "банк", "парол", "инвест", "безопасност", "экстрен",
+	"طبي", "دواء", "طبيب", "قانون", "محام", "بنك", "كلمة المرور", "استثمار", "أمن", "طوارئ",
+	// Chinese, Japanese (substring)
+	"医疗", "药", "医生", "法律", "律师", "银行", "密码", "投资", "安全", "紧急", "诊断", "漏洞",
+	"医療", "薬", "医者", "弁護士", "銀行", "パスワード", "投資", "セキュリティ", "緊急",
+];
+/** Destructive or irreversible actions: with any risk term they raise the floor to L05. */
+const DESTRUCTIVE_TERMS = [
+	"delet", "drop", "wipe", "erase", "destroy", "truncate", "rm -rf", "format", "overwrite", "revoke", "rotate", "shut down", "shutdown",
+	"transfer", "wire", "pay", "purchase", "buy", "sell", "withdraw", "send money", "deploy", "production", "irreversibl", "permanent",
+	"মুছে", "মুছ", "ডিলিট", "স্থায়ী", "স্থানান্তর", "বিক্রি", "পাঠা", "हटा", "डिलीट", "स्थानांतर", "भेज",
+	"elimin", "borra", "transfier", "supprim", "efface", "virement", "lösch", "überweis", "exclu", "apag",
+	"удал", "перевод", "حذف", "تحويل", "删除", "转账", "削除", "送金",
+];
+const SPACELESS_TERM = /[\u3040-\u30ff\u3400-\u9fff]/u;
+/** Terms of `list` found in `text`: one combined pre-check, then per-term tests only when it matches. */
+const combined = new Map<readonly string[], RegExp>();
+function hits(list: readonly string[], text: string): string[] {
+	let any = combined.get(list);
+	if (!any) {
+		any = new RegExp(list.map((t) => termRx(t).source).join("|"), "u");
+		combined.set(list, any);
+	}
+	return any.test(text) ? list.filter((t) => termRx(t).test(text)) : [];
+}
+const termRx = (t: string) => rx(SPACELESS_TERM.test(t) ? t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") : `(?<![\\p{L}\\p{M}\\p{N}])${t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`, "u");
+
 const HYPER_PATTERNS = ["hyper.?rigorous", "l06", "adversarial", "red.?team", "failure analysis", "stress test", "full audit", "forensic"];
 const LEVEL_TOKENS: Array<[AdaptiveLevel, string[]]> = [
 	["L06_HYPER_RIGOROUS", ["/l06\\b", "/ultrathink\\b", "/beastmode\\b", "/hyper.?rigorous\\b"]],
@@ -81,14 +129,17 @@ const METHODS: Record<TaskIntent, string[]> = {
 };
 
 const cache = new Map<string, RegExp>();
-function rx(source: string): RegExp {
-	let r = cache.get(source);
+function rx(source: string, flags = ""): RegExp {
+	const key = `${flags}/${source}`;
+	let r = cache.get(key);
 	if (!r) {
-		r = new RegExp(source);
-		cache.set(source, r);
+		r = new RegExp(source, flags);
+		cache.set(key, r);
 	}
 	return r;
 }
+const LEVEL_ORDER: AdaptiveLevel[] = ["L01_BASIC", "L02_STANDARD", "L03_DEEP", "L04_COMPLEX", "L05_CRITICAL", "L06_HYPER_RIGOROUS"];
+const rank = (l: AdaptiveLevel) => LEVEL_ORDER.indexOf(l);
 const wordStart = (p: string) => rx(`\\b(?:${p})`);
 const words = (text: string) => text.split(/\s+/).filter(Boolean).length;
 const unique = (items: string[]) => [...new Set(items)];
@@ -116,9 +167,13 @@ export function route(prompt: string, overrideLevel?: AdaptiveLevel): AdaptivePr
 	if (!modes.length) modes = DEFAULT_MODES[intent];
 	signals.push(...modes.map((m) => `MODE:${m}`));
 
-	const riskHits = RISK_PATTERNS.filter((p) => wordStart(p).test(text));
+	const riskHits = [...RISK_PATTERNS.filter((p) => wordStart(p).test(text)), ...hits(RISK_TERMS_MULTILINGUAL, text)];
 	const riskScore = Math.min(5, riskHits.length);
 	signals.push(...riskHits.map((p) => `RISK:${p}`));
+	const destructive = hits(DESTRUCTIVE_TERMS, text);
+	signals.push(...destructive.map((t) => `ACTION:${t}`));
+	const riskFloor: AdaptiveLevel = riskScore === 0 ? "L01_BASIC"
+		: riskScore >= 3 || destructive.length > 0 || intent === "EXECUTION" ? "L05_CRITICAL" : "L03_DEEP";
 
 	let complexHits = 0;
 	if (words(text) > 120) { complexHits += 1; signals.push("COMPLEX:long-input"); }
@@ -144,6 +199,11 @@ export function route(prompt: string, overrideLevel?: AdaptiveLevel): AdaptivePr
 	if (overrideLevel !== undefined) {
 		level = overrideLevel;
 		signals.push(`USER_OVERRIDE:${level}`);
+	}
+	// An explicit level may lower the effort, but never below the risk floor.
+	if ((explicit || tokenOverride) && rank(level) < rank(riskFloor)) {
+		signals.push(`RISK_FLOOR:${riskFloor} (explicit ${level} raised)`);
+		level = riskFloor;
 	}
 	let methods = [...METHODS[intent]];
 	if (level === "L05_CRITICAL" || level === "L06_HYPER_RIGOROUS") methods.push("uncertainty-disclosure", "independent-verification", "failure-mode-review");

@@ -23,11 +23,14 @@ const fail = (m: string): never => {
 // ---------------------------------------------------------------- rational exponents
 
 const gcd = (a: number, b: number): number => (b === 0 ? Math.abs(a) : gcd(b, a % b));
+const MAX_EXPONENT = 1_000_000;
 export class Q {
 	readonly n: number;
 	readonly d: number;
 	constructor(n: number, d = 1) {
 		if (!Number.isInteger(n) || !Number.isInteger(d) || d === 0) fail("internal: invalid rational");
+		// Dimension exponents beyond this are never physical and would lose integer precision.
+		if (Math.abs(n) > MAX_EXPONENT || Math.abs(d) > MAX_EXPONENT) fail(`a dimension exponent is out of range (more than ${MAX_EXPONENT})`);
 		const g = gcd(n, d) || 1;
 		const s = d < 0 ? -1 : 1;
 		this.n = (s * n) / g;
@@ -144,8 +147,9 @@ export function parseUnit(src: string): Quantity {
 			if (m && i > 0 && /[A-Za-z)]/.test(s[i - 1]!)) { i += m[0].length; exp = Number(m[0]); }
 		}
 		if (exp === null) return q;
-		const p = rational(exp)!;
-		return qty(q.v ** exp, dimPow(q.dim, p));
+		const p = rational(exp);
+		if (!p) fail(`unit "${src}": the exponent must be a whole number or a simple fraction (denominator up to 12, magnitude up to 1000)`);
+		return qty(q.v ** exp, dimPow(q.dim, p!));
 	};
 	const expr = (): Quantity => {
 		let acc = atom();
@@ -160,6 +164,8 @@ export function parseUnit(src: string): Quantity {
 	};
 	const out = expr();
 	if (i < s.length) fail(`unit "${src}": unexpected ")"`);
+	// An overflowing or vanishing unit factor would silently turn every conversion into 0 or Infinity.
+	if (!Number.isFinite(out.v) || out.v === 0) fail(`unit "${src}": its conversion factor overflows the number range`);
 	return out;
 }
 

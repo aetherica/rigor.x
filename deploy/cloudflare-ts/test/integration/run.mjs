@@ -30,6 +30,38 @@ async function check(name, fn) {
 
 try {
 	await ready();
+	await check("an operation is atomic on workerd: transactionSync rolls back every write when it throws (audit C1)", async () => {
+		const r = JSON.parse(await (await fetch(`${base}/tx`)).text());
+		assert.deepEqual(r, { threw: true, afterRollback: 0, afterCommit: 1 });
+	});
+	await check("a colliding topic merge through the real OwnerRuns object changes nothing (audit C1)", async () => {
+		const owner = "google:merge";
+		const mk = async (args) => { const r = await call(owner, "memory_topic", { decided_by: "user", ...args }); assert.ok(r.ok, JSON.stringify(r)); return r.result.topic_id; };
+		const a = await mk({ action: "create", name: "Alpha" });
+		const b = await mk({ action: "create", name: "Beta" });
+		await mk({ action: "create", name: "Same", parent_id: a });
+		await mk({ action: "create", name: "Same", parent_id: b });
+		const before = (await call(owner, "memory_topic", { action: "list" })).result.topics;
+		const merged = await call(owner, "memory_topic", { action: "merge", topic_id: a, into_id: b, decided_by: "user" });
+		assert.equal(merged.ok, false);
+		assert.deepEqual((await call(owner, "memory_topic", { action: "list" })).result.topics, before);
+	});
+	await check("tenant isolation across two real Durable Objects; idempotent replay on DO SQLite (release G08, G11)", async () => {
+		const A = "google:iso-a", B = "google:iso-b";
+		const run = (await call(A, "start_run", { task: "Prepare the list of options for the team" })).result.run_id;
+		const key = "workerd-idem-0001";
+		const e1 = await call(A, "record_evidence", { run_id: run, source_ref: "https://example.com/a", claim: "A private source of tenant A only", idempotency_key: key });
+		const e2 = await call(A, "record_evidence", { run_id: run, source_ref: "https://example.com/a", claim: "A private source of tenant A only", idempotency_key: key });
+		assert.equal(e2.result.idempotent_replay, true);
+		assert.equal(e2.result.evidence_id, e1.result.evidence_id);
+		assert.equal((await call(A, "get_run", { run_id: run })).result.evidence_count, 1);
+		for (const op of ["get_run", "delete_run", "assess_sources"]) {
+			const r = await call(B, op, { run_id: run });
+			assert.equal(r.ok, false, op);
+			assert.equal(r.code, "RUN_NOT_FOUND", op);
+		}
+		assert.equal((await call(A, "get_run", { run_id: run })).result.status, "IN_PROGRESS");
+	});
 	await check("migration from a hand-written version-1 database on workerd SQLite", async () => {
 		const r = JSON.parse(await (await fetch(`${base}/migration`)).text());
 		assert.equal(r.version, "3");

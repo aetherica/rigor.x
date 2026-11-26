@@ -47,6 +47,16 @@ Checks, all deterministic: `prior_stages_closed`, `requirements_preregistered`, 
 
 Verification level per met requirement: `structural`; `sources_resolved` when every cited source has a successful `SOURCE_CHECK` receipt; `computations_checked` when, in addition, its numeric claims cite successful `COMPUTE_RECEIPT`s. A pass is "structurally verified" at most, never a truth guarantee. Evidence may be recorded after a failed validation (for example the fixing action) before re-entering.
 
+### 3a. Gate 2.1.0 (2026-11-26 engineering audit)
+
+- **One claim–requirement resolver (B3):** a claim bears on a met requirement when it names it in `requirement_ids` OR rests on evidence the requirement cites. `unknown_values_not_supporting`, `claims_support_requirements`, `contradictions_resolved` and `numeric_claims_computed` all use it, so omitting `requirement_ids` takes no claim out of a check.
+- **Numeric claims bound to their computation (B2, L06):** a numeric claim must state `value {status, number, unit}` and cite a `COMPUTE_RECEIPT` that succeeded *and* whose `expect` checked that same value (same dimension, SI value within 1e-9; a unit rigorx_compute does not know is a label: dimensionless receipt, same number). An unrelated or unchecked computation no longer validates anything. The `computations_checked` verification level uses the same rule.
+- **Approvals bound to one operation (B1):** `USER_APPROVAL` evidence needs `approves=<A4/A5 operation id>`; the engine stores the operation's digest (ID, capability, completion condition, tier, requirements), an approval ID, `approved_at` and `expires_at` (24 h). EXECUTE and the gate (`approvals_recorded`) accept it only for that operation, unchanged since the approval, unexpired, and once (single use). Authenticity stays `host_declared`: RIGOR-X cannot observe the user.
+- **Dependency integrity (D):** EXECUTE refuses a `done` operation whose prerequisite is not `done`; the gate repeats it (`dependencies_done`).
+- **Canonical source independence (B5):** `independent_sources` (L06) counts independence groups from `sources.ts` (same DOI in any spelling, same arXiv/PubMed ID, same post across hosts, archive and original, same registrable site, rel=canonical, identical content hash, wire byline, declared `derived_from`/`origin_ref`), not distinct hosts. Different DOIs are different works.
+- **New checks:** `cited_sources_not_retracted` (any level, when a source check carries Crossref data: a met requirement may not cite a retracted work) and `fringe_corroborated` (L03+: a requirement cannot be met on declared D09 sources alone).
+- Verifications record `gate_version`, so runs validated under 2.0.0 stay identifiable.
+
 ## 4. OPTIMIZE loop guard (ADR-004) and run outcomes
 
 `OPTIMIZE` with `changed: true` sends the run back to VALIDATE (VALIDATE, STRESS_TEST and OPTIMIZE are done again), at most **2** cycles. The result fingerprint is SHA-256 of the NFKC-normalised, case-folded, punctuation-stripped `result_summary`; a fingerprint seen before stops the loop (`no_progress`), a third change stops it (`budget`). Either stop proceeds to DELIVER with the limitation recorded by the engine.

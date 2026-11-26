@@ -90,10 +90,17 @@ test("L01: four stages, the rest auto-skipped with a reason, delivered as unveri
 });
 
 test("unknown is not low risk: no router signal requires a declared level and stakes (N2)", () => {
+	// No intent and no risk vocabulary (Bengali: "make a list of options for our team"): UNKNOWN, seed L02.
+	const quiet = runner(harness(), "আমাদের দলের জন্য বিকল্পগুলোর একটি তালিকা তৈরি করো");
+	assert.equal(quiet.start.intent, "UNKNOWN");
+	assert.equal(quiet.start.level, "L02_STANDARD");
+	assert.equal(quiet.start.classification_unknown, true);
+	// Risk vocabulary in Bengali (audit finding F): the multilingual risk lexicon seeds L05; the intent
+	// is still UNKNOWN, so CLASSIFY must still declare level and stakes.
 	const h = harness();
 	const r = runner(h, "আমার ব্যাংক অ্যাকাউন্টের পাসওয়ার্ড ফাঁস হয়েছে, প্রোডাকশন সার্ভার থেকে সব ডেটা স্থায়ীভাবে মুছে ফেলতে হবে");
 	assert.equal(r.start.intent, "UNKNOWN");
-	assert.equal(r.start.level, "L02_STANDARD");
+	assert.equal(r.start.level, "L05_CRITICAL");
 	assert.equal(r.start.classification_unknown, true);
 	r.must("QUERY");
 	const refused = r.submit("CLASSIFY", { objective: "Contain a leaked bank password and plan the deletion", deliverable: "An incident response plan", requirements: [req("R1")] });
@@ -175,7 +182,7 @@ function toValidate(h: ReturnType<typeof harness>, level: Level, requirements: u
 	if (stages.includes("SELECT_METHODS")) r.must("SELECT_METHODS", { methods: [{ name: "source review", reason: "the comparison rests on sources" }] });
 	if (stages.includes("ASSESS_COMPLEXITY")) r.must("ASSESS_COMPLEXITY");
 	if (stages.includes("IDENTIFY_CAPABILITIES")) r.must("IDENTIFY_CAPABILITIES", { available: ["web_search"], missing: [] });
-	const ev = Array.from({ length: opts.evidence ?? 2 }, (_, i) => r.evidence(`https://source${i}.example.org/doc`));
+	const ev = Array.from({ length: opts.evidence ?? 2 }, (_, i) => r.evidence(`https://source${i}.example${i}.org/doc`));
 	r.must("PLAN", { operations: [{ id: "op1", capability: "web_search", depends_on: [], completion_condition: "All sources for the comparison are recorded", requirement_ids: [], tier: "A1" }] });
 	r.must("EXECUTE", { operations: [{ id: "op1", status: "done", evidence_ids: [ev[0]] }] });
 	if (stages.includes("EVALUATE_EVIDENCE")) {
@@ -367,9 +374,9 @@ test("L06: two independent sources per met requirement", () => {
 	const h = harness();
 	const claims = (ev: string[]) => [{ id: "C1", text: "The main claim rests on recorded sources", status: "VERIFIED", evidence_ids: [ev[0]!, ev[1]!], requirement_ids: ["R1"] }];
 	const r = toValidate(h, "L06_HYPER_RIGOROUS", [req("R1")], { claims, assumptions: [] });
-	const sameHost = r.evidence("https://source0.example.org/other-page");
+	const sameHost = r.evidence("https://news.example0.org/other-page"); // another subdomain of the same registrable site
 	const v = (r.verify([{ id: "R1", met: true, evidence_ids: [r.ev[0], sameHost] }]) as any).result;
-	assert.deepEqual(check(v, "independent_sources").detail, ["R1 cites fewer than two independent sources"]);
+	assert.deepEqual(check(v, "independent_sources").detail, ["R1 cites fewer than two independent sources (1 independent group: site:example0.org)"]);
 	h.ok("reenter", { run_id: r.id, target_stage: "VALIDATE", trigger: "gate_failed", reason: "cite a second independent source" });
 	assert.equal((r.verify([{ id: "R1", met: true, evidence_ids: [r.ev[0], r.ev[1]] }]) as any).result.passed, true);
 });
@@ -467,7 +474,8 @@ test("autonomy tiers (directive §15): a done A4 operation needs the user's appr
 	const sent = h.ok("report_action", { run_id: r.id, tool_name: "send_email", status: "EXECUTED" }).action_id;
 	const refused = r.submit("EXECUTE", { operations: [{ id: "op1", status: "done", evidence_ids: [sent] }] }) as any;
 	assert.match(refused.message, /tier A4: a done A4 operation must cite the user's approval/);
-	const approval = r.evidence("chat:message:approve-sending", { evidence_type: "USER_APPROVAL" });
+	assert.match((h.call("record_evidence", { run_id: r.id, source_ref: "chat:message:approve-sending", claim: "The user approved sending the options", evidence_type: "USER_APPROVAL" }) as any).message, /must name the planned operation/);
+	const approval = r.evidence("chat:message:approve-sending", { evidence_type: "USER_APPROVAL", approves: "op1" });
 	r.must("EXECUTE", { operations: [{ id: "op1", status: "done", evidence_ids: [sent, approval] }] });
 	const v = (r.verify([{ id: "R1", met: true, evidence_ids: [sent] }]) as any).result;
 	assert.equal(v.checks.find((c: any) => c.check === "approvals_recorded").passed, true);

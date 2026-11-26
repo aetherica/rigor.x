@@ -20,9 +20,9 @@ RIGOR-X topic memory stores knowledge about topics it works on. It is separate f
 - Create or select the correct topic with `rigorx_memory_topic`.
 - Use `rigorx_memory_write` with concise text and useful keywords in the item's language.
 - Use `user_confirmed` only when the user explicitly confirmed the item and set `decided_by: "user"`.
-- Use `run_validated` only with provenance pointing to a run whose VALIDATE stage passed.
+- Use `run_validated` only with `provenance.run_id` of a run whose validation passed and `provenance.claim_id` or `provenance.evidence_id`; the text must be exactly that validated claim's text (checked by SHA-256). Recall shows `integrity`; an item whose text changed is shown as `host_inferred`.
 - Otherwise use `host_inferred` and label the provenance honestly. Never promote an inference to a confirmed fact.
-- If an item supersedes or conflicts with an older item, use the corresponding fields and disclose the conflict.
+- If an item supersedes or conflicts with an older item, use the corresponding fields and disclose the conflict. `supersedes` works only inside the same topic, and an item the user placed (or of higher trust) can only be replaced with `decided_by: "user"`.
 
 ## Topic governance and deletion
 

@@ -25,6 +25,20 @@ This project is in pre-release development. Entries summarize notable changes; t
 - MCP 2026-07-28 (stateless) alongside the handshake era; per-owner quotas; schema migrations; random per-owner profile IDs.
 - CI: real Worker auth path and Durable Object storage under `wrangler dev`, type check, conformance suite, memory benchmarks, compute differential test against pint, slash catalogue sync.
 
+### Security and integrity (2026-11-26 engineering audit)
+- Source checks follow redirects manually and check every hop (IPv4/IPv6 special-purpose ranges in every spelling, local names, ports, loops, at most 10 hops); the quota is reserved before any external fetch.
+- Gate 2.1.0: claims linked by requirement IDs or shared evidence; numeric claims bound to a computation that checked their own value; single-use, expiring approvals bound to one operation; dependency integrity; canonical source independence; retraction and fringe-corroboration checks.
+- Topic memory: atomic operations (storage transactions), merge preflight, move-collision check, whole-word short-token recall, scoped supersession, run_validated bound to a validated claim by SHA-256.
+- Router risk floor for explicit low levels and a multilingual risk lexicon; compute exponents validated (no runtime exceptions); MCP request limits (1 MiB, depth 32, string/integer IDs).
+
+### Release hardening (2026-11-27)
+- Resilience policy (retries, deadlines, circuit breakers, bulkhead), DNS-verified source fetches, idempotency keys, engine-verified user approvals (`rigorx_request_approval`), account data deletion, suspension, source-check quota, OIDC azp/iat/nonce, `/version` and `/health`, structured logs, commit-tagged deploys, discovery gap register; rollback-compatible storage; mutation test in CI.
+
+### Added (2026-11-26 engineering audit)
+- Source Intelligence Gate (`src/sources.ts`, tool `rigorx_assess_sources`): canonical identity, nine source domains, independence groups, lifecycle verdicts, claim-level cross-checks; Crossref (metadata, retractions) and Wayback lookups in `rigorx_check_source`; HTML metadata and injection signals.
+- Circular transparent Aetherica icons (static assets, MCP `serverInfo.icons`, sign-in pages).
+- Regression tests for every finding (`test/audit.test.ts`, `test/sources.test.ts`), workerd transaction probe, Chromium render check, CPU benchmark (`scripts/bench.ts`), live source check (`scripts/live_source_check.ts`).
+
 ### Changed (WS32)
 - Text policy accepts Chinese, Japanese and Thai text; dense scripts count two units for minimum length.
 - Tasks without a router signal are UNKNOWN and need a declared level and stakes.
