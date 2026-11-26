@@ -37,7 +37,7 @@ test("server/discover advertises versions, tools capability, instructions, cache
 	assert.equal(r.cacheScope, "public");
 	const info = r._meta["io.modelcontextprotocol/serverInfo"];
 	assert.equal(info.name, "rigor-x");
-	assert.equal(info.title, "RIGOR-X");
+	assert.equal(info.title, "Aetherica");
 	assert.equal(info.version, "0.4.0.dev0");
 	// Icons (MCP 2025-11-25 Implementation.icons): absolute URLs on the request's origin, PNG, square sizes.
 	assert.deepEqual(info.icons.map((i: any) => i.sizes[0]), ["48x48", "96x96", "192x192", "448x448"]);

@@ -31,6 +31,9 @@ This project is in pre-release development. Entries summarize notable changes; t
 - Topic memory: atomic operations (storage transactions), merge preflight, move-collision check, whole-word short-token recall, scoped supersession, run_validated bound to a validated claim by SHA-256.
 - Router risk floor for explicit low levels and a multilingual risk lexicon; compute exponents validated (no runtime exceptions); MCP request limits (1 MiB, depth 32, string/integer IDs).
 
+### Aetherica sign-in (2026-11-26)
+- Sign-in, approval, privacy, terms and home pages carry the Aetherica brand in one card design (light/dark, phone-first): "Allow <app> to use Aetherica?", Cancel/Continue, a one-line Terms/Privacy notice; the redirect host stays visible. Pages send CSP, `frame-ancestors none` and X-Frame-Options DENY. MCP serverInfo title is "Aetherica"; tool names keep the `rigorx_` prefix.
+
 ### Release hardening (2026-11-26)
 - Resilience policy (retries, deadlines, circuit breakers, bulkhead), DNS-verified source fetches, idempotency keys, engine-verified user approvals (`rigorx_request_approval`), account data deletion, suspension, source-check quota, OIDC azp/iat/nonce, `/version` and `/health`, structured logs, commit-tagged deploys, discovery gap register; rollback-compatible storage; mutation test in CI.
 - Router: a destructive action with no risk vocabulary ("/l01 delete production database") was routable at L01; it now has an L05 floor (L03 for one broad term such as "format"), found by post-deploy verification.

@@ -24,6 +24,7 @@ import {
 import {
 	GOOGLE_CALLBACK_PATH,
 	GOOGLE_TOKEN_URL,
+	HOME_PAGE,
 	PRIVACY_PAGE,
 	TERMS_PAGE,
 	consentPage,
@@ -144,12 +145,15 @@ export interface AuthProps {
 	owner: string;
 }
 
-const BANNER = "RIGOR-X MCP server. MCP endpoint: POST /mcp (OAuth sign-in required)";
 
 const html = (body: string, status = 200, headers?: Headers) => {
 	const h = new Headers(headers);
 	h.set("Content-Type", "text/html; charset=utf-8");
 	h.set("Cache-Control", "no-store");
+	// Pages carry no scripts; the sign-in and approval pages must not be framed (clickjacking).
+	h.set("Content-Security-Policy", "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'");
+	h.set("X-Frame-Options", "DENY");
+	h.set("Referrer-Policy", "no-referrer");
 	return new Response(body, { status, headers: h });
 };
 
@@ -246,7 +250,7 @@ function defaultHandler(origin: string, call: OwnerCall | null, extra: ExtraRout
 				if (approve && call && request.method === "POST") return await approvePost(request, env, approve[1]!, call);
 				const handled = extra ? await extra(request, env) : null;
 				if (handled) return handled;
-				if (pathname === "/" && request.method === "GET") return new Response(BANNER);
+				if (pathname === "/" && request.method === "GET") return html(HOME_PAGE);
 				if (pathname === "/privacy" && request.method === "GET") return html(PRIVACY_PAGE);
 				if (pathname === "/terms" && request.method === "GET") return html(TERMS_PAGE);
 				if (pathname === "/authorize" && request.method === "GET") return await authorizeGet(request, env);
@@ -287,7 +291,7 @@ export function buildProvider<Env extends AuthEnv>(origin: string, serveMcp: Mcp
 		tokenEndpoint: "/token",
 		clientRegistrationEndpoint: "/register",
 		clientIdMetadataDocumentEnabled: true,
-		resourceMetadata: { resource: `${origin}/mcp`, resource_name: "RIGOR-X" },
+		resourceMetadata: { resource: `${origin}/mcp`, resource_name: "Aetherica" },
 		// No resolveExternalToken: only tokens issued by this provider are accepted.
 	});
 	providers.set(origin, provider);
