@@ -1,0 +1,19 @@
+# Python bytecode and build output
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+
+# Node / Cloudflare Workers
+node_modules/
+.wrangler/
+.dev.vars
+.dev.vars.*
+
+# Editors and OS
+.DS_Store
+.idea/
+.vscode/

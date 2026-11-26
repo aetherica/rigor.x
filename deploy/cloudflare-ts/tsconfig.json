@@ -1,7 +1,7 @@
 {
 	"compilerOptions": {
 		"target": "ES2022",
-		"lib": ["ES2022", "DOM"],
+		"lib": ["ES2022"],
 		"module": "ESNext",
 		"moduleResolution": "bundler",
 		"allowImportingTsExtensions": true,
@@ -10,7 +10,7 @@
 		"noEmit": true,
 		"noUncheckedIndexedAccess": true,
 		"skipLibCheck": true,
-		"types": []
+		"types": ["@cloudflare/workers-types", "node"]
 	},
-	"include": ["src/**/*.ts", "test/**/*.ts"]
+	"include": ["src/**/*.ts", "test/**/*.ts", "scripts/**/*.ts"]
 }

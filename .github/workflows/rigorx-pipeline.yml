@@ -101,9 +101,21 @@ jobs:
           python-version: "3.13"
       - name: Install package with the MCP SDK (conformance client)
         run: python -m pip install '.[mcp]'
-      - name: TypeScript unit and parity tests (no npm dependencies)
+      - name: Install Worker dependencies (locked)
+        working-directory: deploy/cloudflare-ts
+        run: npm ci --no-audit --no-fund
+      - name: Type check (tsc --strict, Workers and Node types)
+        working-directory: deploy/cloudflare-ts
+        run: npm run typecheck
+      - name: TypeScript unit and parity tests
         working-directory: deploy/cloudflare-ts
         run: npm test
+      - name: Real Worker auth path under wrangler dev (OAuth only; static token rejected)
+        working-directory: deploy/cloudflare-ts
+        run: node test/integration/auth-probe.mjs
+      - name: Durable Object storage on workerd (migrations, quotas, listing, rows written)
+        working-directory: deploy/cloudflare-ts
+        run: node test/integration/run.mjs
       - name: Parity fixtures still match the Python engine
         run: PYTHONPATH=src python deploy/cloudflare-ts/scripts/parity_fixtures.py --check
       - name: Conformance with the official MCP SDK client

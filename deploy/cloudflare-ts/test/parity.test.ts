@@ -2,6 +2,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { dispatch, HostEngine, RELAXED_TEXT_POLICY } from "../src/engine.ts";
 import { route } from "../src/router.ts";
 import { DurableObjectRunStore, canonicalJson } from "../src/store.ts";
@@ -12,7 +13,7 @@ interface Fixture {
 	router: { prompt: string; profile: unknown }[];
 	scenarios: Record<string, { steps: [string, Record<string, unknown>, string?][]; expected: unknown[]; text_policy: "default" | "relaxed" }>;
 }
-const fixture = JSON.parse(readFileSync(new URL("./fixtures/parity.json", import.meta.url), "utf8")) as Fixture;
+const fixture = JSON.parse(readFileSync(fileURLToPath(new URL("./fixtures/parity.json", import.meta.url).href), "utf8")) as Fixture;
 
 const sorted = (value: unknown) => JSON.parse(canonicalJson(value)) as unknown;
 
