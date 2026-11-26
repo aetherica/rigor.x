@@ -76,6 +76,21 @@ export function list(name: string, value: unknown, max: number, required = true)
 	return value;
 }
 
+/**
+ * Hosts that cached an older tool schema (no `data` parameter, for example) may send a structured
+ * argument as a JSON string. A string that parses to the expected JSON shape is accepted as that value.
+ */
+export function jsonish(value: unknown): unknown {
+	if (typeof value !== "string") return value;
+	const s = value.trim();
+	if (!(s.startsWith("{") || s.startsWith("["))) return value;
+	try {
+		return JSON.parse(s) as unknown;
+	} catch {
+		return value;
+	}
+}
+
 export function object(name: string, value: unknown): Record<string, unknown> {
 	if (typeof value !== "object" || value === null || Array.isArray(value)) throw invalid(`${name} must be an object`);
 	return value as Record<string, unknown>;

@@ -438,3 +438,21 @@ test("stage summaries keep the text policy: substance and no repeats across stag
 	const repeat = h.call("submit_stage", { run_id: r.id, stage: "CLASSIFY", outcome: "completed", summary: text.toUpperCase(), data: classify("L01_BASIC", []) }) as any;
 	assert.match(repeat.message, /repeats the QUERY summary/);
 });
+
+test("hosts with a cached older schema: JSON-string arguments are accepted, criteria gets a clear message", () => {
+	const h = harness();
+	const r = runner(h, "Prepare the list of options for the team");
+	r.must("QUERY");
+	const c = h.ok("submit_stage", { run_id: r.id, stage: "CLASSIFY", outcome: "completed", summary: summary("CLASSIFY"), data: JSON.stringify(classify("L02_STANDARD", [req("R1")])) });
+	assert.equal(c.current_stage, "PLAN");
+	assert.equal(c.requirements[0].id, "R1");
+	const notJson = h.call("submit_stage", { run_id: r.id, stage: "PLAN", outcome: "completed", summary: summary("PLAN"), data: "operations: none" }) as any;
+	assert.match(notJson.message, /data must be an object/);
+	r.must("PLAN", { operations: [{ id: "op1", capability: "web_search", depends_on: [], completion_condition: "The options are listed with sources" }] });
+	const ev = r.evidence("https://a.example.org/x");
+	r.must("EXECUTE", { operations: [{ id: "op1", status: "done", evidence_ids: [ev] }] });
+	const old = h.call("verify", { run_id: r.id, criteria: [{ criterion: "The answer cites a source here", passed: true, evidence_ids: [ev] }] }) as any;
+	assert.match(old.message, /takes requirements .* refresh the RIGOR-X connector/);
+	const v = h.ok("verify", { run_id: r.id, requirements: JSON.stringify([{ id: "R1", met: true, evidence_ids: [ev] }]) });
+	assert.equal(v.passed, true);
+});

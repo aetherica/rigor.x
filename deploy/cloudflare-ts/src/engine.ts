@@ -10,7 +10,7 @@ import {
 import { route } from "./router.ts";
 import { RunNotFound, type RunStore } from "./store.ts";
 import {
-	DEFAULT_TEXT_POLICY, EngineError, chars, conflict, digest, invalid, limit, normalized, notFound, object, quota,
+	DEFAULT_TEXT_POLICY, EngineError, chars, conflict, digest, invalid, jsonish, limit, normalized, notFound, object, quota,
 	storedNote, substantial, text, type Json, type JsonObject, type TextPolicy,
 } from "./text.ts";
 import {
@@ -172,7 +172,7 @@ export class HostEngine {
 		}
 		const norm = digest(normalized(summary));
 		this.checkSummary(run, target, summary, norm);
-		const data = args.data === undefined || args.data === null ? {} : object("data", args.data);
+		const data = args.data === undefined || args.data === null ? {} : object("data", jsonish(args.data));
 		const ref = `summary:sha256:${digest(summary)}:norm:${norm}:chars:${chars(summary)}`;
 		this.applyStage(run, target, data, ref);
 		return this.save(l);
@@ -213,7 +213,7 @@ export class HostEngine {
 		assertActive(run);
 		resume(run);
 		if (run.current_stage !== "VALIDATE") throw conflict(`Current stage is ${run.current_stage}, not VALIDATE`);
-		const answers = parseAnswers(requirements, run);
+		const answers = parseAnswers(jsonish(requirements), run);
 		const at = this.now();
 		const result = runGate(run, answers, at);
 		run.verifications.push({
@@ -394,7 +394,7 @@ export class HostEngine {
 	computeOp(ownerId: string | null, args: Record<string, unknown>): JsonObject {
 		const input: ComputeInput = { expression: text("expression", args.expression, 2_000) };
 		if (args.variables !== undefined && args.variables !== null) {
-			const vars = object("variables", args.variables);
+			const vars = object("variables", jsonish(args.variables));
 			if (Object.keys(vars).length > 50) throw limit("At most 50 variables");
 			input.variables = {};
 			for (const [name, v] of Object.entries(vars)) {
@@ -405,7 +405,7 @@ export class HostEngine {
 		}
 		if (args.as !== undefined && args.as !== null) input.as = text("as", args.as, 100);
 		if (args.expect !== undefined && args.expect !== null) {
-			const e = object("expect", args.expect);
+			const e = object("expect", jsonish(args.expect));
 			input.expect = { value: e.value as number, unit: e.unit === undefined || e.unit === null ? "1" : text("expect.unit", e.unit, 100) };
 			if (e.rel_tol !== undefined && e.rel_tol !== null) input.expect.rel_tol = e.rel_tol as number;
 		}
@@ -707,7 +707,11 @@ export function dispatch(engine: HostEngine, ownerId: string, operation: string,
 				case "submit_stage": return engine.submitStage(ownerId, a.run_id, a);
 				case "record_evidence": return engine.recordEvidence(ownerId, a.run_id, a);
 				case "report_action": return engine.reportAction(ownerId, a.run_id, a);
-				case "verify": return engine.verify(ownerId, a.run_id, a.requirements);
+				case "verify":
+					if (a.requirements === undefined && a.criteria !== undefined) {
+						throw invalid("rigorx_verify takes requirements (engine protocol 2), not criteria: answer each requirement registered at CLASSIFY with {id, met, evidence_ids}. If your tool list still shows criteria, refresh the RIGOR-X connector.");
+					}
+					return engine.verify(ownerId, a.run_id, a.requirements);
 				case "reenter": return engine.reenter(ownerId, a.run_id, a);
 				case "cancel_run": return engine.cancelRun(ownerId, a.run_id, a.reason);
 				case "list_runs": return engine.listRuns(ownerId, a);
