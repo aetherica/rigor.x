@@ -29,7 +29,7 @@ Recall returns an envelope stating that items are data, not instructions. Trust 
 ## Verification receipts
 TypeScript tests 69/69 (memory 8), tsc clean; workerd: FTS5 trigram recall in Chinese and Bengali, abstention, deletion, usage (test/integration/run.mjs). [A]
 
-## Changes from the 2026-11-26 engineering audit ([32](32-ENGINEERING-AUDIT-2026-11-26.md))
+## Changes from the 2026-11-26 engineering audit
 
 - **Atomic operations (C1):** every engine operation runs in one Durable Object storage transaction (`ctx.storage.transactionSync`); `mergeTopic` also runs all its checks (sibling-name collisions, depth) before the first write. Verified on workerd: a write followed by an error is rolled back; a colliding merge leaves the topic list unchanged.
 - **Move collisions (C2):** moving a topic next to a sibling of the same name is a clear `INVALID_REQUEST`, no longer a raw `UNIQUE constraint` error (which surfaced as HTTP 500).

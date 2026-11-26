@@ -47,7 +47,7 @@ Checks, all deterministic: `prior_stages_closed`, `requirements_preregistered`, 
 
 Verification level per met requirement: `structural`; `sources_resolved` when every cited source has a successful `SOURCE_CHECK` receipt; `computations_checked` when, in addition, its numeric claims cite successful `COMPUTE_RECEIPT`s. A pass is "structurally verified" at most, never a truth guarantee. Evidence may be recorded after a failed validation (for example the fixing action) before re-entering.
 
-### 3a. Gate 2.1.0 (2026-11-26 engineering audit, [32](32-ENGINEERING-AUDIT-2026-11-26.md))
+### 3a. Gate 2.1.0 (2026-11-26 engineering audit)
 
 - **One claim–requirement resolver (B3):** a claim bears on a met requirement when it names it in `requirement_ids` OR rests on evidence the requirement cites. `unknown_values_not_supporting`, `claims_support_requirements`, `contradictions_resolved` and `numeric_claims_computed` all use it, so omitting `requirement_ids` takes no claim out of a check.
 - **Numeric claims bound to their computation (B2, L06):** a numeric claim must state `value {status, number, unit}` and cite a `COMPUTE_RECEIPT` that succeeded *and* whose `expect` checked that same value (same dimension, SI value within 1e-9; a unit rigorx_compute does not know is a label: dimensionless receipt, same number). An unrelated or unchecked computation no longer validates anything. The `computations_checked` verification level uses the same rule.
