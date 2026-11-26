@@ -6,13 +6,15 @@
 // interactive part: /authorize shows a consent page, then hands the user to Google, and
 // /oauth/google/callback finishes the grant.
 //
+// OAuth access tokens issued by this provider are the only credential /mcp accepts. There is no
+// static or shared token (the WS31 spike token was removed in WS32 P0.1): every owner is a
+// Google account that signed in through /authorize.
+//
 // Worker configuration:
 //   OAUTH_KV                  KV namespace for clients, grants and tokens (stored hashed/encrypted)
 //   GOOGLE_CLIENT_ID          secret: Google OAuth client ID (Web application)
 //   GOOGLE_CLIENT_SECRET      secret: Google OAuth client secret
-//   RIGORX_SPIKE_TOKEN        optional secret: shared development token (one development owner)
 
-import { timingSafeEqual } from "node:crypto";
 import {
 	AuthorizationError,
 	OAuthProvider,
@@ -40,7 +42,6 @@ export interface AuthEnv {
 	OAUTH_PROVIDER: OAuthHelpers;
 	GOOGLE_CLIENT_ID?: string;
 	GOOGLE_CLIENT_SECRET?: string;
-	RIGORX_SPIKE_TOKEN?: string;
 }
 
 /** What every authenticated /mcp request carries in ctx.props. */
@@ -48,14 +49,7 @@ export interface AuthProps {
 	owner: string;
 }
 
-export const SPIKE_OWNER = "spike:dev";
-const BANNER = "RIGOR-X MCP server (spike). MCP endpoint: POST /mcp";
-
-function tokenMatches(given: string, expected: string): boolean {
-	const a = new TextEncoder().encode(given);
-	const b = new TextEncoder().encode(expected);
-	return a.length === b.length && timingSafeEqual(a, b);
-}
+const BANNER = "RIGOR-X MCP server. MCP endpoint: POST /mcp (OAuth sign-in required)";
 
 const html = (body: string, status = 200, headers?: Headers) => {
 	const h = new Headers(headers);
@@ -192,12 +186,7 @@ export function buildProvider<Env extends AuthEnv>(origin: string, serveMcp: Mcp
 		clientRegistrationEndpoint: "/register",
 		clientIdMetadataDocumentEnabled: true,
 		resourceMetadata: { resource: `${origin}/mcp`, resource_name: "RIGOR-X" },
-		async resolveExternalToken({ token, env }) {
-			if (env.RIGORX_SPIKE_TOKEN && tokenMatches(token, env.RIGORX_SPIKE_TOKEN)) {
-				return { props: { owner: SPIKE_OWNER } satisfies AuthProps, audience: `${origin}/mcp` };
-			}
-			return null;
-		},
+		// No resolveExternalToken: only tokens issued by this provider are accepted.
 	});
 	providers.set(origin, provider);
 	return provider;

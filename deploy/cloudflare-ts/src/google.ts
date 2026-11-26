@@ -109,7 +109,7 @@ ${facts.redirectIsLoopback ? '<p class="warn"><strong>This sends access to an ap
 
 const REPO_URL = "https://github.com/aetherica/rigor.x";
 
-/** Public pages linked from the Google OAuth consent screen (Branding). Factual, spike-stage text. */
+/** Public pages linked from the Google OAuth consent screen (Branding). Factual, early-development text. */
 export const PRIVACY_PAGE = `<!doctype html>
 <html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>RIGOR-X privacy</title><style>${PAGE_STYLE}</style>
