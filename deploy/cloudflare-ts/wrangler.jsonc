@@ -10,8 +10,8 @@
 	"compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
 	"workers_dev": true,
 	// Static assets (2026-11-26): the circular Aetherica icons (/icon-<size>.png, /favicon.ico) are
-	// served by the asset layer without running the Worker (free, cached). Every other path runs the
-	// Worker first, exactly as before, so OAuth navigations (/authorize, the Google callback) and
+	// served by the asset layer without running the Worker (free, cached). Every other path runs
+	// the Worker first, exactly as before, so OAuth navigations (/authorize, the Google callback) and
 	// /mcp never depend on asset routing.
 	"assets": {
 		"directory": "./public",
@@ -53,6 +53,16 @@
 	"version_metadata": { "binding": "CF_VERSION_METADATA" },
 	"observability": {
 		"enabled": true,
+		// Query strings may carry OAuth authorization codes/state. Always redact them from persisted logs.
+		"redact_query_string": true,
+		// Keep useful operational telemetry while reducing request-level log exposure and volume.
+		"head_sampling_rate": 0.1,
+		"logs": {
+			"enabled": true,
+			"invocation_logs": true,
+			"persist": true,
+			"head_sampling_rate": 0.1
+		},
 		"issues": {
 			"enabled": true
 		}
