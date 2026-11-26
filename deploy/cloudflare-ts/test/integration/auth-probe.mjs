@@ -37,9 +37,11 @@ async function check(name, fn) {
 
 try {
 	await ready();
-	await check("banner names OAuth and no spike", async () => {
-		const text = await (await fetch(`${base}/`)).text();
-		assert.match(text, /OAuth sign-in required/);
+	await check("home page names the brand and no spike", async () => {
+		const r = await fetch(`${base}/`);
+		const text = await r.text();
+		assert.match(text, /<h1>Aetherica<\/h1>/);
+		assert.match(r.headers.get("content-security-policy") ?? "", /frame-ancestors 'none'/);
 		assert.doesNotMatch(text, /spike/i);
 	});
 	await check("no token: 401 with resource_metadata", async () => {
@@ -72,8 +74,9 @@ try {
 		const consent = await fetch(`${base}/authorize?${q}`, { headers: { "sec-fetch-mode": "navigate", "sec-fetch-dest": "document" } });
 		assert.equal(consent.status, 200);
 		const html = await consent.text();
-		assert.match(html, /Continue with Google/);
-		assert.match(html, /<img class="emblem" src="\/icon-192\.png"/);
+		assert.match(html, /<h1>Allow ci-probe to use Aetherica\?<\/h1>/);
+		assert.match(html, /Continue with your Google account/);
+		assert.match(html, /<img class="mark" src="\/icon-192\.png"/);
 		assert.match(html, /<link rel="icon" href="\/favicon\.ico"/);
 		const csp = consent.headers.get("content-security-policy") ?? "";
 		assert.ok(!/img-src[^;]*'none'/.test(csp) && !/default-src[^;]*'none'/.test(csp) || /img-src[^;]*'self'/.test(csp), `CSP blocks the emblem: ${csp}`);
@@ -91,7 +94,7 @@ try {
 		assert.equal(ico.status, 200);
 		assert.match(ico.headers.get("content-type") ?? "", /icon/);
 		const privacy = await fetch(`${base}/privacy`, { headers: { "sec-fetch-mode": "navigate" } });
-		assert.match(await privacy.text(), /RIGOR-X privacy policy/); // still the Worker's page, not an asset 404
+		assert.match(await privacy.text(), /Aetherica privacy policy/); // still the Worker's page, not an asset 404
 		assert.equal((await fetch(`${base}/icon-999.png`)).status, 404); // unknown icons fall through to the Worker's 404
 	});
 	await check("/version and /health are public, non-sensitive, uncached; an out-of-range policy var is rejected", async () => {

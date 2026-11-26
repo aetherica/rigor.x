@@ -54,7 +54,23 @@ test("consent page escapes client-supplied text and shows the redirect host", ()
 	assert.ok(page.includes("an app on your computer"));
 	assert.ok(page.includes('value="h&#34;1"'));
 	assert.ok(page.includes("not verified"));
-	assert.ok(consentPage({ clientName: "ChatGPT", clientDomain: "chatgpt.com", redirectHost: "chatgpt.com", redirectIsLoopback: false }, "h").includes("Published by <strong>chatgpt.com</strong>"));
+	const verified = consentPage({ clientName: "ChatGPT", clientDomain: "chatgpt.com", redirectHost: "chatgpt.com", redirectIsLoopback: false }, "h");
+	assert.ok(verified.includes("<h1>Allow ChatGPT to use Aetherica?</h1>"));
+	assert.ok(verified.includes("Access goes to <strong>chatgpt.com</strong>"));
+	assert.ok(!verified.includes("not verified"));
+});
+
+test("every public page carries the Aetherica brand, the legal links and no RIGOR-X name", async () => {
+	const g = await import("../src/google.ts");
+	const pages = [g.HOME_PAGE, g.PRIVACY_PAGE, g.TERMS_PAGE, g.messagePage("Signed out", "Done."),
+		g.consentPage({ clientName: "Claude", clientDomain: "claude.ai", redirectHost: "claude.ai", redirectIsLoopback: false }, "h"),
+		g.approvalPage({ status: "pending", description: "Delete the staging bucket", operation_id: "op1", tier: "A5", capability: "storage", run_id: "rx_1", expires_at: "2026-11-27T00:00:00Z" }, "c")];
+	for (const html of pages) {
+		assert.ok(html.startsWith("<!doctype html>"));
+		assert.ok(html.includes("Sign in with <b>Aetherica</b>"));
+		assert.ok(html.includes('href="/terms"') && html.includes('href="/privacy"'));
+		assert.doesNotMatch(html, /RIGOR-X|workers\.dev/);
+	}
 });
 
 test("privacy and terms pages are static and name the deletion tool", async () => {

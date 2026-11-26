@@ -21,7 +21,7 @@ export const SUPPORTED_VERSIONS = ["2025-11-25", "2025-06-18", "2025-03-26"];
 /** Stateless-era versions (per-request _meta envelope). */
 export const MODERN_VERSIONS = ["2026-07-28"];
 const LATEST = SUPPORTED_VERSIONS[0]!;
-const SERVER_INFO = { name: "rigor-x", title: "RIGOR-X", version: SERVER_VERSION };
+const SERVER_INFO = { name: "rigor-x", title: "Aetherica", version: SERVER_VERSION };
 /** Circular Aetherica emblem in the sizes the Worker serves (brand.ts); hosts show it in their connector UI. */
 export const ICON_SIZES = [48, 96, 192, 448] as const;
 /** serverInfo with absolute icon URLs on this origin (MCP 2025-11-25 Implementation.icons). */
