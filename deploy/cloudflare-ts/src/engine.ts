@@ -688,8 +688,9 @@ export class HostEngine {
 	// ---------------------------------------------------------------- quotas, listing, profile (WS32 P0.3, P0.5, P0.8)
 
 	/** Count one metered call, or refuse it. Called by dispatch() before the operation runs. */
-	meter(ownerId: unknown, operation: string): void {
-		if (RATE_LIMITED_OPERATIONS.has(operation)) {
+	meter(ownerId: unknown, operation: string, args: Record<string, unknown> = {}): void {
+		// Listing topics is a read, even though memory_topic also mutates (audit finding C5).
+		if (RATE_LIMITED_OPERATIONS.has(operation) || (operation === "memory_topic" && args.action === "list")) {
 			this.burstCount(this.owner(ownerId), this.now().getTime());
 			return;
 		}
@@ -956,7 +957,7 @@ export function dispatch(engine: HostEngine, ownerId: string, operation: string,
 		const p = JSON.parse(payloadJson) as unknown;
 		if (typeof p !== "object" || p === null || Array.isArray(p)) throw new EngineError("Payload must be a JSON object");
 		const a = p as Record<string, unknown>;
-		engine.meter(ownerId, operation); // outside the transaction: a refused or failing call is still counted
+		engine.meter(ownerId, operation, a); // outside the transaction: a refused or failing call is still counted
 		const result = engine.atomic(() => {
 			switch (operation) {
 				case "start_run": return engine.startRun(ownerId, a.task);

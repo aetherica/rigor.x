@@ -389,6 +389,10 @@ test("C5 reads and deletes are never refused by the daily quota, but count again
 	for (let i = 0; i < 4; i++) assert.ok(h.call("memory_recall", { queries: ["anything"] }).ok);
 	assert.equal((h.call("memory_recall", { queries: ["anything"] }) as any).code, "QUOTA_EXCEEDED");
 	assert.ok(t);
+	// Listing topics is a read: never refused by the daily quota (only the burst limit applies).
+	const h2 = harness({ callsPerDay: 1, burstPerMinute: 100 });
+	h2.ok("memory_topic", { action: "create", name: "Only", decided_by: "user" });
+	assert.equal(h2.ok("memory_topic", { action: "list" }).topics.length, 1);
 });
 
 test("A3 a source check on a finished run is refused before anything is fetched", async () => {
@@ -450,4 +454,24 @@ test("H store integrity: history is append-only (an edited, removed or reordered
 	assert.throws(() => store.save("o", "rx_integrity00000000000", { events: [ev(2, { a: 1, b: [1, 2] }), ev(1), ev(3)] } as never, {}, 2), EventIntegrityError);
 	assert.throws(() => store.save("o", "rx_integrity00000000000", { events: [ev(1), ev(2, { a: 1, b: [1, 2] }), ev(3), ev(4)] } as never, {}, 1), RevisionConflict);
 	assert.equal(store.save("o", "rx_integrity00000000000", { events: [ev(1), ev(2, { a: 1, b: [1, 2] }), ev(3), ev(4)], other: { events: [] } } as never, {}, 2), 3);
+});
+
+test("B1 an approval valid when the operation ran stays valid at a later validation", () => {
+	let clock = new Date();
+	const sql = memorySql();
+	const engine = new HostEngine(new DurableObjectRunStore(sql), { limits: { burstPerMinute: 100_000 }, now: () => clock, transaction: sql.transaction });
+	const call = (op: string, a: object): Env => JSON.parse(dispatch(engine, OWNER, op, JSON.stringify(a)));
+	const ok = (op: string, a: object) => { const r = call(op, a); if (!r.ok) throw new Error(`${op}: ${r.message}`); return r.result; };
+	const id = ok("start_run", { task: "Prepare the list of options for the team" }).run_id;
+	const s = (stage: string, data: object) => ok("submit_stage", { run_id: id, stage, outcome: "completed", summary: `${stage}: the work of this stage was done and checked, step ${++n}.`, data });
+	s("QUERY", {});
+	s("CLASSIFY", { objective: "Send the prepared message to the team", deliverable: "One message sent with a receipt", level: "L02_STANDARD", stakes: "low", requirements: [req("R1")] });
+	s("PLAN", { operations: [{ id: "op1", capability: "email", depends_on: [], completion_condition: "The message is sent to the team", requirement_ids: ["R1"], tier: "A4" }] });
+	const sent = ok("report_action", { run_id: id, tool_name: "send_email", status: "EXECUTED" }).action_id;
+	const approval = ok("record_evidence", { run_id: id, source_ref: "chat:approve", claim: "The user approved sending the message", evidence_type: "USER_APPROVAL", approves: "op1" }).evidence_id;
+	s("EXECUTE", { operations: [{ id: "op1", status: "done", evidence_ids: [sent, approval] }] });
+	clock = new Date(clock.getTime() + 3 * 86_400_000); // validated three days later
+	const v = ok("verify", { run_id: id, requirements: [{ id: "R1", met: true, evidence_ids: [sent] }] });
+	assert.equal(v.checks.find((c: any) => c.check === "approvals_recorded").passed, true);
+	assert.equal(v.passed, true);
 });

@@ -11,7 +11,7 @@ const { chromium } = createRequire(import.meta.url)("playwright");
 
 const out = process.argv[2] ?? "ui-render";
 mkdirSync(out, { recursive: true });
-const port = 8796;
+const port = 8797;
 const base = `http://127.0.0.1:${port}`;
 const dev = spawn("./node_modules/.bin/wrangler", ["dev", "--port", String(port), "--ip", "127.0.0.1", "--persist-to", mkdtempSync(join(tmpdir(), "rigorx-ui-"))],
 	{ env: { ...process.env, WRANGLER_SEND_METRICS: "false", CI: "1" }, stdio: ["ignore", "pipe", "pipe"] });

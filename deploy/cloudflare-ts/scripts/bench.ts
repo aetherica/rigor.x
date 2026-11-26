@@ -22,7 +22,7 @@ const stats = (xs: number[]) => {
 };
 function engine() {
 	const sql = memorySql();
-	const e = new HostEngine(new DurableObjectRunStore(sql), { limits: { burstPerMinute: 1e9, callsPerDay: 1e9, runsPerDay: 1e9, storedRuns: 1e9 }, memory: new MemoryStore(sql), ...(sql.transaction ? { transaction: sql.transaction } : {}) });
+	const e = new HostEngine(new DurableObjectRunStore(sql), { limits: { burstPerMinute: 1e9, callsPerDay: 1e9, runsPerDay: 1e9, storedRuns: 1e9 }, memory: new MemoryStore(sql), ...(sql.transaction && !process.env.BENCH_NO_TX ? { transaction: sql.transaction } : {}) });
 	const call = (op: string, args: object) => {
 		const r = JSON.parse(dispatch(e, "google:bench", op, JSON.stringify(args)));
 		if (!r.ok) throw new Error(`${op}: ${r.code} ${r.message}`);

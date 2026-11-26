@@ -36,6 +36,7 @@
 - [WS32 Topic memory (ADR-008, implemented)](29-TOPIC-MEMORY.md)
 - [WS32 Threat model, autonomy, observability and evaluation](30-THREAT-MODEL-AND-OPERATIONS.md)
 - [Session handoff 2026-11-26 (WS32 status, open items, owner actions)](31-SESSION-HANDOFF-2026-11-26.md)
+- [Engineering audit, remediation and Source Intelligence Gate, 2026-11-26 (Bengali report)](32-ENGINEERING-AUDIT-2026-11-26.md)
 
 ## Registry alignment (WS18)
 - The candidate slash-command library's 18 taxonomy groups are distinct from the canonical 18 Functional Groups.

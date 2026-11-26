@@ -28,3 +28,13 @@ Recall returns an envelope stating that items are data, not instructions. Trust 
 
 ## Verification receipts
 TypeScript tests 69/69 (memory 8), tsc clean; workerd: FTS5 trigram recall in Chinese and Bengali, abstention, deletion, usage (test/integration/run.mjs). [A]
+
+## Changes from the 2026-11-26 engineering audit ([32](32-ENGINEERING-AUDIT-2026-11-26.md))
+
+- **Atomic operations (C1):** every engine operation runs in one Durable Object storage transaction (`ctx.storage.transactionSync`); `mergeTopic` also runs all its checks (sibling-name collisions, depth) before the first write. Verified on workerd: a write followed by an error is rolled back; a colliding merge leaves the topic list unchanged.
+- **Move collisions (C2):** moving a topic next to a sibling of the same name is a clear `INVALID_REQUEST`, no longer a raw `UNIQUE constraint` error (which surfaced as HTTP 500).
+- **Short-token precision (C3):** a short query token of a space-delimited script (for example "AI") matches whole words only, never substrings ("chair", "said"); CJK bigrams are unchanged. The eight-language and held-out benchmarks are unchanged (recall@3 1.000, MRR 1.000, abstention 3/3).
+- **Scoped supersession (C4):** `supersedes` only replaces an active item of the same topic, and an item the user placed, or of higher trust, only with `decided_by: "user"`.
+- **run_validated is earned (B4):** the item text must be exactly the text of a claim (`provenance.claim_id`) or evidence claim (`provenance.evidence_id`) of a run whose last validation passed, bearing on a requirement it accepted as met (SHA-256 match). The item stores `content_sha256`, `gate_version` and `validated_at`; recall reports `integrity` and shows a mismatching item as `host_inferred`.
+- **Quota (C5):** reads (`memory_recall`, topic `list`) and deletes are never refused by the daily quota but count against the per-minute burst limit.
+- **Cost (§09):** recall prefilters short terms in SQLite (`instr`) and diversifies only the best `max(8 × limit, 64)` candidates: on a 2,000-item corpus the median recall time fell from 35.8 ms to 26.0 ms and p95 from 142 ms to 91 ms (Node 22, three runs each; `scripts/bench.ts`).

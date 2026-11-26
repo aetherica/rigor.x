@@ -10,6 +10,26 @@ interface Env {
 	OWNER_RUNS: DurableObjectNamespace<OwnerRuns>;
 	MIGRATION_PROBE: DurableObjectNamespace<MigrationProbe>;
 	WRITE_METER: DurableObjectNamespace<WriteMeter>;
+	TX_PROBE: DurableObjectNamespace<TxProbe>;
+}
+
+/** Proves on workerd that an engine operation is atomic (2026-11-26 audit, C1): transactionSync rolls back on throw. */
+export class TxProbe extends DurableObject<Env> {
+	run(): string {
+		const sql = this.ctx.storage.sql;
+		const engine = new HostEngine(new DurableObjectRunStore(sql), { transaction: (fn) => this.ctx.storage.transactionSync(fn) });
+		sql.exec("CREATE TABLE IF NOT EXISTS tx_probe (x INTEGER)");
+		let threw = false;
+		try {
+			engine.atomic(() => { sql.exec("INSERT INTO tx_probe VALUES (1)"); throw new Error("boom"); });
+		} catch {
+			threw = true;
+		}
+		const afterRollback = Number(sql.exec("SELECT COUNT(*) AS n FROM tx_probe").toArray()[0]!.n);
+		engine.atomic(() => sql.exec("INSERT INTO tx_probe VALUES (2)"));
+		const afterCommit = Number(sql.exec("SELECT COUNT(*) AS n FROM tx_probe").toArray()[0]!.n);
+		return JSON.stringify({ threw, afterRollback, afterCommit });
+	}
 }
 
 /** Measures rows written per engine operation with the cursor's rowsWritten counter (billing unit). */
@@ -64,6 +84,9 @@ export default {
 		const url = new URL(request.url);
 		if (url.pathname === "/rows-written") {
 			return new Response(await env.WRITE_METER.get(env.WRITE_METER.idFromName("meter")).run());
+		}
+		if (url.pathname === "/tx") {
+			return new Response(await env.TX_PROBE.get(env.TX_PROBE.idFromName("tx")).run());
 		}
 		if (url.pathname === "/migration") {
 			return new Response(await env.MIGRATION_PROBE.get(env.MIGRATION_PROBE.idFromName("probe")).run());

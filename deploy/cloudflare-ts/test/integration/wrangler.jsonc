@@ -10,10 +10,11 @@
 		"bindings": [
 			{ "name": "OWNER_RUNS", "class_name": "OwnerRuns" },
 			{ "name": "MIGRATION_PROBE", "class_name": "MigrationProbe" },
-			{ "name": "WRITE_METER", "class_name": "WriteMeter" }
+			{ "name": "WRITE_METER", "class_name": "WriteMeter" },
+			{ "name": "TX_PROBE", "class_name": "TxProbe" }
 		]
 	},
-	"migrations": [{ "tag": "v1", "new_sqlite_classes": ["OwnerRuns", "MigrationProbe", "WriteMeter"] }],
+	"migrations": [{ "tag": "v1", "new_sqlite_classes": ["OwnerRuns", "MigrationProbe", "WriteMeter", "TxProbe"] }],
 	"kv_namespaces": [{ "binding": "OAUTH_KV", "id": "00000000000000000000000000000000" }],
 	"vars": {
 		"RIGORX_CALLS_PER_DAY": "6",

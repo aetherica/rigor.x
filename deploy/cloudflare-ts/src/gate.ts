@@ -210,8 +210,12 @@ export function runGate(run: RunState, answers: Answer[], at: Date): GateResult 
 	const gated = plan.filter((op) => op.tier === "A4" || op.tier === "A5");
 	if (gated.length) {
 		const usedBy = new Map<string, string>();
+		// Expiry is judged when the operation was reported done (EXECUTE completed), not at validation
+		// time: an approval that was valid when the action ran stays valid for the record.
+		const executed = [...run.events].reverse().find((e) => e.type === "STAGE_COMPLETED" && e.stage === "EXECUTE");
+		const executedAt = executed ? new Date(executed.timestamp) : at;
 		add("approvals_recorded", gated.filter((op) => reports.get(op.id)?.status === "done")
-			.map((op) => approvalProblems(op, reports.get(op.id)?.evidence_ids ?? [], evidence, at, usedBy)).filter((p): p is string => p !== null));
+			.map((op) => approvalProblems(op, reports.get(op.id)?.evidence_ids ?? [], evidence, executedAt, usedBy)).filter((p): p is string => p !== null));
 	}
 	// 11d. Dependency integrity: a done operation's prerequisites are done (audit finding D).
 	if (plan.some((op) => op.depends_on.length)) add("dependencies_done", dependencyProblems(plan, (id) => reports.get(id)?.status ?? "unreported"));

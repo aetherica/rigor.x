@@ -30,6 +30,22 @@ async function check(name, fn) {
 
 try {
 	await ready();
+	await check("an operation is atomic on workerd: transactionSync rolls back every write when it throws (audit C1)", async () => {
+		const r = JSON.parse(await (await fetch(`${base}/tx`)).text());
+		assert.deepEqual(r, { threw: true, afterRollback: 0, afterCommit: 1 });
+	});
+	await check("a colliding topic merge through the real OwnerRuns object changes nothing (audit C1)", async () => {
+		const owner = "google:merge";
+		const mk = async (args) => { const r = await call(owner, "memory_topic", { decided_by: "user", ...args }); assert.ok(r.ok, JSON.stringify(r)); return r.result.topic_id; };
+		const a = await mk({ action: "create", name: "Alpha" });
+		const b = await mk({ action: "create", name: "Beta" });
+		await mk({ action: "create", name: "Same", parent_id: a });
+		await mk({ action: "create", name: "Same", parent_id: b });
+		const before = (await call(owner, "memory_topic", { action: "list" })).result.topics;
+		const merged = await call(owner, "memory_topic", { action: "merge", topic_id: a, into_id: b, decided_by: "user" });
+		assert.equal(merged.ok, false);
+		assert.deepEqual((await call(owner, "memory_topic", { action: "list" })).result.topics, before);
+	});
 	await check("migration from a hand-written version-1 database on workerd SQLite", async () => {
 		const r = JSON.parse(await (await fetch(`${base}/migration`)).text());
 		assert.equal(r.version, "3");
