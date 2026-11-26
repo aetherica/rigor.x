@@ -47,7 +47,11 @@ export const SERVER_INSTRUCTIONS =
 export interface EngineBackend {
 	route(task: unknown): JsonObject;
 	resolveCommands(text: unknown): JsonObject;
+	/** Stateless rigorx_compute (no run_id). */
+	compute(args: JsonObject): JsonObject;
 	run(ownerId: string, operation: string, args: JsonObject): Promise<JsonObject>;
+	/** rigorx_check_source: read the evidence's source, fetch it, record the receipt. */
+	checkSource(ownerId: string, args: JsonObject): Promise<JsonObject>;
 }
 
 type Hint = "read" | "additive" | "destructive";
@@ -60,6 +64,8 @@ interface ToolSpec {
 	required: string[];
 	/** Engine operation for run tools; omitted for stateless tools. */
 	operation?: string;
+	/** The tool reaches outside RIGOR-X (fetches from the internet). */
+	openWorld?: boolean;
 	meta?: JsonObject;
 	outputSchema?: JsonObject;
 }
@@ -107,15 +113,22 @@ export const TOOLS: ToolSpec[] = [
 	{ name: "rigorx_usage", title: "Usage and limits", hint: "read", operation: "usage",
 		description: "Today's tool calls, new runs and stored runs against your limits (UTC day), when they reset, and the storage your account uses. Limits are provisional.",
 		properties: {}, required: [] },
+	{ name: "rigorx_compute", title: "Compute with units", hint: "additive", operation: "compute",
+		description: "Evaluate arithmetic with SI dimensional analysis (no code execution). expression: numbers, variables, constants (pi, c, h, hbar, q_e, k_B, N_A, G, eps0, mu0, m_e, m_p, sigma_SB, R_gas, g_n), + - * / ^, sqrt, exp, ln, log10, sin, cos, tan, abs, min, max, pow, and units in brackets such as 3 [eV] or [m/s^2]. variables: {name: {value, unit}} (units like 'S/m', 'ohm m', 'J/(mol K)', CGS 'erg', 'dyn', 'G'). as: a unit to express the result in. expect: {value, unit, rel_tol} to check a claimed number. Adding mismatched dimensions is an error. With run_id the result (and any failed check) is recorded as an engine-verified COMPUTE_RECEIPT evidence to cite.",
+		properties: { expression: str(), variables: { anyOf: [{ type: "object", additionalProperties: true }, { type: "null" }], default: null }, as: optStr(),
+			expect: { anyOf: [{ type: "object", additionalProperties: true }, { type: "null" }], default: null }, run_id: optStr() }, required: ["expression"] },
+	{ name: "rigorx_check_source", title: "Check a source", hint: "additive", openWorld: true,
+		description: "Fetch the source of an evidence record (http(s) URL or DOI via doi.org) and record what was retrieved: HTTP status, final URL, content type, size and SHA-256 (first 1 MiB). Recorded as an engine-verified SOURCE_CHECK receipt; a successful check raises the requirement's verification level to sources_resolved. It shows the source exists and what it contained, not that it supports the claim.",
+		properties: { run_id: str(), evidence_id: str() }, required: ["run_id", "evidence_id"] },
 	{ name: "rigorx_profile", title: "Account profile", hint: "read", operation: "profile",
 		description: "Stable, opaque identifier of the signed-in account (random, not derived from your Google account).",
 		properties: {}, required: [], meta: { "openai/profile": true },
 		outputSchema: { type: "object", properties: { id: { type: "string" } }, required: ["id"] } },
 ];
 
-function annotations(hint: Hint): JsonObject {
-	if (hint === "read") return { readOnlyHint: true, openWorldHint: false };
-	return { readOnlyHint: false, destructiveHint: hint === "destructive", openWorldHint: false };
+function annotations(hint: Hint, openWorld = false): JsonObject {
+	if (hint === "read") return { readOnlyHint: true, openWorldHint: openWorld };
+	return { readOnlyHint: false, destructiveHint: hint === "destructive", openWorldHint: openWorld };
 }
 
 export function toolList(): Json[] {
@@ -125,7 +138,7 @@ export function toolList(): Json[] {
 			title: t.title,
 			description: t.description,
 			inputSchema: { type: "object", properties: t.properties, required: t.required },
-			annotations: annotations(t.hint),
+			annotations: annotations(t.hint, t.openWorld),
 		};
 		if (t.outputSchema) tool.outputSchema = t.outputSchema;
 		if (t.meta) tool._meta = t.meta;
@@ -180,7 +193,9 @@ export async function handleMessage(message: unknown, backend: EngineBackend, ow
 			try {
 				if (tool.name === "rigorx_route") return rpcResult(m.id, toolResult(backend.route(args.task)));
 				if (tool.name === "rigorx_resolve_commands") return rpcResult(m.id, toolResult(backend.resolveCommands(args.text)));
+				if (tool.name === "rigorx_compute" && (args.run_id === undefined || args.run_id === null)) return rpcResult(m.id, toolResult(backend.compute(args)));
 				if (!owner) return rpcResult(m.id, toolError("AUTH_REQUIRED: sign in to use this tool"));
+				if (tool.name === "rigorx_check_source") return rpcResult(m.id, toolResult(await backend.checkSource(owner, args)));
 				return rpcResult(m.id, toolResult(await backend.run(owner, tool.operation!, args)));
 			} catch (e) {
 				if (e instanceof EngineError) return rpcResult(m.id, toolError(`${e.code}: ${e.message}`));

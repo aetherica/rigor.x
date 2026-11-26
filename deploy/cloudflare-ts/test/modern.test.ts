@@ -7,19 +7,8 @@ import { dispatch, EngineError, HostEngine } from "../src/engine.ts";
 import { handleHttp, type EngineBackend } from "../src/mcp.ts";
 import { DurableObjectRunStore } from "../src/store.ts";
 import { memorySql } from "./sqlite-fake.ts";
+import { localBackend } from "./backend.ts";
 
-function backend(): EngineBackend {
-	const engine = new HostEngine(new DurableObjectRunStore(memorySql()));
-	return {
-		route: (t) => engine.route(t),
-		resolveCommands: (t) => engine.resolveCommands(t),
-		async run(owner, operation, args) {
-			const r = JSON.parse(dispatch(engine, owner, operation, JSON.stringify(args)));
-			if (!r.ok) throw new EngineError(r.message, r.code);
-			return r.result;
-		},
-	};
-}
 
 const V = "2026-07-28";
 const META = { "io.modelcontextprotocol/protocolVersion": V, "io.modelcontextprotocol/clientCapabilities": {} };
@@ -32,7 +21,7 @@ function request(method: string, params: Record<string, unknown> = {}, headers: 
 	});
 }
 async function send(req: Request, owner: string | null = null) {
-	const r = await handleHttp(req, backend(), owner);
+	const r = await handleHttp(req, localBackend(), owner);
 	return { status: r.status, body: r.status === 202 ? null : ((await r.json()) as any) };
 }
 
@@ -52,7 +41,7 @@ test("server/discover advertises versions, tools capability, instructions, cache
 test("tools/list and tools/call in the stateless era", async () => {
 	const list = await send(request("tools/list"));
 	assert.equal(list.status, 200);
-	assert.equal(list.body.result.tools.length, 14);
+	assert.equal(list.body.result.tools.length, 16);
 	assert.equal(list.body.result.resultType, "complete");
 	const routed = await send(request("tools/call", { name: "rigorx_route", arguments: { task: "Debug this code" } }, { "Mcp-Name": "rigorx_route" }));
 	assert.equal(routed.status, 200);
@@ -122,6 +111,6 @@ test("removed methods are 404 -32601; notifications get 202; the handshake era i
 	assert.equal(legacy.body.result.protocolVersion, "2025-11-25");
 	const legacyCall = await send(new Request("https://x/mcp", { method: "POST", headers: { "MCP-Protocol-Version": "2025-11-25" },
 		body: JSON.stringify({ jsonrpc: "2.0", id: 2, method: "tools/list" }) }));
-	assert.equal(legacyCall.body.result.tools.length, 14);
+	assert.equal(legacyCall.body.result.tools.length, 16);
 	assert.equal(legacyCall.body.result.resultType, undefined);
 });

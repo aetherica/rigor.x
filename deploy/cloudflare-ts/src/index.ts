@@ -16,7 +16,8 @@ import { EngineError, HostEngine, dispatch } from "./engine.ts";
 import { limitsFromEnv, type LimitVars } from "./limits.ts";
 import { handleHttp, type EngineBackend } from "./mcp.ts";
 import { buildProvider, type AuthEnv } from "./auth.ts";
-import type { JsonObject } from "./pipeline.ts";
+import { checkSource } from "./source.ts";
+import type { JsonObject } from "./text.ts";
 
 export interface Env extends AuthEnv, LimitVars {
 	OWNER_RUNS: DurableObjectNamespace<OwnerRuns>;
@@ -53,14 +54,21 @@ function backend(env: Env): EngineBackend {
 	return {
 		route: (task) => localEngine.route(task),
 		resolveCommands: (text) => localEngine.resolveCommands(text),
-		async run(ownerId, operation, args) {
-			const stub = env.OWNER_RUNS.get(env.OWNER_RUNS.idFromName(await ownerKey(ownerId)));
-			const response = JSON.parse(await stub.call(ownerId, operation, JSON.stringify(args))) as
-				{ ok: true; result: JsonObject } | { ok: false; code: string; message: string };
-			if (!response.ok) throw new EngineError(response.message, response.code);
-			return response.result;
+		compute: (args) => localEngine.computeOp(null, args),
+		run,
+		async checkSource(ownerId, args) {
+			const evidence = await run(ownerId, "evidence_for_check", args);
+			const check = await checkSource(String(evidence.source_ref));
+			return run(ownerId, "record_source_check", { run_id: args.run_id ?? null, evidence_id: args.evidence_id ?? null, check: check as unknown as JsonObject });
 		},
 	};
+	async function run(ownerId: string, operation: string, args: JsonObject): Promise<JsonObject> {
+		const stub = env.OWNER_RUNS.get(env.OWNER_RUNS.idFromName(await ownerKey(ownerId)));
+		const response = JSON.parse(await stub.call(ownerId, operation, JSON.stringify(args))) as
+			{ ok: true; result: JsonObject } | { ok: false; code: string; message: string };
+		if (!response.ok) throw new EngineError(response.message, response.code);
+		return response.result;
+	}
 }
 
 async function serveMcp(request: Request, env: Env, owner: string): Promise<Response> {

@@ -1,0 +1,455 @@
+{
+ "name": "test-b-unit-error",
+ "description": "P1 exit Test B (EUV acceptance test #2 failure mode): a conductivity computed in Gaussian units (s^-1) and labelled S/m. The rigorx_compute receipt fails its check (computed/expected = 4·pi·eps0), so an L06 validation citing it fails (cited_receipts_ok, numeric_claims_computed); with a correct SI receipt it passes. A reconstruction of the failure mode, not a replay of the original answer's numbers.",
+ "steps": [
+  {
+   "op": "start_run",
+   "args": {
+    "task": "Prepare the plasma figures for the lithography note"
+   },
+   "expect": {
+    "ok": true,
+    "fields": {
+     "intent": "UNKNOWN",
+     "classification_unknown": true
+    }
+   },
+   "capture": {
+    "run": "run_id"
+   }
+  },
+  {
+   "op": "submit_stage",
+   "args": {
+    "run_id": "$run",
+    "stage": "QUERY",
+    "outcome": "completed",
+    "summary": "The note needs the Spitzer conductivity of a 30 eV hydrogen plasma in SI units."
+   },
+   "expect": {
+    "ok": true
+   }
+  },
+  {
+   "op": "submit_stage",
+   "args": {
+    "run_id": "$run",
+    "stage": "CLASSIFY",
+    "outcome": "completed",
+    "summary": "Objective, deliverable and one numeric requirement are registered at the highest level.",
+    "data": {
+     "objective": "Report the plasma conductivity used in the note",
+     "deliverable": "One number with its SI unit and its derivation",
+     "level": "L06_HYPER_RIGOROUS",
+     "stakes": "high",
+     "requirements": [
+      {
+       "id": "R1",
+       "text": "The plasma conductivity is reported correctly in SI units"
+      }
+     ]
+    }
+   },
+   "expect": {
+    "ok": true,
+    "fields": {
+     "level": "L06_HYPER_RIGOROUS",
+     "current_stage": "SELECT_METHODS"
+    }
+   }
+  },
+  {
+   "op": "submit_stage",
+   "args": {
+    "run_id": "$run",
+    "stage": "SELECT_METHODS",
+    "outcome": "completed",
+    "summary": "Dimensional analysis of the formulary expression, cross-checked with a second source.",
+    "data": {
+     "methods": [
+      {
+       "name": "dimensional analysis",
+       "reason": "unit systems differ between the sources"
+      }
+     ]
+    }
+   },
+   "expect": {
+    "ok": true
+   }
+  },
+  {
+   "op": "submit_stage",
+   "args": {
+    "run_id": "$run",
+    "stage": "ASSESS_COMPLEXITY",
+    "outcome": "completed",
+    "summary": "The level stays at L06 because the number feeds an engineering decision."
+   },
+   "expect": {
+    "ok": true
+   }
+  },
+  {
+   "op": "submit_stage",
+   "args": {
+    "run_id": "$run",
+    "stage": "IDENTIFY_CAPABILITIES",
+    "outcome": "completed",
+    "summary": "Calculation and web search are available; no laboratory data are available.",
+    "data": {
+     "available": [
+      "calculation",
+      "web_search"
+     ],
+     "missing": []
+    }
+   },
+   "expect": {
+    "ok": true
+   }
+  },
+  {
+   "op": "record_evidence",
+   "args": {
+    "run_id": "$run",
+    "source_ref": "https://formulary.example.org/spitzer",
+    "claim": "The formulary gives the Spitzer resistivity in ohm cm with T in eV"
+   },
+   "expect": {
+    "ok": true
+   },
+   "capture": {
+    "s1": "evidence_id"
+   }
+  },
+  {
+   "op": "record_evidence",
+   "args": {
+    "run_id": "$run",
+    "source_ref": "https://textbook.example.org/plasma",
+    "claim": "The textbook gives the same temperature scaling of the resistivity"
+   },
+   "expect": {
+    "ok": true
+   },
+   "capture": {
+    "s2": "evidence_id"
+   }
+  },
+  {
+   "op": "compute",
+   "args": {
+    "run_id": "$run",
+    "expression": "1/eta",
+    "variables": {
+     "eta": {
+      "value": 6.2684e-06,
+      "unit": "ohm m"
+     }
+    },
+    "expect": {
+     "value": 1433800000000000.0,
+     "unit": "S/m",
+     "rel_tol": 0.01
+    }
+   },
+   "expect": {
+    "ok": true,
+    "fields": {
+     "ok": false,
+     "check.passed": false
+    }
+   },
+   "capture": {
+    "c1": "evidence_id"
+   }
+  },
+  {
+   "op": "submit_stage",
+   "args": {
+    "run_id": "$run",
+    "stage": "PLAN",
+    "outcome": "completed",
+    "summary": "Compute the conductivity from the resistivity, then confirm the scaling in the second source.",
+    "data": {
+     "operations": [
+      {
+       "id": "op1",
+       "capability": "calculation",
+       "depends_on": [],
+       "completion_condition": "The conductivity is computed with units checked",
+       "requirement_ids": [
+        "R1"
+       ]
+      },
+      {
+       "id": "op2",
+       "capability": "web_search",
+       "depends_on": [
+        "op1"
+       ],
+       "completion_condition": "The second source confirms the scaling law"
+      }
+     ]
+    }
+   },
+   "expect": {
+    "ok": true
+   }
+  },
+  {
+   "op": "submit_stage",
+   "args": {
+    "run_id": "$run",
+    "stage": "EXECUTE",
+    "outcome": "completed",
+    "summary": "The conductivity was computed and the second source was read and recorded.",
+    "data": {
+     "operations": [
+      {
+       "id": "op1",
+       "status": "done",
+       "evidence_ids": [
+        "$c1"
+       ]
+      },
+      {
+       "id": "op2",
+       "status": "done",
+       "evidence_ids": [
+        "$s2"
+       ]
+      }
+     ]
+    }
+   },
+   "expect": {
+    "ok": true
+   }
+  },
+  {
+   "op": "submit_stage",
+   "args": {
+    "run_id": "$run",
+    "stage": "EVALUATE_EVIDENCE",
+    "outcome": "completed",
+    "summary": "One numeric claim rests on both sources and on the computation receipt.",
+    "data": {
+     "claims": [
+      {
+       "id": "C1",
+       "text": "The Spitzer conductivity at 30 eV is about 1.6e5 S/m",
+       "status": "SUPPORTED",
+       "numeric": true,
+       "evidence_ids": [
+        "$s1",
+        "$s2",
+        "$c1"
+       ],
+       "requirement_ids": [
+        "R1"
+       ]
+      }
+     ],
+     "assumptions": []
+    }
+   },
+   "expect": {
+    "ok": true
+   }
+  },
+  {
+   "op": "verify",
+   "args": {
+    "run_id": "$run",
+    "requirements": [
+     {
+      "id": "R1",
+      "met": true,
+      "evidence_ids": [
+       "$s1",
+       "$s2",
+       "$c1"
+      ]
+     }
+    ]
+   },
+   "expect": {
+    "ok": true,
+    "fields": {
+     "passed": false,
+     "status": "VALIDATION_FAILED",
+     "checks.[check=cited_receipts_ok].detail": [
+      "R1 cites $c1, a COMPUTE_RECEIPT that failed"
+     ],
+     "checks.[check=numeric_claims_computed].detail": [
+      "numeric claim C1 cites no successful rigorx_compute receipt"
+     ],
+     "checks.[check=independent_sources].passed": true
+    }
+   }
+  },
+  {
+   "op": "compute",
+   "args": {
+    "run_id": "$run",
+    "expression": "1/eta",
+    "variables": {
+     "eta": {
+      "value": 6.2684e-06,
+      "unit": "ohm m"
+     }
+    },
+    "expect": {
+     "value": 159500.0,
+     "unit": "S/m",
+     "rel_tol": 0.001
+    }
+   },
+   "expect": {
+    "ok": true,
+    "fields": {
+     "ok": true,
+     "check.passed": true,
+     "unit_si": "m^-3 kg^-1 s^3 A^2"
+    }
+   },
+   "capture": {
+    "c2": "evidence_id"
+   }
+  },
+  {
+   "op": "reenter",
+   "args": {
+    "run_id": "$run",
+    "target_stage": "EVALUATE_EVIDENCE",
+    "trigger": "gate_failed",
+    "reason": "the claimed value was a Gaussian number labelled S/m"
+   },
+   "expect": {
+    "ok": true,
+    "fields": {
+     "current_stage": "EVALUATE_EVIDENCE"
+    }
+   }
+  },
+  {
+   "op": "submit_stage",
+   "args": {
+    "run_id": "$run",
+    "stage": "EVALUATE_EVIDENCE",
+    "outcome": "completed",
+    "summary": "The numeric claim now rests on the corrected SI computation receipt.",
+    "data": {
+     "claims": [
+      {
+       "id": "C1",
+       "text": "The Spitzer conductivity at 30 eV is about 1.6e5 S/m",
+       "status": "SUPPORTED",
+       "numeric": true,
+       "evidence_ids": [
+        "$s1",
+        "$s2",
+        "$c2"
+       ],
+       "requirement_ids": [
+        "R1"
+       ]
+      }
+     ],
+     "assumptions": []
+    }
+   },
+   "expect": {
+    "ok": true
+   }
+  },
+  {
+   "op": "verify",
+   "args": {
+    "run_id": "$run",
+    "requirements": [
+     {
+      "id": "R1",
+      "met": true,
+      "evidence_ids": [
+       "$s1",
+       "$s2",
+       "$c2"
+      ]
+     }
+    ]
+   },
+   "expect": {
+    "ok": true,
+    "fields": {
+     "passed": true,
+     "levels.R1": "structural",
+     "current_stage": "STRESS_TEST"
+    }
+   }
+  },
+  {
+   "op": "submit_stage",
+   "args": {
+    "run_id": "$run",
+    "stage": "STRESS_TEST",
+    "outcome": "completed",
+    "summary": "Failure scenario checked: a different Coulomb logarithm would change the value.",
+    "data": {
+     "scenarios": [
+      {
+       "id": "S1",
+       "requirement_ids": [
+        "R1"
+       ],
+       "failure_mode": "A Coulomb logarithm of 15 instead of 10 lowers the conductivity",
+       "outcome": "survives",
+       "mitigation": "The note states the assumed Coulomb logarithm"
+      }
+     ]
+    }
+   },
+   "expect": {
+    "ok": true,
+    "fields": {
+     "current_stage": "OPTIMIZE"
+    }
+   }
+  },
+  {
+   "op": "submit_stage",
+   "args": {
+    "run_id": "$run",
+    "stage": "OPTIMIZE",
+    "outcome": "completed",
+    "summary": "No further revision: the validated number and its derivation stand as they are.",
+    "data": {
+     "changed": false,
+     "result_summary": "Conductivity about 1.6e5 S/m at 30 eV, computed in SI units with checked dimensions."
+    }
+   },
+   "expect": {
+    "ok": true
+   }
+  },
+  {
+   "op": "submit_stage",
+   "args": {
+    "run_id": "$run",
+    "stage": "DELIVER",
+    "outcome": "completed",
+    "summary": "The note reports 1.6e5 S/m with the derivation and the assumed Coulomb logarithm.",
+    "data": {}
+   },
+   "expect": {
+    "ok": true,
+    "fields": {
+     "status": "COMPLETED",
+     "verified": true
+    }
+   }
+  }
+ ]
+}

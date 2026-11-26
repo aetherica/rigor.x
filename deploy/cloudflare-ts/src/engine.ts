@@ -17,7 +17,9 @@ import {
 	STAGE_LEDGER_KEY, capabilitiesContract, classifyContract, complexityContract, deliveryContract, evaluationContract,
 	executeContract, methodsContract, optimizeContract, planContract, queryContract, stressContract, type ContractContext,
 } from "./ledger.ts";
-import { ACTION, ENGINE_TYPES, GATE_VERSION, parseAnswers, runGate, unresolvedActions } from "./gate.ts";
+import { ACTION, COMPUTE, ENGINE_TYPES, GATE_VERSION, SOURCE_CHECK, parseAnswers, runGate, unresolvedActions } from "./gate.ts";
+import { ComputeError, compute, type ComputeInput } from "./compute.ts";
+import type { SourceCheck } from "./source.ts";
 import {
 	TERMINAL, advance, assertActive, cancel, completeStage, event, isRunState, newRun, optimizeOutcome,
 	pauseStage, raiseLevel, reenter, resume, type EvidenceRecord, type RunState,
@@ -60,6 +62,7 @@ export const DEFAULT_LIMITS: QuotaLimits = { callsPerDay: 2_000, runsPerDay: 100
 /** Operations that change stored state and therefore count against the quotas. */
 export const METERED_OPERATIONS: ReadonlySet<string> = new Set([
 	"start_run", "submit_stage", "record_evidence", "report_action", "verify", "reenter", "cancel_run",
+	"compute", "record_source_check",
 ]);
 /** Recent actions returned in a run view; the full count and unresolved IDs are always returned. */
 export const RECENT_ACTIONS = 10;
@@ -382,6 +385,61 @@ export class HostEngine {
 		return out;
 	}
 
+	// ---------------------------------------------------------------- deterministic tools (ADR-007)
+
+	/**
+	 * rigorx_compute. Without run_id it is stateless. With run_id the result is recorded as an
+	 * engine-verified COMPUTE_RECEIPT (also when the evaluation fails, so a failed check stays visible).
+	 */
+	computeOp(ownerId: string | null, args: Record<string, unknown>): JsonObject {
+		const input: ComputeInput = { expression: text("expression", args.expression, 2_000) };
+		if (args.variables !== undefined && args.variables !== null) {
+			const vars = object("variables", args.variables);
+			if (Object.keys(vars).length > 50) throw limit("At most 50 variables");
+			input.variables = {};
+			for (const [name, v] of Object.entries(vars)) {
+				const o = object(`variables.${name}`, v);
+				if (typeof o.value !== "number" || !Number.isFinite(o.value)) throw invalid(`variables.${name}.value must be a finite number`);
+				input.variables[name] = { value: o.value, unit: o.unit === undefined || o.unit === null ? "1" : text(`variables.${name}.unit`, o.unit, 100) };
+			}
+		}
+		if (args.as !== undefined && args.as !== null) input.as = text("as", args.as, 100);
+		if (args.expect !== undefined && args.expect !== null) {
+			const e = object("expect", args.expect);
+			input.expect = { value: e.value as number, unit: e.unit === undefined || e.unit === null ? "1" : text("expect.unit", e.unit, 100) };
+			if (e.rel_tol !== undefined && e.rel_tol !== null) input.expect.rel_tol = e.rel_tol as number;
+		}
+		let result: JsonObject;
+		try {
+			result = compute(input) as unknown as JsonObject;
+		} catch (e) {
+			if (!(e instanceof ComputeError)) throw e;
+			result = { ok: false, error: e.message };
+		}
+		if (args.run_id === undefined || args.run_id === null) return result;
+		if (ownerId === null) throw invalid("run_id needs a signed-in owner");
+		const ref = `rigorx_compute:sha256:${digest(JSON.stringify([input.expression, input.variables ?? {}, input.as ?? null, input.expect ?? null]))}`;
+		const details: JsonObject = { ...result, input: input as unknown as JsonObject };
+		const receipt = this.captureEngineReceipt(ownerId, args.run_id, COMPUTE, ref, details);
+		return { ...result, evidence_id: receipt.evidence_id as string };
+	}
+
+	/** Internal (no tool): the source reference of a host evidence record, for rigorx_check_source. */
+	evidenceForCheck(ownerId: string, args: Record<string, unknown>): JsonObject {
+		const id = text("evidence_id", args.evidence_id, 16);
+		const e = this.evidenceRecord(ownerId, args.run_id, id);
+		if (ENGINE_TYPES.has(e.type)) throw invalid(`${id} is a ${e.type}; check the source evidence it refers to instead`);
+		return { evidence_id: e.id, source_ref: e.source_ref };
+	}
+
+	/** Internal (no tool): record the result of a source check made by the Worker. */
+	recordSourceCheck(ownerId: string, args: Record<string, unknown>): JsonObject {
+		const id = text("evidence_id", args.evidence_id, 16);
+		const check = object("check", args.check) as unknown as SourceCheck;
+		const details: JsonObject = { ...(check as unknown as JsonObject), checks_evidence: id };
+		return this.captureEngineReceipt(ownerId, args.run_id, SOURCE_CHECK, check.final_url ?? check.requested, details);
+	}
+
 	// ---------------------------------------------------------------- quotas, listing, profile (WS32 P0.3, P0.5, P0.8)
 
 	/** Count one metered call, or refuse it. Called by dispatch() before the operation runs. */
@@ -615,7 +673,7 @@ function v1View(snapshot: JsonObject, meta: JsonObject): JsonObject {
 
 export const RUN_OPERATIONS = new Set([
 	"start_run", "get_run", "submit_stage", "record_evidence", "report_action", "verify", "reenter", "cancel_run", "delete_run",
-	"list_runs", "usage", "profile",
+	"list_runs", "usage", "profile", "compute", "evidence_for_check", "record_source_check",
 ]);
 
 function encodeCursor(updatedAt: string, runId: string): string {
@@ -655,6 +713,9 @@ export function dispatch(engine: HostEngine, ownerId: string, operation: string,
 				case "list_runs": return engine.listRuns(ownerId, a);
 				case "usage": return engine.usage(ownerId);
 				case "profile": return engine.profile(ownerId);
+				case "compute": return engine.computeOp(ownerId, a);
+				case "evidence_for_check": return engine.evidenceForCheck(ownerId, a);
+				case "record_source_check": return engine.recordSourceCheck(ownerId, a);
 				default: return engine.deleteRun(ownerId, a.run_id);
 			}
 		})();

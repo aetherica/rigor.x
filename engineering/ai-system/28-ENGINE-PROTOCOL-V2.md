@@ -65,6 +65,13 @@ Terminal statuses: `COMPLETED` (validated, nothing to disclose, no engine limita
 
 TypeScript tests 51/51 (protocol-v2 21, conformance 3 scenarios, modern era 6, run management 9, others), `tsc --strict` clean, workerd integration 4/4, real-Worker auth probe 6/6, official SDK `mcp 2.3.0` smoke: a full L03 run to `COMPLETED` in `auto` (2026-07-28) and `legacy` (2025-11-25) modes. Python 204 OK (frozen v1 engine). [A]
 
-## 7. Not yet done
+## 7. Deterministic tools (ADR-007, WP6)
 
-`rigorx_compute` and `rigorx_check_source` (the receipt types and gate rules exist; the tools are WP6). Test B (EUV unit error) depends on `rigorx_compute`. Topic memory at QUERY (P2). Host tool descriptions are cached: hosts must refresh the connector to see the protocol-2 parameters.
+- **`rigorx_compute`** (`src/compute.ts`): arithmetic with SI dimensional analysis and rational exponents (no `eval`, no dependencies). Units with SI prefixes (incl. Q, R, r, q), derived units, CGS mechanical units (erg, dyn), the gauss by the NIST SP 811 B-field correspondence only; exact SI 2019 constants and CODATA 2022 values. Adding mismatched dimensions, transcendental functions of dimensioned values, division by zero and overflow are errors. `expect {value, unit, rel_tol}` checks a claimed number and reports `rel_error` and `ratio` (computed/expected; 4·π·ε₀ ≈ 1.1e-10 is the Gaussian-vs-SI signature). With `run_id` every result, including a failed check or evaluation, becomes an engine-verified `COMPUTE_RECEIPT`.
+- **`rigorx_check_source`** (`src/source.ts`): fetches an evidence record's URL or DOI (via doi.org; http(s) only; no credentials, no private or local hosts; 10 s timeout; first 1 MiB hashed) and records status, final URL, content type, size and SHA-256 as an engine-verified `SOURCE_CHECK` receipt. It shows that the source resolved and what it contained, not that it supports the claim.
+- **Independent verification:** `scripts/compute_differential.py` compares 23 conversions and constants with pint 0.26.2 (CODATA 2022): worst relative difference 8.8e-13 (run in CI). The comparison found that the first version used CODATA 2018 values for m_e and Da (differences 1.4e-9), now updated, and that pint models the gauss in Gaussian dimensions, which is why only the B-field correspondence is offered. [A]
+- **Test B** (`conformance/v2/test-b-unit-error.json`): a Gaussian conductivity labelled S/m fails its compute check, so an L06 validation citing it fails (`cited_receipts_ok`, `numeric_claims_computed`); a correct SI receipt passes and the run is COMPLETED. It reconstructs the failure mode of acceptance test #2; the original answer's numbers are not in the repository. The RCWA TM factorisation error and the mis-targeted citation of that test are not catchable by unit analysis: they need domain checks (Li's factorisation rules) and source-content review — not implemented. [A for the mechanism, C for the scope statement]
+
+## 8. Not yet done
+
+Topic memory at QUERY (P2). Live end-to-end runs of the new parameters through Claude and ChatGPT: hosts cache tool descriptions, so the connectors must be refreshed first.

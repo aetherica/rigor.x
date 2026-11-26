@@ -119,11 +119,11 @@ export const PRIVACY_PAGE = `<!doctype html>
 <p>You sign in with Google. RIGOR-X asks Google only for your account ID (the <code>openid</code> scope), not your name or e-mail address. Your runs are stored under that account ID.</p>
 <h2>What is stored</h2>
 <ul>
-<li>Task text, stage summaries, evidence claims and verification criteria: stored only as SHA-256 digests and lengths, not as text.</li>
-<li>Stored as text, because they are the record of the run: source references (for example URLs), reasons given for skipping, pausing, re-entering or cancelling a stage, and the names and receipt references of actions your assistant reports.</li>
+<li>Task text, stage summaries, objectives, requirement and claim texts, assumptions, scenarios and evidence claims: stored only as SHA-256 digests and lengths, not as text.</li>
+<li>Stored as text, because they are the record of the run: source references (for example URLs), reasons given for pausing, re-entering or cancelling a stage, requirement, operation, claim and capability IDs and names, the names and receipt references of actions your assistant reports, the inputs and results of calculations made with <code>rigorx_compute</code> in a run, and, for sources checked with <code>rigorx_check_source</code>, the address fetched, its status, size and SHA-256 hash (not the page content).</li>
 <li>Sign-in records (registered apps, grants, tokens): stored hashed or encrypted.</li>
 </ul>
-<p>Each account's runs live in separate storage on Cloudflare. RIGOR-X does not sell data, show ads or use your data to train models, and does not call any AI model itself.</p>
+<p>Each account's runs live in separate storage on Cloudflare. RIGOR-X does not sell data, show ads or use your data to train models, and does not call any AI model itself. It fetches a web page only when your assistant asks it to check that source.</p>
 <h2>Deleting your data</h2>
 <p>Ask your assistant to use the <code>rigorx_delete_run</code> tool on a run to delete it permanently. For anything else, open an issue at <a href="${REPO_URL}">${REPO_URL}</a>.</p>
 </html>`;

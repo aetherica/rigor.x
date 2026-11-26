@@ -4,19 +4,8 @@ import { dispatch, EngineError, HostEngine } from "../src/engine.ts";
 import { handleHttp, handleMessage, TOOLS, type EngineBackend } from "../src/mcp.ts";
 import { DurableObjectRunStore } from "../src/store.ts";
 import { memorySql } from "./sqlite-fake.ts";
+import { localBackend } from "./backend.ts";
 
-function localBackend(): EngineBackend {
-	const engine = new HostEngine(new DurableObjectRunStore(memorySql()));
-	return {
-		route: (t) => engine.route(t),
-		resolveCommands: (t) => engine.resolveCommands(t),
-		async run(owner, operation, args) {
-			const r = JSON.parse(dispatch(engine, owner, operation, JSON.stringify(args)));
-			if (!r.ok) throw new EngineError(r.message, r.code);
-			return r.result;
-		},
-	};
-}
 const call = (id: number, name: string, args: Record<string, unknown> = {}) =>
 	({ jsonrpc: "2.0", id, method: "tools/call", params: { name, arguments: args } });
 
@@ -43,14 +32,14 @@ test("tools/list is complete, ordered and annotated (Python's 12 plus the Worker
 	assert.deepEqual(tools.map((t) => t.name), [
 		"rigorx_route", "rigorx_resolve_commands", "rigorx_start_run", "rigorx_get_run", "rigorx_submit_stage",
 		"rigorx_record_evidence", "rigorx_report_action", "rigorx_verify", "rigorx_reenter", "rigorx_cancel_run",
-		"rigorx_delete_run", "rigorx_list_runs", "rigorx_usage", "rigorx_profile",
+		"rigorx_delete_run", "rigorx_list_runs", "rigorx_usage", "rigorx_compute", "rigorx_check_source", "rigorx_profile",
 	]);
 	assert.deepEqual(tools.map((t) => t.name), TOOLS.map((t) => t.name));
 	const readOnly = new Set(["rigorx_route", "rigorx_resolve_commands", "rigorx_get_run", "rigorx_list_runs", "rigorx_usage", "rigorx_profile"]);
 	const destructive = new Set(["rigorx_cancel_run", "rigorx_delete_run"]);
 	for (const t of tools) {
 		assert.ok(t.title && t.description, t.name);
-		assert.equal(t.annotations.openWorldHint, false);
+		assert.equal(t.annotations.openWorldHint, t.name === "rigorx_check_source", t.name); // only the source check fetches from the internet
 		assert.equal(t.annotations.readOnlyHint, readOnly.has(t.name));
 		if (!readOnly.has(t.name)) assert.equal(t.annotations.destructiveHint, destructive.has(t.name));
 		assert.equal(t.inputSchema.type, "object");

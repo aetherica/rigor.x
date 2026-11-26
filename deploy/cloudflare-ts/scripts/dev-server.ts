@@ -10,17 +10,24 @@ import { dispatch, EngineError, HostEngine } from "../src/engine.ts";
 import { handleHttp, type EngineBackend } from "../src/mcp.ts";
 import { DurableObjectRunStore } from "../src/store.ts";
 import { memorySql } from "../test/sqlite-fake.ts";
+import { checkSource } from "../src/source.ts";
 
 const port = Number(process.argv[2] ?? 8787);
 const token = process.argv[3] ?? "dev-token";
 const engine = new HostEngine(new DurableObjectRunStore(memorySql()));
+async function run(owner: string, operation: string, args: object) {
+	const r = JSON.parse(dispatch(engine, owner, operation, JSON.stringify(args)));
+	if (!r.ok) throw new EngineError(r.message, r.code);
+	return r.result;
+}
 const backend: EngineBackend = {
 	route: (t) => engine.route(t),
 	resolveCommands: (t) => engine.resolveCommands(t),
-	async run(owner, operation, args) {
-		const r = JSON.parse(dispatch(engine, owner, operation, JSON.stringify(args)));
-		if (!r.ok) throw new EngineError(r.message, r.code);
-		return r.result;
+	compute: (args) => engine.computeOp(null, args),
+	run,
+	async checkSource(owner, args) {
+		const evidence = await run(owner, "evidence_for_check", args);
+		return run(owner, "record_source_check", { run_id: args.run_id, evidence_id: args.evidence_id, check: await checkSource(String(evidence.source_ref)) });
 	},
 };
 

@@ -110,6 +110,10 @@ jobs:
       - name: TypeScript unit and parity tests
         working-directory: deploy/cloudflare-ts
         run: npm test
+      - name: rigorx_compute against an independent units library (pint, CODATA 2022)
+        run: |
+          python -m pip install 'pint==0.26.2'
+          python deploy/cloudflare-ts/scripts/compute_differential.py
       - name: Real Worker auth path under wrangler dev (OAuth only; static token rejected)
         working-directory: deploy/cloudflare-ts
         run: node test/integration/auth-probe.mjs
