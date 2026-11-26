@@ -19,6 +19,10 @@ This project is in pre-release development. Entries summarize notable changes; t
 - Root README, contributor guidance, and repository licensing policy consistently identify RIGOR-X as Apache-2.0 open-source software; paid services are optional and do not restrict open-source rights.
 - Removed the superseded proprietary subscription license and deployment addenda from the active repository document set.
 
+### Removed
+- Static shared-token ("spike token") access to the Cloudflare MCP server: OAuth sign-in is the only credential for `/mcp` (WS32 P0.1).
+- The Python Cloudflare Worker spike (`deploy/cloudflare`), superseded by the TypeScript Worker and sharing its Worker name.
+
 ### Known limitations
 - No stable release/tag yet; package version remains `0.4.0.dev0`.
 - External model/provider and host-plugin integrations require an integrating host and have not been acceptance-tested end-to-end in this repository.
