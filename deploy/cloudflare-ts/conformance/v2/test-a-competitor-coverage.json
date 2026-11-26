@@ -1,0 +1,674 @@
+{
+ "name": "test-a-competitor-coverage",
+ "description": "Brief §11 / P1 exit Test A: nine named competitors are pre-registered as items of one requirement; validation fails while one has no evidence of its own and passes once every item has one.",
+ "steps": [
+  {
+   "op": "start_run",
+   "args": {
+    "task": "Prepare the list of competitors for the brief"
+   },
+   "expect": {
+    "ok": true,
+    "fields": {
+     "engine_protocol_version": "2.0.0",
+     "intent": "UNKNOWN",
+     "level": "L02_STANDARD",
+     "classification_unknown": true,
+     "current_stage": "QUERY"
+    }
+   },
+   "capture": {
+    "run": "run_id"
+   }
+  },
+  {
+   "op": "submit_stage",
+   "args": {
+    "run_id": "$run",
+    "stage": "QUERY",
+    "outcome": "completed",
+    "summary": "The investor brief needs a competitor section that covers nine named firms."
+   },
+   "expect": {
+    "ok": true,
+    "fields": {
+     "current_stage": "CLASSIFY"
+    }
+   }
+  },
+  {
+   "op": "submit_stage",
+   "args": {
+    "run_id": "$run",
+    "stage": "CLASSIFY",
+    "outcome": "completed",
+    "summary": "Objective, deliverable and the competitor coverage requirement are registered.",
+    "data": {
+     "objective": "Write the competitor section of the investor brief",
+     "deliverable": "One paragraph per competitor with a source each",
+     "level": "L02_STANDARD",
+     "stakes": "medium",
+     "requirements": [
+      {
+       "id": "R1",
+       "text": "Every one of the nine named competitors is covered with a source",
+       "items": [
+        "Acme",
+        "Globex",
+        "Initech",
+        "Umbrella",
+        "Hooli",
+        "Stark",
+        "Wayne",
+        "Wonka",
+        "Tyrell"
+       ]
+      }
+     ]
+    }
+   },
+   "expect": {
+    "ok": true,
+    "fields": {
+     "level": "L03_DEEP",
+     "current_stage": "SELECT_METHODS",
+     "requirements.0.items.8": "R1.9"
+    }
+   }
+  },
+  {
+   "op": "submit_stage",
+   "args": {
+    "run_id": "$run",
+    "stage": "SELECT_METHODS",
+    "outcome": "completed",
+    "summary": "One method: a source per competitor, then a comparison of their positions.",
+    "data": {
+     "methods": [
+      {
+       "name": "competitor review",
+       "reason": "each firm needs its own source"
+      }
+     ]
+    }
+   },
+   "expect": {
+    "ok": true,
+    "fields": {
+     "current_stage": "IDENTIFY_CAPABILITIES",
+     "stage_status.ASSESS_COMPLEXITY": "AUTO_SKIPPED"
+    }
+   }
+  },
+  {
+   "op": "submit_stage",
+   "args": {
+    "run_id": "$run",
+    "stage": "IDENTIFY_CAPABILITIES",
+    "outcome": "completed",
+    "summary": "Web search is available to the host; no paid market database is available.",
+    "data": {
+     "available": [
+      "web_search"
+     ],
+     "missing": []
+    }
+   },
+   "expect": {
+    "ok": true,
+    "fields": {
+     "current_stage": "PLAN",
+     "stage_status.SELECT_METHODS": "COMPLETED"
+    }
+   }
+  },
+  {
+   "op": "record_evidence",
+   "args": {
+    "run_id": "$run",
+    "source_ref": "https://acme.example.com/about",
+    "claim": "Acme sells the product in four markets"
+   },
+   "expect": {
+    "ok": true
+   },
+   "capture": {
+    "e1": "evidence_id"
+   }
+  },
+  {
+   "op": "record_evidence",
+   "args": {
+    "run_id": "$run",
+    "source_ref": "https://globex.example.com/about",
+    "claim": "Globex sells the product in two markets"
+   },
+   "expect": {
+    "ok": true
+   },
+   "capture": {
+    "e2": "evidence_id"
+   }
+  },
+  {
+   "op": "record_evidence",
+   "args": {
+    "run_id": "$run",
+    "source_ref": "https://initech.example.com/about",
+    "claim": "Initech sells the product in one market"
+   },
+   "expect": {
+    "ok": true
+   },
+   "capture": {
+    "e3": "evidence_id"
+   }
+  },
+  {
+   "op": "record_evidence",
+   "args": {
+    "run_id": "$run",
+    "source_ref": "https://umbrella.example.com/about",
+    "claim": "Umbrella sells the product in six markets"
+   },
+   "expect": {
+    "ok": true
+   },
+   "capture": {
+    "e4": "evidence_id"
+   }
+  },
+  {
+   "op": "record_evidence",
+   "args": {
+    "run_id": "$run",
+    "source_ref": "https://hooli.example.com/about",
+    "claim": "Hooli sells the product in three markets"
+   },
+   "expect": {
+    "ok": true
+   },
+   "capture": {
+    "e5": "evidence_id"
+   }
+  },
+  {
+   "op": "record_evidence",
+   "args": {
+    "run_id": "$run",
+    "source_ref": "https://stark.example.com/about",
+    "claim": "Stark sells the product in five markets"
+   },
+   "expect": {
+    "ok": true
+   },
+   "capture": {
+    "e6": "evidence_id"
+   }
+  },
+  {
+   "op": "record_evidence",
+   "args": {
+    "run_id": "$run",
+    "source_ref": "https://wayne.example.com/about",
+    "claim": "Wayne sells the product in two markets"
+   },
+   "expect": {
+    "ok": true
+   },
+   "capture": {
+    "e7": "evidence_id"
+   }
+  },
+  {
+   "op": "record_evidence",
+   "args": {
+    "run_id": "$run",
+    "source_ref": "https://wonka.example.com/about",
+    "claim": "Wonka sells the product in one market"
+   },
+   "expect": {
+    "ok": true
+   },
+   "capture": {
+    "e8": "evidence_id"
+   }
+  },
+  {
+   "op": "submit_stage",
+   "args": {
+    "run_id": "$run",
+    "stage": "PLAN",
+    "outcome": "completed",
+    "summary": "One operation: find one primary source for each of the nine competitors.",
+    "data": {
+     "operations": [
+      {
+       "id": "op1",
+       "capability": "web_search",
+       "depends_on": [],
+       "completion_condition": "Each competitor has a recorded primary source",
+       "requirement_ids": [
+        "R1"
+       ]
+      }
+     ]
+    }
+   },
+   "expect": {
+    "ok": true,
+    "fields": {
+     "current_stage": "EXECUTE"
+    }
+   }
+  },
+  {
+   "op": "submit_stage",
+   "args": {
+    "run_id": "$run",
+    "stage": "EXECUTE",
+    "outcome": "completed",
+    "summary": "Sources were found and recorded; the ninth competitor still has no source.",
+    "data": {
+     "operations": [
+      {
+       "id": "op1",
+       "status": "done",
+       "evidence_ids": [
+        "$e1"
+       ]
+      }
+     ]
+    }
+   },
+   "expect": {
+    "ok": true,
+    "fields": {
+     "current_stage": "EVALUATE_EVIDENCE"
+    }
+   }
+  },
+  {
+   "op": "submit_stage",
+   "args": {
+    "run_id": "$run",
+    "stage": "EVALUATE_EVIDENCE",
+    "outcome": "completed",
+    "summary": "Each recorded source supports one competitor claim; Tyrell remains unsourced.",
+    "data": {
+     "claims": [
+      {
+       "id": "C1",
+       "text": "Eight competitors are described by their own sources",
+       "status": "SUPPORTED",
+       "evidence_ids": [
+        "$e1",
+        "$e2",
+        "$e3",
+        "$e4",
+        "$e5",
+        "$e6",
+        "$e7",
+        "$e8"
+       ],
+       "requirement_ids": [
+        "R1"
+       ]
+      }
+     ]
+    }
+   },
+   "expect": {
+    "ok": true,
+    "fields": {
+     "current_stage": "VALIDATE"
+    }
+   }
+  },
+  {
+   "op": "verify",
+   "args": {
+    "run_id": "$run",
+    "requirements": [
+     {
+      "id": "R1",
+      "met": true,
+      "evidence_ids": [],
+      "items": [
+       {
+        "id": "R1.1",
+        "evidence_ids": [
+         "$e1"
+        ]
+       },
+       {
+        "id": "R1.2",
+        "evidence_ids": [
+         "$e2"
+        ]
+       },
+       {
+        "id": "R1.3",
+        "evidence_ids": [
+         "$e3"
+        ]
+       },
+       {
+        "id": "R1.4",
+        "evidence_ids": [
+         "$e4"
+        ]
+       },
+       {
+        "id": "R1.5",
+        "evidence_ids": [
+         "$e5"
+        ]
+       },
+       {
+        "id": "R1.6",
+        "evidence_ids": [
+         "$e6"
+        ]
+       },
+       {
+        "id": "R1.7",
+        "evidence_ids": [
+         "$e7"
+        ]
+       },
+       {
+        "id": "R1.8",
+        "evidence_ids": [
+         "$e8"
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "expect": {
+    "ok": true,
+    "fields": {
+     "passed": false,
+     "status": "VALIDATION_FAILED",
+     "checks.[check=items_have_own_evidence].detail": [
+      "R1.9 has no evidence"
+     ]
+    }
+   }
+  },
+  {
+   "op": "record_evidence",
+   "args": {
+    "run_id": "$run",
+    "source_ref": "https://tyrell.example.com/about",
+    "claim": "Tyrell sells the product in seven markets"
+   },
+   "expect": {
+    "ok": true
+   },
+   "capture": {
+    "e9": "evidence_id"
+   }
+  },
+  {
+   "op": "reenter",
+   "args": {
+    "run_id": "$run",
+    "target_stage": "VALIDATE",
+    "trigger": "gate_failed",
+    "reason": "the ninth competitor now has a source of its own"
+   },
+   "expect": {
+    "ok": true,
+    "fields": {
+     "current_stage": "VALIDATE",
+     "reentries.used": 1
+    }
+   }
+  },
+  {
+   "op": "verify",
+   "args": {
+    "run_id": "$run",
+    "requirements": [
+     {
+      "id": "R1",
+      "met": true,
+      "evidence_ids": [],
+      "items": [
+       {
+        "id": "R1.1",
+        "evidence_ids": [
+         "$e1"
+        ]
+       },
+       {
+        "id": "R1.2",
+        "evidence_ids": [
+         "$e2"
+        ]
+       },
+       {
+        "id": "R1.3",
+        "evidence_ids": [
+         "$e3"
+        ]
+       },
+       {
+        "id": "R1.4",
+        "evidence_ids": [
+         "$e4"
+        ]
+       },
+       {
+        "id": "R1.5",
+        "evidence_ids": [
+         "$e5"
+        ]
+       },
+       {
+        "id": "R1.6",
+        "evidence_ids": [
+         "$e6"
+        ]
+       },
+       {
+        "id": "R1.7",
+        "evidence_ids": [
+         "$e7"
+        ]
+       },
+       {
+        "id": "R1.8",
+        "evidence_ids": [
+         "$e8"
+        ]
+       },
+       {
+        "id": "R1.9",
+        "evidence_ids": [
+         "$e9"
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "expect": {
+    "ok": true,
+    "fields": {
+     "passed": false,
+     "checks.[check=items_have_own_evidence].passed": true,
+     "checks.[check=claims_support_requirements].detail": [
+      "R1: $e9 is cited but no claim gives it a status"
+     ]
+    }
+   }
+  },
+  {
+   "op": "reenter",
+   "args": {
+    "run_id": "$run",
+    "target_stage": "EVALUATE_EVIDENCE",
+    "trigger": "gate_failed",
+    "reason": "the new source needs a claim with a status"
+   },
+   "expect": {
+    "ok": true,
+    "fields": {
+     "current_stage": "EVALUATE_EVIDENCE",
+     "stage_status.VALIDATE": "NOT_STARTED",
+     "reentries.used": 2
+    }
+   }
+  },
+  {
+   "op": "submit_stage",
+   "args": {
+    "run_id": "$run",
+    "stage": "EVALUATE_EVIDENCE",
+    "outcome": "completed",
+    "summary": "All nine competitor sources now carry a supported claim each, Tyrell included.",
+    "data": {
+     "claims": [
+      {
+       "id": "C1",
+       "text": "Eight competitors are described by their own sources",
+       "status": "SUPPORTED",
+       "evidence_ids": [
+        "$e1",
+        "$e2",
+        "$e3",
+        "$e4",
+        "$e5",
+        "$e6",
+        "$e7",
+        "$e8"
+       ],
+       "requirement_ids": [
+        "R1"
+       ]
+      },
+      {
+       "id": "C2",
+       "text": "Tyrell is described by its own primary source",
+       "status": "SUPPORTED",
+       "evidence_ids": [
+        "$e9"
+       ],
+       "requirement_ids": [
+        "R1"
+       ]
+      }
+     ]
+    }
+   },
+   "expect": {
+    "ok": true,
+    "fields": {
+     "current_stage": "VALIDATE",
+     "ledger.claims": 2
+    }
+   }
+  },
+  {
+   "op": "verify",
+   "args": {
+    "run_id": "$run",
+    "requirements": [
+     {
+      "id": "R1",
+      "met": true,
+      "evidence_ids": [],
+      "items": [
+       {
+        "id": "R1.1",
+        "evidence_ids": [
+         "$e1"
+        ]
+       },
+       {
+        "id": "R1.2",
+        "evidence_ids": [
+         "$e2"
+        ]
+       },
+       {
+        "id": "R1.3",
+        "evidence_ids": [
+         "$e3"
+        ]
+       },
+       {
+        "id": "R1.4",
+        "evidence_ids": [
+         "$e4"
+        ]
+       },
+       {
+        "id": "R1.5",
+        "evidence_ids": [
+         "$e5"
+        ]
+       },
+       {
+        "id": "R1.6",
+        "evidence_ids": [
+         "$e6"
+        ]
+       },
+       {
+        "id": "R1.7",
+        "evidence_ids": [
+         "$e7"
+        ]
+       },
+       {
+        "id": "R1.8",
+        "evidence_ids": [
+         "$e8"
+        ]
+       },
+       {
+        "id": "R1.9",
+        "evidence_ids": [
+         "$e9"
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "expect": {
+    "ok": true,
+    "fields": {
+     "passed": true,
+     "wording": "structurally verified",
+     "levels.R1": "structural",
+     "current_stage": "DELIVER",
+     "requires.unmet_requirements": []
+    }
+   }
+  },
+  {
+   "op": "submit_stage",
+   "args": {
+    "run_id": "$run",
+    "stage": "DELIVER",
+    "outcome": "completed",
+    "summary": "The competitor section covers all nine firms, each with its own primary source."
+   },
+   "expect": {
+    "ok": true,
+    "fields": {
+     "status": "COMPLETED",
+     "current_stage": null,
+     "verified": true,
+     "limitations": []
+    }
+   }
+  }
+ ]
+}

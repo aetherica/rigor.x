@@ -1,8 +1,9 @@
-// Port of src/rigorx/run_store.py + do_store.py: owner-scoped run storage on
-// Durable Object SQLite. Same schema and JSON layout as the Python stores.
+// Owner-scoped run storage on Durable Object SQLite. Schema version 1 is the layout shared with
+// the Python stores (src/rigorx/run_store.py); later versions are Worker-only. The store keeps run
+// snapshots (JSON documents with an append-only `events` list) for any engine protocol version.
 // Durable Object SQL is synchronous, so load → mutate → save in one call is atomic.
 
-import { PipelineRun, type Json, type JsonObject } from "./pipeline.ts";
+import type { Json, JsonObject } from "./text.ts";
 
 export class RunStoreError extends Error {
 	override name = "RunStoreError";
@@ -18,7 +19,7 @@ export class EventIntegrityError extends RunStoreError {
 }
 
 export interface StoredHostRun {
-	run: PipelineRun;
+	snapshot: JsonObject;
 	meta: JsonObject;
 	revision: number;
 }
@@ -41,9 +42,9 @@ export interface DailyUsage {
 }
 
 export interface RunStore {
-	create(ownerId: string, run: PipelineRun, meta: JsonObject): number;
+	create(ownerId: string, runId: string, snapshot: JsonObject, meta: JsonObject): number;
 	load(ownerId: string, runId: string): StoredHostRun;
-	save(ownerId: string, run: PipelineRun, meta: JsonObject, expectedRevision: number): number;
+	save(ownerId: string, runId: string, snapshot: JsonObject, meta: JsonObject, expectedRevision: number): number;
 	delete(ownerId: string, runId: string): void;
 	/** Newest first by (updated_at, run_id); `after` is the last row of the previous page. */
 	list(ownerId: string, limit: number, after?: { updated_at: string; run_id: string }): RunSummary[];
@@ -131,16 +132,15 @@ export class DurableObjectRunStore implements RunStore {
 		migrate(sql);
 	}
 
-	create(ownerId: string, run: PipelineRun, meta: JsonObject): number {
-		const snapshot = run.snapshot();
-		PipelineRun.fromSnapshot(snapshot);
-		if (this.sql.exec("SELECT run_id FROM host_runs WHERE run_id = ?", run.run_id).toArray().length) {
+	create(ownerId: string, runId: string, snapshot: JsonObject, meta: JsonObject): number {
+		if (!Array.isArray(snapshot.events)) throw new RunStoreError("A run snapshot needs an events list");
+		if (this.sql.exec("SELECT run_id FROM host_runs WHERE run_id = ?", runId).toArray().length) {
 			throw new RevisionConflict("Run ID already exists");
 		}
 		const stamp = now();
 		this.sql.exec(
 			"INSERT INTO host_runs(run_id, owner_id, revision, snapshot_json, meta_json, created_at, updated_at) VALUES(?, ?, 1, ?, ?, ?, ?)",
-			run.run_id, ownerId, canonicalJson(snapshot), canonicalJson(meta), stamp, stamp,
+			runId, ownerId, canonicalJson(snapshot), canonicalJson(meta), stamp, stamp,
 		);
 		return 1;
 	}
@@ -152,32 +152,30 @@ export class DurableObjectRunStore implements RunStore {
 		if (rows.length === 0) throw new RunNotFound(runId);
 		const row = rows[0]!;
 		return {
-			run: PipelineRun.fromSnapshot(JSON.parse(String(row.snapshot_json))),
+			snapshot: JSON.parse(String(row.snapshot_json)) as JsonObject,
 			meta: JSON.parse(String(row.meta_json)) as JsonObject,
 			revision: Number(row.revision),
 		};
 	}
 
-	save(ownerId: string, run: PipelineRun, meta: JsonObject, expectedRevision: number): number {
-		const snapshot = run.snapshot();
-		PipelineRun.fromSnapshot(snapshot);
+	save(ownerId: string, runId: string, snapshot: JsonObject, meta: JsonObject, expectedRevision: number): number {
 		const rows = this.sql.exec(
-			"SELECT revision, snapshot_json FROM host_runs WHERE run_id = ? AND owner_id = ?", run.run_id, ownerId,
+			"SELECT revision, snapshot_json FROM host_runs WHERE run_id = ? AND owner_id = ?", runId, ownerId,
 		).toArray();
-		if (rows.length === 0) throw new RunNotFound(run.run_id);
+		if (rows.length === 0) throw new RunNotFound(runId);
 		const row = rows[0]!;
 		if (Number(row.revision) !== expectedRevision) {
 			throw new RevisionConflict(`Expected revision ${expectedRevision}, found ${String(row.revision)}`);
 		}
 		const previous = (JSON.parse(String(row.snapshot_json)) as { events: Json[] }).events;
 		const events = snapshot.events as Json[];
-		if (events.length < previous.length || previous.some((e, i) => canonicalJson(e) !== canonicalJson(events[i]))) {
+		if (!Array.isArray(events) || events.length < previous.length || previous.some((e, i) => canonicalJson(e) !== canonicalJson(events[i]))) {
 			throw new EventIntegrityError("Event history must remain append-only");
 		}
 		const revision = expectedRevision + 1;
 		this.sql.exec(
 			"UPDATE host_runs SET revision = ?, snapshot_json = ?, meta_json = ?, updated_at = ? WHERE run_id = ? AND owner_id = ? AND revision = ?",
-			revision, canonicalJson(snapshot), canonicalJson(meta), now(), run.run_id, ownerId, expectedRevision,
+			revision, canonicalJson(snapshot), canonicalJson(meta), now(), runId, ownerId, expectedRevision,
 		);
 		return revision;
 	}

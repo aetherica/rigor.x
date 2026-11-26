@@ -1,93 +1,36 @@
-// Port of src/rigorx/host_engine.py: owner-scoped control-plane operations behind
-// the plugin tools. Behaviour, error codes and stored layout match the Python
-// engine; tests/parity fixtures keep the two in step.
+// RIGOR-X engine (canonical implementation, WS32 ADR-001/ADR-012): owner-scoped control-plane
+// operations behind the plugin tools. New runs use engine protocol v2 (twelve stages, level policy,
+// pre-registered requirements, coverage gate, plan graph, assumptions, OPTIMIZE loop guard).
+// Runs of protocol v1 (eleven stages) are read-only: they can be read, listed and deleted.
 
-import { createHash } from "node:crypto";
-import { STAGE_ORDER, InvalidTransition, PipelineRun, isStage, type Json, type JsonObject, type PipelineEvent, type Stage } from "./pipeline.ts";
+import { PipelineRun, STAGE_ORDER as V1_STAGES } from "./pipeline.ts";
+import {
+	PROTOCOL_VERSION, STAGES, STAGE_GUIDANCE, STAKES_FLOOR, isMandatory, isStage, mandatoryStages, type Level, type Stage,
+} from "./protocol.ts";
 import { route } from "./router.ts";
 import { RunNotFound, type RunStore } from "./store.ts";
+import {
+	DEFAULT_TEXT_POLICY, EngineError, chars, conflict, digest, invalid, limit, normalized, notFound, object, quota,
+	storedNote, substantial, text, type Json, type JsonObject, type TextPolicy,
+} from "./text.ts";
+import {
+	STAGE_LEDGER_KEY, capabilitiesContract, classifyContract, complexityContract, deliveryContract, evaluationContract,
+	executeContract, methodsContract, optimizeContract, planContract, queryContract, stressContract, type ContractContext,
+} from "./ledger.ts";
+import { ACTION, ENGINE_TYPES, GATE_VERSION, parseAnswers, runGate, unresolvedActions } from "./gate.ts";
+import {
+	TERMINAL, advance, assertActive, cancel, completeStage, event, isRunState, newRun, optimizeOutcome,
+	pauseStage, raiseLevel, reenter, resume, type EvidenceRecord, type RunState,
+} from "./run.ts";
 
+export { EngineError, DEFAULT_TEXT_POLICY, RELAXED_TEXT_POLICY, words, type TextPolicy } from "./text.ts";
+export { GATE_VERSION } from "./gate.ts";
+export const ENGINE_PROTOCOL_VERSION = PROTOCOL_VERSION;
 
-export const ENGINE_PROTOCOL_VERSION = "1.0.0";
-export const GATE_VERSION = "1.1.0";
-const ACTION_EVIDENCE_TYPE = "HOST_REPORTED_ACTION";
-
-export const STAGE_GUIDANCE: Record<Stage, string> = {
-	CONTEXT: "Collect the context the task depends on: prior decisions, constraints, available tools, and what is missing. Submit a short summary.",
-	INTENT: "State what the user actually wants, the expected output and the success criteria. Submit them as the summary.",
-	KNOWLEDGE: "Identify the knowledge domains and known facts that apply, and what must still be looked up.",
-	RESEARCH: "Acquire sources for anything that must be looked up. Record each source with rigorx_record_evidence. Skip with a reason if no research is needed.",
-	ROUTING: "Choose which tools or methods will carry out the work and why. Note any capability that is unavailable.",
-	REASONING: "Work out the answer or plan. Keep reasoning separate from actions: nothing is executed in this stage.",
-	EXECUTION: "Perform the actions with your tools. Report each one with rigorx_report_action, including failures. Skip with a reason if nothing must be executed.",
-	EVIDENCE: "Make sure every claim the answer depends on has recorded evidence. Record anything still missing.",
-	VERIFICATION: "Call rigorx_verify with your success criteria. Each passed criterion must cite evidence IDs. Submitting this stage directly is not allowed.",
-	DECISION: "Decide the final result using only verified material. State remaining limitations.",
-	FEEDBACK: "Note what should change next time (gaps, failures, follow-ups). Completing this stage completes the run.",
-};
-const FAILED_GUIDANCE = "Verification failed: call rigorx_reenter to return to an earlier stage and fix the gaps.";
-const NO_SKIP: ReadonlySet<Stage> = new Set(["VERIFICATION", "DECISION", "FEEDBACK"]);
 const OUTCOMES = ["blocked", "completed", "partial", "skipped"];
 const ACTION_STATUSES = ["BLOCKED", "EXECUTED", "FAILED"];
-const EVIDENCE_ID = /^ev-[1-9][0-9]{0,6}$/;
-
-export class EngineError extends Error {
-	code = "ENGINE_ERROR";
-	override name = "EngineError";
-	constructor(message: string, code?: string) {
-		super(message);
-		if (code) this.code = code;
-	}
-}
-const invalid = (m: string) => new EngineError(m, "INVALID_REQUEST");
-const conflict = (m: string) => new EngineError(m, "STAGE_CONFLICT");
-const limit = (m: string) => new EngineError(m, "LIMIT_EXCEEDED");
-const notFound = () => new EngineError("Run not found", "RUN_NOT_FOUND");
-
-const digest = (text: string) => createHash("sha256").update(text, "utf8").digest("hex");
-/** Python `len(str)` counts code points; JS `.length` counts UTF-16 units. */
-const chars = (text: string) => [...text].length;
-
-/** Minimum substance for host-submitted text; mirrors TextPolicy in the Python engine. */
-export interface TextPolicy {
-	minSummaryChars: number;
-	minSummaryWords: number;
-	minNoteChars: number;
-	minNoteWords: number;
-	distinctSummaries: boolean;
-}
-export const DEFAULT_TEXT_POLICY: TextPolicy = { minSummaryChars: 40, minSummaryWords: 6, minNoteChars: 15, minNoteWords: 3, distinctSummaries: true };
-export const RELAXED_TEXT_POLICY: TextPolicy = { minSummaryChars: 0, minSummaryWords: 0, minNoteChars: 0, minNoteWords: 0, distinctSummaries: false };
-
-// Scripts written without spaces between words (same Unicode blocks as _SPACELESS in the Python
-// engine): each of their characters counts as one word unit, so the word minimum reduces to the
-// character minimum for Chinese, Japanese, Thai, Lao, Khmer, Myanmar and Tibetan text.
-const SPACELESS = /[\u0E00-\u0EFF\u0F00-\u0FFF\u1000-\u109F\u1780-\u17FF\u19E0-\u19FF\u3040-\u30FF\u31F0-\u31FF\u3400-\u4DBF\u4E00-\u9FFF\uF900-\uFAFF\uFF66-\uFF9F\u{20000}-\u{3134F}]/gu;
-export function words(value: string): number {
-	let total = 0;
-	for (const token of value.split(/\s+/)) {
-		if (!token) continue;
-		const spaceless = token.match(SPACELESS)?.length ?? 0;
-		total += spaceless + (/[\p{L}\p{N}]/u.test(token.replace(SPACELESS, "")) ? 1 : 0);
-	}
-	return total;
-}
-const normalized = (value: string) => value.toLowerCase().split(/\s+/).filter(Boolean).join(" ");
-
-function substantial(name: string, value: string, minChars: number, minWords: number, hint: string): void {
-	const trimmed = value.trim();
-	if (chars(trimmed) < minChars || words(trimmed) < minWords) {
-		throw invalid(`${name} is too short: use at least ${minChars} characters and ${minWords} words (${hint})`);
-	}
-}
-
-function text(name: string, value: unknown, maxChars: number, required = true): string {
-	if ((value === undefined || value === null) && !required) return "";
-	if (typeof value !== "string") throw invalid(`${name} must be text`);
-	if (required && !value.trim()) throw invalid(`${name} is required`);
-	if (chars(value) > maxChars) throw limit(`${name} exceeds ${maxChars} characters`);
-	return value;
-}
+const FAILED_GUIDANCE = "Validation failed: call rigorx_reenter to return to an earlier stage, fix the gaps the checks name, and validate again.";
+const V1_READ_ONLY = "This run uses engine protocol 1.0.0 (eleven stages), which is read-only since protocol 2.0.0: read it, list it or delete it, and start a new run to continue the work";
 
 function newRunId(): string {
 	const bytes = new Uint8Array(24);
@@ -96,8 +39,6 @@ function newRunId(): string {
 	for (const b of bytes) binary += String.fromCharCode(b);
 	return "rx_" + btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
-
-interface Action { id: string; tool_name: string; status: string; resolves?: string }
 
 /**
  * Per-owner limits (WS32 P0.3). The values are PROVISIONAL: the owner sets the final numbers with
@@ -127,7 +68,6 @@ const LIST_MAX = 50;
 
 const utcDay = (d: Date) => d.toISOString().slice(0, 10);
 const nextUtcMidnight = (d: Date) => new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + 1)).toISOString();
-const quota = (m: string) => new EngineError(m, "QUOTA_EXCEEDED");
 
 function randomHex(bytes: number): string {
 	const b = new Uint8Array(bytes);
@@ -140,19 +80,19 @@ export interface EngineOptions {
 	maxEvidencePerRun?: number;
 	maxTextChars?: number;
 	maxRefChars?: number;
-	maxCriteria?: number;
 	textPolicy?: TextPolicy;
 	limits?: Partial<QuotaLimits>;
-	/** Clock for quota windows; tests inject one. */
+	/** Clock for quota windows and freshness checks; tests inject one. */
 	now?: () => Date;
 }
+
+interface Loaded { run: RunState; meta: JsonObject; revision: number; owner: string }
 
 export class HostEngine {
 	readonly maxReentries: number;
 	readonly maxEvidencePerRun: number;
 	readonly maxTextChars: number;
 	readonly maxRefChars: number;
-	readonly maxCriteria: number;
 	readonly textPolicy: TextPolicy;
 	readonly limits: QuotaLimits;
 
@@ -168,7 +108,6 @@ export class HostEngine {
 		this.maxEvidencePerRun = options.maxEvidencePerRun ?? 500;
 		this.maxTextChars = options.maxTextChars ?? 20_000;
 		this.maxRefChars = options.maxRefChars ?? 2_048;
-		this.maxCriteria = options.maxCriteria ?? 50;
 		this.textPolicy = options.textPolicy ?? DEFAULT_TEXT_POLICY;
 	}
 
@@ -190,130 +129,123 @@ export class HostEngine {
 		const owner = this.owner(ownerId);
 		const t = text("task", task, this.maxTextChars);
 		const profile = route(t);
-		const run = new PipelineRun(newRunId(), this.maxReentries);
-		run.beginStage();
+		const run = newRun(newRunId(), profile.level as Level, profile.intent, profile.intent === "UNKNOWN", this.maxReentries);
 		const meta: JsonObject = {
-			engine_protocol_version: ENGINE_PROTOCOL_VERSION,
+			engine_protocol_version: PROTOCOL_VERSION,
 			task_sha256: digest(t),
 			task_chars: chars(t),
 			intent: profile.intent,
-			level: profile.level,
+			level: run.level,
 			modes: profile.modes,
-			verifications: [],
 		};
-		this.store.create(owner, run, meta);
-		return this.view(run, meta);
+		this.store.create(owner, run.run_id, run as unknown as JsonObject, meta);
+		return this.view(run);
 	}
 
 	getRun(ownerId: string, runId: unknown): JsonObject {
-		const { run, meta } = this.load(ownerId, runId);
-		return this.view(run, meta);
+		const owner = this.owner(ownerId);
+		const stored = this.loadAny(owner, runId);
+		if (!isRunState(stored.snapshot)) return v1View(stored.snapshot, stored.meta);
+		return this.view(stored.snapshot);
 	}
 
-	submitStage(ownerId: string, runId: unknown, args: { stage?: unknown; outcome?: unknown; summary?: unknown; reason?: unknown }): JsonObject {
-		const stored = this.load(ownerId, runId);
-		const { run, meta } = stored;
-		const target = this.stage(args.stage);
+	submitStage(ownerId: string, runId: unknown, args: { stage?: unknown; outcome?: unknown; summary?: unknown; reason?: unknown; data?: unknown }): JsonObject {
+		const l = this.load(ownerId, runId);
+		const { run } = l;
+		if (!isStage(args.stage)) throw invalid(`Unknown stage: ${JSON.stringify(args.stage)}; stages are ${STAGES.join(", ")}`);
+		const target = args.stage;
 		if (typeof args.outcome !== "string" || !OUTCOMES.includes(args.outcome)) throw invalid(`outcome must be one of ${JSON.stringify(OUTCOMES)}`);
 		const summary = text("summary", args.summary, this.maxTextChars);
-		this.activate(run);
+		assertActive(run);
+		resume(run);
 		if (target !== run.current_stage) throw conflict(`Current stage is ${run.current_stage}, not ${target}`);
-		if (target === "VERIFICATION") throw conflict("VERIFICATION is completed only through rigorx_verify");
-		const norm = digest(normalized(summary));
-		const resultRef = `summary:sha256:${digest(summary)}:norm:${norm}:chars:${chars(summary)}`;
-		try {
-			if (args.outcome === "completed") {
-				this.checkSummary(run, target, summary, norm);
-				run.completeStage(resultRef);
-			} else if (args.outcome === "skipped") {
-				if (NO_SKIP.has(target)) throw conflict(`${target} cannot be skipped`);
-				run.skipStage(this.note("reason", args.reason));
-			} else if (args.outcome === "partial") {
-				run.markPartial(this.note("reason", args.reason));
-			} else {
-				run.markBlocked(this.note("reason", args.reason));
-			}
-		} catch (e) {
-			if (e instanceof InvalidTransition) throw conflict(e.message);
-			throw e;
+		if (target === "VALIDATE") throw conflict("VALIDATE is completed only through rigorx_verify");
+		if (args.outcome === "skipped") {
+			throw conflict(`${target} is mandatory at ${run.level} and cannot be skipped; stages that are not mandatory at this level are skipped automatically. Use partial or blocked with a reason to pause.`);
 		}
-		this.advance(run);
-		this.store.save(this.owner(ownerId), run, meta, stored.revision);
-		return this.view(run, meta);
+		if (args.outcome === "partial" || args.outcome === "blocked") {
+			pauseStage(run, args.outcome, this.note("reason", args.reason));
+			return this.save(l);
+		}
+		const norm = digest(normalized(summary));
+		this.checkSummary(run, target, summary, norm);
+		const data = args.data === undefined || args.data === null ? {} : object("data", args.data);
+		const ref = `summary:sha256:${digest(summary)}:norm:${norm}:chars:${chars(summary)}`;
+		this.applyStage(run, target, data, ref);
+		return this.save(l);
 	}
 
-	recordEvidence(ownerId: string, runId: unknown, args: { source_ref?: unknown; claim?: unknown; evidence_type?: unknown }): JsonObject {
-		const stored = this.load(ownerId, runId);
-		const { run, meta } = stored;
+	recordEvidence(ownerId: string, runId: unknown, args: { source_ref?: unknown; claim?: unknown; evidence_type?: unknown; as_of?: unknown }): JsonObject {
+		const l = this.load(ownerId, runId);
 		const sourceRef = text("source_ref", args.source_ref, this.maxRefChars);
 		const claim = text("claim", args.claim, this.maxTextChars);
 		substantial("claim", claim, this.textPolicy.minNoteChars, this.textPolicy.minNoteWords, "state what this source supports");
-		const evidenceType = text("evidence_type", args.evidence_type ?? "SOURCE", 64);
-		if (!/^[A-Z][A-Z0-9_]{0,63}$/.test(evidenceType) || evidenceType === ACTION_EVIDENCE_TYPE) {
-			throw invalid("evidence_type must be an upper-case identifier and not HOST_REPORTED_ACTION");
+		const type = text("evidence_type", args.evidence_type ?? "SOURCE", 64);
+		if (!/^[A-Z][A-Z0-9_]{0,63}$/.test(type) || ENGINE_TYPES.has(type)) {
+			throw invalid(`evidence_type must be an upper-case identifier and not one the engine creates (${[...ENGINE_TYPES].join(", ")})`);
 		}
-		const event = this.capture(run, evidenceType, sourceRef, { claim_sha256: digest(claim), claim_chars: chars(claim) });
-		this.store.save(this.owner(ownerId), run, meta, stored.revision);
-		return { evidence_id: `ev-${event.sequence}`, stage: event.stage, ...this.view(run, meta) };
+		const asOf = this.asOf(args.as_of);
+		const e = this.capture(l.run, type, sourceRef, digest(claim), asOf, "HOST_REPORTED", { claim_chars: chars(claim) });
+		return { evidence_id: e.id, stage: e.stage, ...this.save(l) };
 	}
 
 	reportAction(ownerId: string, runId: unknown, args: { tool_name?: unknown; status?: unknown; receipt_ref?: unknown; resolves?: unknown }): JsonObject {
-		const stored = this.load(ownerId, runId);
-		const { run, meta } = stored;
+		const l = this.load(ownerId, runId);
 		const toolName = text("tool_name", args.tool_name, 128);
 		if (typeof args.status !== "string" || !ACTION_STATUSES.includes(args.status)) throw invalid(`status must be one of ${JSON.stringify(ACTION_STATUSES)}`);
 		const receiptRef = text("receipt_ref", args.receipt_ref, this.maxRefChars, false);
-		const details: JsonObject = { tool_name: toolName, status: args.status, verification: "HOST_REPORTED" };
+		const details: JsonObject = { tool_name: toolName, status: args.status };
 		if (args.resolves !== undefined && args.resolves !== null) {
-			const earlier = this.actions(run).find((a) => a.id === args.resolves);
-			if (!earlier || earlier.status === "EXECUTED") throw invalid("resolves must reference an earlier FAILED or BLOCKED action");
+			const earlier = l.run.evidence.find((e) => e.id === args.resolves && e.type === ACTION);
+			if (!earlier || earlier.details.status === "EXECUTED") throw invalid("resolves must reference an earlier FAILED or BLOCKED action");
 			details.resolves = earlier.id;
 		}
-		const event = this.capture(run, ACTION_EVIDENCE_TYPE, receiptRef || `host-action:${toolName}`, details);
-		this.store.save(this.owner(ownerId), run, meta, stored.revision);
-		return { action_id: `ev-${event.sequence}`, ...this.view(run, meta) };
+		const e = this.capture(l.run, ACTION, receiptRef || `host-action:${toolName}`, null, null, "HOST_REPORTED", details);
+		return { action_id: e.id, ...this.save(l) };
 	}
 
-	verify(ownerId: string, runId: unknown, criteria: unknown): JsonObject {
-		const stored = this.load(ownerId, runId);
-		const { run, meta } = stored;
-		this.activate(run);
-		if (run.current_stage !== "VERIFICATION") throw conflict(`Current stage is ${run.current_stage}, not VERIFICATION`);
-		const { checks, recorded } = this.gate(run, meta, criteria);
-		const passed = checks.every((c) => c.passed === true);
-		run.completeStage(`gate:${GATE_VERSION}:${passed ? "pass" : "fail"}`, passed);
-		(meta.verifications as Json[]).push({ gate_version: GATE_VERSION, passed, checks, criteria: recorded });
-		this.advance(run);
-		this.store.save(this.owner(ownerId), run, meta, stored.revision);
-		return { passed, wording: passed ? "structurally verified" : "not verified", checks, ...this.view(run, meta) };
+	verify(ownerId: string, runId: unknown, requirements: unknown): JsonObject {
+		const l = this.load(ownerId, runId);
+		const { run } = l;
+		assertActive(run);
+		resume(run);
+		if (run.current_stage !== "VALIDATE") throw conflict(`Current stage is ${run.current_stage}, not VALIDATE`);
+		const answers = parseAnswers(requirements, run);
+		const at = this.now();
+		const result = runGate(run, answers, at);
+		run.verifications.push({
+			gate_version: GATE_VERSION, passed: result.passed, at: at.toISOString(), checks: result.checks,
+			answers: answers.map((a) => ({ id: a.id, met: a.met, evidence_ids: a.evidence_ids, items: a.items })) as unknown as JsonObject[],
+			levels: result.levels,
+		});
+		if (result.passed) {
+			completeStage(run, `gate:${GATE_VERSION}:pass`, { unmet: result.unmet as unknown as Json });
+			run.optimize.unvalidated_change = false;
+			advance(run);
+		} else {
+			run.stage_status.VALIDATE = "FAILED";
+			run.status = "VALIDATION_FAILED";
+			event(run, "VALIDATION_FAILED", { failed_checks: result.checks.filter((c) => c.passed !== true).map((c) => c.check) as Json[] });
+		}
+		const view = this.save(l);
+		return { passed: result.passed, wording: result.passed ? "structurally verified" : "not verified", checks: result.checks, levels: result.levels, ...view };
 	}
 
 	reenter(ownerId: string, runId: unknown, args: { target_stage?: unknown; trigger?: unknown; reason?: unknown }): JsonObject {
-		const stored = this.load(ownerId, runId);
-		const { run, meta } = stored;
-		const target = this.stage(args.target_stage);
-		try {
-			run.reenter(target, text("trigger", args.trigger, this.maxRefChars), text("reason", args.reason, this.maxRefChars));
-		} catch (e) {
-			if (e instanceof InvalidTransition) throw conflict(e.message);
-			throw e;
+		const l = this.load(ownerId, runId);
+		if (!isStage(args.target_stage)) throw invalid(`Unknown stage: ${JSON.stringify(args.target_stage)}`);
+		const reset = reenter(l.run, args.target_stage, text("trigger", args.trigger, this.maxRefChars), text("reason", args.reason, this.maxRefChars));
+		for (const s of reset) {
+			const key = STAGE_LEDGER_KEY[s];
+			if (key && s !== "CLASSIFY") delete l.run.ledger[key];
 		}
-		run.beginStage();
-		this.store.save(this.owner(ownerId), run, meta, stored.revision);
-		return this.view(run, meta);
+		return this.save(l);
 	}
 
 	cancelRun(ownerId: string, runId: unknown, reason: unknown): JsonObject {
-		const stored = this.load(ownerId, runId);
-		const { run, meta } = stored;
-		try {
-			run.cancel(text("reason", reason, this.maxRefChars));
-		} catch (e) {
-			if (e instanceof InvalidTransition) throw conflict(e.message);
-			throw e;
-		}
-		this.store.save(this.owner(ownerId), run, meta, stored.revision);
-		return this.view(run, meta);
+		const l = this.load(ownerId, runId);
+		cancel(l.run, text("reason", reason, this.maxRefChars));
+		return this.save(l);
 	}
 
 	deleteRun(ownerId: string, runId: unknown): JsonObject {
@@ -326,6 +258,128 @@ export class HostEngine {
 			throw e;
 		}
 		return { run_id: id, deleted: true };
+	}
+
+	// ---------------------------------------------------------------- stage effects
+
+	private ctx(run: RunState): ContractContext {
+		return {
+			policy: this.textPolicy, maxText: this.maxTextChars, level: run.level, classificationUnknown: run.classification_unknown,
+			ledger: run.ledger, evidence: new Set(run.evidence.map((e) => e.id)),
+		};
+	}
+
+	private applyStage(run: RunState, stage: Stage, data: Record<string, unknown>, ref: string): void {
+		const ctx = this.ctx(run);
+		switch (stage) {
+			case "QUERY":
+				run.ledger.query = queryContract(data, ctx);
+				break;
+			case "CLASSIFY": {
+				const { slice, level } = classifyContract(data, ctx, STAKES_FLOOR);
+				const fingerprint = digest(JSON.stringify(slice.requirements.map((r) => [r.id, r.text.sha256, r.importance, r.items.map((i) => i.name.sha256), r.max_age_days])));
+				const previous = run.ledger.classify;
+				if (previous) {
+					const before = digest(JSON.stringify(previous.requirements.map((r) => [r.id, r.text.sha256, r.importance, r.items.map((i) => i.name.sha256), r.max_age_days])));
+					if (before !== fingerprint) {
+						run.requirement_revisions += 1;
+						event(run, "REQUIREMENTS_REVISED", { revision: run.requirement_revisions, before: previous.requirements.length, after: slice.requirements.length });
+					}
+				}
+				run.ledger.classify = slice;
+				if (typeof data.intent === "string" && /^[A-Z_]{2,32}$/.test(data.intent)) run.intent = data.intent;
+				if (run.classification_unknown) event(run, "CLASSIFICATION_DECLARED", { level: slice.declared_level, stakes: slice.stakes });
+				raiseLevel(run, level, "CLASSIFY");
+				break;
+			}
+			case "SELECT_METHODS":
+				run.ledger.methods = methodsContract(data, ctx);
+				break;
+			case "ASSESS_COMPLEXITY": {
+				const { slice, level } = complexityContract(data, ctx);
+				run.ledger.complexity = slice;
+				raiseLevel(run, level, "ASSESS_COMPLEXITY");
+				break;
+			}
+			case "IDENTIFY_CAPABILITIES":
+				run.ledger.capabilities = capabilitiesContract(data);
+				break;
+			case "PLAN":
+				run.ledger.plan = planContract(data, ctx);
+				break;
+			case "EXECUTE":
+				run.ledger.execution = executeContract(data, ctx);
+				break;
+			case "EVALUATE_EVIDENCE":
+				run.ledger.evaluation = evaluationContract(data, ctx);
+				break;
+			case "STRESS_TEST":
+				run.ledger.stress = stressContract(data, ctx);
+				break;
+			case "OPTIMIZE": {
+				const slice = optimizeContract(data, ctx);
+				run.ledger.optimize = slice;
+				completeStage(run, ref, { changed: slice.changed });
+				if (optimizeOutcome(run, slice.changed, slice.fingerprint) === "deliver") advance(run);
+				return;
+			}
+			case "DELIVER": {
+				const delivery = deliveryContract(data, ctx);
+				const required = this.requiredDisclosures(run);
+				const missing: string[] = [];
+				const need = (field: keyof typeof required, given: string[]) => {
+					const absent = required[field].filter((x) => !given.includes(x));
+					if (absent.length) missing.push(`data.${field}: ${absent.join(", ")}`);
+				};
+				need("unmet_requirements", delivery.unmet_requirements);
+				need("missing_capabilities", delivery.missing_capabilities);
+				need("unverified_assumptions", delivery.unverified_assumptions);
+				need("broken_scenarios", delivery.broken_scenarios);
+				if (missing.length) throw invalid(`DELIVER must disclose what is not achieved or not verified. Missing: ${missing.join("; ")}`);
+				run.ledger.delivery = delivery;
+				const limitations = this.engineLimitations(run);
+				const validated = run.stage_status.VALIDATE === "COMPLETED";
+				const disclosed = Object.values(required).some((v) => v.length > 0) || delivery.limitations.length > 0;
+				completeStage(run, ref);
+				run.status = !validated ? "DELIVERED_UNVERIFIED" : limitations.length || disclosed ? "DELIVERED_WITH_LIMITATIONS" : "COMPLETED";
+				event(run, "RUN_DELIVERED", { status: run.status, engine_limitations: limitations as unknown as Json });
+				return;
+			}
+			default:
+				break;
+		}
+		completeStage(run, ref);
+		advance(run);
+	}
+
+	/** What DELIVER must disclose, computed from the ledger and the last validation. */
+	private requiredDisclosures(run: RunState): { unmet_requirements: string[]; missing_capabilities: string[]; unverified_assumptions: string[]; broken_scenarios: string[] } {
+		const last = run.verifications[run.verifications.length - 1];
+		const validated = run.stage_status.VALIDATE === "COMPLETED";
+		const requirements = run.ledger.classify?.requirements ?? [];
+		let unmet: string[] = [];
+		if (validated && last) {
+			const met = new Set((last.answers as unknown as { id: string; met: unknown }[]).filter((a) => a.met === true).map((a) => a.id));
+			unmet = requirements.filter((r) => !met.has(r.id)).map((r) => r.id);
+		}
+		const caps = run.ledger.capabilities;
+		const plan = run.ledger.plan?.operations ?? [];
+		const missingCaps = caps ? (plan.length ? [...new Set(plan.map((o) => o.capability).filter((c) => caps.missing.includes(c)))] : caps.missing) : [];
+		const assumptions = (run.ledger.evaluation?.assumptions ?? []).filter((a) => a.status !== "verified").map((a) => a.id);
+		const scenarios = (run.ledger.stress?.scenarios ?? []).filter((s) => s.outcome !== "survives").map((s) => s.id);
+		return { unmet_requirements: unmet, missing_capabilities: missingCaps, unverified_assumptions: assumptions, broken_scenarios: scenarios };
+	}
+
+	/** Limitations the engine itself records (not left to the host). */
+	private engineLimitations(run: RunState): string[] {
+		const out: string[] = [];
+		if (run.optimize.stopped) out.push(`OPTIMIZE loop stopped (${run.optimize.stopped}) after ${run.optimize.cycles} cycle(s)`);
+		if (run.optimize.unvalidated_change) out.push("the last OPTIMIZE revision was not validated again");
+		const reports = new Map((run.ledger.execution?.operations ?? []).map((o) => [o.id, o.status]));
+		const notDone = (run.ledger.plan?.operations ?? []).filter((o) => reports.get(o.id) !== "done").map((o) => o.id);
+		if (notDone.length) out.push(`planned operations not done: ${notDone.join(", ")}`);
+		if (run.requirement_revisions) out.push(`requirements were revised ${run.requirement_revisions} time(s) after first registration`);
+		return out;
 	}
 
 	// ---------------------------------------------------------------- quotas, listing, profile (WS32 P0.3, P0.5, P0.8)
@@ -377,22 +431,19 @@ export class HostEngine {
 
 	listRuns(ownerId: unknown, args: { limit?: unknown; cursor?: unknown }): JsonObject {
 		const owner = this.owner(ownerId);
-		let limit = 20;
+		let n = 20;
 		if (args.limit !== undefined && args.limit !== null) {
 			if (typeof args.limit !== "number" || !Number.isInteger(args.limit) || args.limit < 1 || args.limit > LIST_MAX) {
 				throw invalid(`limit must be an integer from 1 to ${LIST_MAX}`);
 			}
-			limit = args.limit;
+			n = args.limit;
 		}
 		let after: { updated_at: string; run_id: string } | undefined;
 		if (args.cursor !== undefined && args.cursor !== null) after = decodeCursor(text("cursor", args.cursor, 512));
-		const runs = this.store.list(owner, limit + 1, after);
-		const page = runs.slice(0, limit);
+		const runs = this.store.list(owner, n + 1, after);
+		const page = runs.slice(0, n);
 		const last = page[page.length - 1];
-		return {
-			runs: page as unknown as Json[],
-			next_cursor: runs.length > limit && last ? encodeCursor(last.updated_at, last.run_id) : null,
-		};
+		return { runs: page as unknown as Json[], next_cursor: runs.length > n && last ? encodeCursor(last.updated_at, last.run_id) : null };
 	}
 
 	profile(ownerId: unknown): JsonObject {
@@ -400,84 +451,61 @@ export class HostEngine {
 		return { id: this.store.profileId(this.owner(ownerId), () => randomHex(16)) };
 	}
 
-	// ---------------------------------------------------------------- verification gate
-
-	private gate(run: PipelineRun, meta: JsonObject, criteria: unknown): { checks: JsonObject[]; recorded: JsonObject[] } {
-		if (!Array.isArray(criteria)) throw invalid("criteria must be a list");
-		if (criteria.length > this.maxCriteria) throw limit(`At most ${this.maxCriteria} criteria are allowed`);
-		const evidence = new Set(this.evidence(run).map((e) => e.id));
-		const actions = this.actions(run);
-		const allIds = new Set([...evidence, ...actions.map((a) => a.id)]);
-		const checks: JsonObject[] = [];
-
-		const before = STAGE_ORDER.slice(0, STAGE_ORDER.indexOf("VERIFICATION"));
-		const open = before.filter((s) => !["COMPLETED", "SKIPPED_WITH_REASON"].includes(run.stage_status[s]));
-		checks.push({ check: "prior_stages_closed", passed: open.length === 0, detail: open });
-
-		if (meta.intent === "RESEARCH") checks.push({ check: "research_has_sources", passed: evidence.size > 0, detail: evidence.size });
-		if (meta.intent === "EXECUTION") {
-			const unresolved = unresolvedActions(actions);
-			checks.push({ check: "execution_has_actions", passed: actions.length > 0, detail: actions.length });
-			checks.push({ check: "no_unresolved_failed_actions", passed: unresolved.length === 0, detail: unresolved });
-		}
-
-		const recorded: JsonObject[] = [];
-		const problems: string[] = [];
-		const dangling: string[] = [];
-		const cited: [number, Set<string>][] = [];
-		criteria.forEach((item: unknown, index: number) => {
-			if (typeof item !== "object" || item === null || Array.isArray(item)) throw invalid(`criteria[${index}] must be an object`);
-			const c = item as Record<string, unknown>;
-			const criterion = this.note(`criteria[${index}].criterion`, c.criterion, "state what must be true");
-			const refs = c.evidence_ids ?? [];
-			if (typeof c.passed !== "boolean") {
-				problems.push(`criteria[${index}]: passed must be true or false`);
-				return;
-			}
-			if (!Array.isArray(refs) || refs.some((r) => typeof r !== "string" || !EVIDENCE_ID.test(r))) {
-				problems.push(`criteria[${index}]: evidence_ids must be a list of ev-N identifiers`);
-				return;
-			}
-			if (c.passed && refs.length === 0) problems.push(`criteria[${index}]: a passed criterion must cite evidence`);
-			if (c.passed && refs.length > 0) cited.push([index, new Set(refs as string[])]);
-			if (!c.passed) problems.push(`criteria[${index}]: criterion reported as not met`);
-			for (const r of refs as string[]) if (!allIds.has(r)) dangling.push(r);
-			recorded.push({ criterion_sha256: digest(criterion), passed: c.passed, evidence_ids: [...(refs as string[])] });
-		});
-		checks.push({ check: "criteria_present", passed: criteria.length > 0, detail: criteria.length });
-		checks.push({ check: "criteria_met_with_evidence", passed: problems.length === 0, detail: problems });
-		checks.push({ check: "evidence_references_exist", passed: dangling.length === 0, detail: [...new Set(dangling)].sort() });
-		// One source may support several criteria, but each passed criterion needs at least one
-		// evidence ID of its own: citing the same record for everything does not pass the gate.
-		const shared: string[] = [];
-		for (const [index, refs] of cited) {
-			const others = new Set(cited.filter(([i]) => i !== index).flatMap(([, r]) => [...r]));
-			if (![...refs].some((r) => !others.has(r))) {
-				shared.push(`criteria[${index}]: cites no evidence of its own (every cited ID is also cited by another criterion)`);
-			}
-		}
-		checks.push({ check: "criteria_have_own_evidence", passed: shared.length === 0, detail: shared });
-		return { checks, recorded };
-	}
-
 	// ---------------------------------------------------------------- helpers
 
-	private note(name: string, value: unknown, hint = "explain why"): string {
+	private note(name: string, value: unknown): string {
 		const t = text(name, value, this.maxRefChars);
-		substantial(name, t, this.textPolicy.minNoteChars, this.textPolicy.minNoteWords, hint);
+		substantial(name, t, this.textPolicy.minNoteChars, this.textPolicy.minNoteWords, "explain why");
 		return t;
 	}
 
-	private checkSummary(run: PipelineRun, target: Stage, summary: string, norm: string): void {
+	private checkSummary(run: RunState, target: Stage, summary: string, norm: string): void {
 		const p = this.textPolicy;
 		substantial("summary", summary, p.minSummaryChars, p.minSummaryWords, "describe what was done in this stage");
 		if (!p.distinctSummaries) return;
 		const marker = `:norm:${norm}:`;
 		for (const e of run.events) {
-			if (e.event_type === "STAGE_COMPLETED" && e.stage !== target && String(e.details.result_ref ?? "").includes(marker)) {
+			if (e.type === "STAGE_COMPLETED" && e.stage !== target && String(e.details.result_ref ?? "").includes(marker)) {
 				throw invalid(`summary repeats the ${e.stage} summary: describe this stage's own work`);
 			}
 		}
+	}
+
+	private asOf(value: unknown): string | null {
+		if (value === undefined || value === null) return null;
+		const t = text("as_of", value, 40);
+		const ms = Date.parse(t);
+		if (!/^\d{4}-\d{2}-\d{2}([T ][0-9:.]+(Z|[+-]\d{2}:?\d{2})?)?$/.test(t) || Number.isNaN(ms)) throw invalid("as_of must be an ISO 8601 date such as 2026-11-26");
+		if (ms > this.now().getTime() + 86_400_000) throw invalid("as_of cannot be in the future");
+		return new Date(ms).toISOString();
+	}
+
+	private capture(run: RunState, type: string, sourceRef: string, claimSha: string | null, asOf: string | null, verification: EvidenceRecord["verification"], details: JsonObject): EvidenceRecord {
+		if (run.evidence.length >= this.maxEvidencePerRun) throw limit(`At most ${this.maxEvidencePerRun} evidence records per run`);
+		// Evidence and action receipts may be recorded at any time before the run ends, including
+		// after a failed validation (for example the action that fixes a failure, before re-entering).
+		if (TERMINAL.has(run.status)) throw conflict(`Run is ${run.status}`);
+		resume(run);
+		const e = event(run, "EVIDENCE_CAPTURED", { evidence_type: type, source_ref: sourceRef });
+		const record: EvidenceRecord = { id: `ev-${e.sequence}`, type, stage: run.current_stage, source_ref: sourceRef, claim_sha256: claimSha, as_of: asOf, verification, details };
+		run.evidence.push(record);
+		return record;
+	}
+
+	/** Engine-created receipts (rigorx_compute, rigorx_check_source) use this entry point. */
+	captureEngineReceipt(ownerId: string, runId: unknown, type: string, sourceRef: string, details: JsonObject): JsonObject {
+		if (!ENGINE_TYPES.has(type) || type === ACTION) throw invalid(`Not an engine receipt type: ${type}`);
+		const l = this.load(ownerId, runId);
+		const e = this.capture(l.run, type, sourceRef, null, null, "ENGINE_VERIFIED", details);
+		return { evidence_id: e.id, ...this.save(l) };
+	}
+
+	/** Read access for engine tools (for example the source of an evidence record to check). */
+	evidenceRecord(ownerId: string, runId: unknown, evidenceId: string): EvidenceRecord {
+		const l = this.load(ownerId, runId);
+		const e = l.run.evidence.find((x) => x.id === evidenceId);
+		if (!e) throw invalid(`${evidenceId} does not exist in this run`);
+		return e;
 	}
 
 	private owner(ownerId: unknown): string {
@@ -490,13 +518,7 @@ export class HostEngine {
 		return runId;
 	}
 
-	private stage(value: unknown): Stage {
-		if (!isStage(value)) throw invalid(`Unknown stage: ${JSON.stringify(value)}`);
-		return value;
-	}
-
-	private load(ownerId: unknown, runId: unknown) {
-		const owner = this.owner(ownerId);
+	private loadAny(owner: string, runId: unknown) {
 		try {
 			return this.store.load(owner, this.runId(runId));
 		} catch (e) {
@@ -505,86 +527,96 @@ export class HostEngine {
 		}
 	}
 
-	private activate(run: PipelineRun): void {
-		if (run.status === "BLOCKED") {
-			run.resumeBlocked();
-			run.beginStage();
-		} else if (run.status === "PARTIAL") {
-			run.beginStage();
-		}
-		if (run.status !== "IN_PROGRESS") throw conflict(`Run is ${run.status}`);
+	private load(ownerId: unknown, runId: unknown): Loaded {
+		const owner = this.owner(ownerId);
+		const stored = this.loadAny(owner, runId);
+		if (!isRunState(stored.snapshot)) throw conflict(V1_READ_ONLY);
+		return { run: stored.snapshot, meta: stored.meta, revision: stored.revision, owner };
 	}
 
-	private advance(run: PipelineRun): void {
-		if (run.status === "IN_PROGRESS" && run.stage_status[run.current_stage] === "READY") run.beginStage();
+	private save(l: Loaded): JsonObject {
+		l.meta.level = l.run.level;
+		l.meta.intent = l.run.intent;
+		l.revision = this.store.save(l.owner, l.run.run_id, l.run as unknown as JsonObject, l.meta, l.revision);
+		return this.view(l.run);
 	}
 
-	private capture(run: PipelineRun, evidenceType: string, sourceRef: string, metadata: JsonObject): PipelineEvent {
-		if (this.evidence(run).length + this.actions(run).length >= this.maxEvidencePerRun) {
-			throw limit(`At most ${this.maxEvidencePerRun} evidence records per run`);
-		}
-		this.activate(run);
-		return run.recordEvidence(evidenceType, sourceRef, metadata);
-	}
-
-	private evidenceEvents(run: PipelineRun): PipelineEvent[] {
-		return run.events.filter((e) => e.event_type === "EVIDENCE_CAPTURED");
-	}
-
-	private evidence(run: PipelineRun): { id: string; type: string; stage: string }[] {
-		return this.evidenceEvents(run)
-			.filter((e) => e.details.evidence_type !== ACTION_EVIDENCE_TYPE)
-			.map((e) => ({ id: `ev-${e.sequence}`, type: String(e.details.evidence_type), stage: e.stage }));
-	}
-
-	private actions(run: PipelineRun): Action[] {
-		return this.evidenceEvents(run)
-			.filter((e) => e.details.evidence_type === ACTION_EVIDENCE_TYPE)
-			.map((e) => {
-				const m = (e.details.metadata ?? {}) as JsonObject;
-				const a: Action = { id: `ev-${e.sequence}`, tool_name: String(m.tool_name), status: String(m.status) };
-				if (m.resolves) a.resolves = String(m.resolves);
-				return a;
-			});
-	}
-
-	private view(run: PipelineRun, meta: JsonObject): JsonObject {
-		const actions = this.actions(run);
-		const active = run.status !== "COMPLETED" && run.status !== "CANCELLED";
-		const verifications = (meta.verifications as Json[] | undefined) ?? [];
+	private view(run: RunState): JsonObject {
+		const active = !TERMINAL.has(run.status);
+		const actions = run.evidence.filter((e) => e.type === ACTION).map((a) => {
+			const x: JsonObject = { id: a.id, tool_name: a.details.tool_name ?? null, status: a.details.status ?? null };
+			if (a.details.resolves) x.resolves = a.details.resolves;
+			return x;
+		});
+		const last = run.verifications[run.verifications.length - 1];
 		let guidance: string | null = null;
-		if (run.status === "VERIFICATION_FAILED") guidance = FAILED_GUIDANCE;
+		if (run.status === "VALIDATION_FAILED") guidance = FAILED_GUIDANCE;
 		else if (active) guidance = STAGE_GUIDANCE[run.current_stage];
-		return {
+		const requirements = (run.ledger.classify?.requirements ?? []).map((r) => ({ id: r.id, importance: r.importance, items: r.items.map((i) => i.id), max_age_days: r.max_age_days }));
+		const view: JsonObject = {
 			run_id: run.run_id,
+			engine_protocol_version: run.protocol,
 			status: run.status,
 			current_stage: active ? run.current_stage : null,
-			stage_status: Object.fromEntries(STAGE_ORDER.map((s) => [s, run.stage_status[s]])),
+			stage_status: Object.fromEntries(STAGES.map((s) => [s, run.stage_status[s]])),
+			level: run.level,
+			intent: run.intent,
+			classification_unknown: run.classification_unknown,
+			mandatory_stages: mandatoryStages(run.level),
 			guidance,
-			route: { intent: meta.intent ?? null, level: meta.level ?? null, modes: meta.modes ?? [] },
-			reentries: { used: run.reentry_count, max: run.max_reentries },
-			evidence_count: this.evidence(run).length,
-			actions: actions.slice(-RECENT_ACTIONS) as unknown as Json[],
+			requirements: requirements as unknown as Json[],
+			ledger: {
+				methods: run.ledger.methods?.length ?? 0,
+				capabilities: run.ledger.capabilities ? { available: run.ledger.capabilities.available, missing: run.ledger.capabilities.missing } : null,
+				operations: (run.ledger.plan?.operations ?? []).map((o) => o.id),
+				claims: run.ledger.evaluation?.claims.length ?? 0,
+				assumptions: run.ledger.evaluation?.assumptions?.length ?? null,
+				scenarios: run.ledger.stress?.scenarios.length ?? 0,
+				requirement_revisions: run.requirement_revisions,
+			},
+			reentries: { ...run.reentries },
+			optimize: { cycles: run.optimize.cycles, max: run.optimize.max, stopped: run.optimize.stopped },
+			evidence_count: run.evidence.filter((e) => e.type !== ACTION).length,
+			actions: actions.slice(-RECENT_ACTIONS),
 			actions_total: actions.length,
-			actions_unresolved: unresolvedActions(actions),
-			verified: run.verification_accepted,
-			last_verification: verifications.length ? verifications[verifications.length - 1]! : null,
+			actions_unresolved: unresolvedActions(run.evidence),
+			verified: !!last && last.passed && run.stage_status.VALIDATE === "COMPLETED",
+			last_verification: last ? { gate_version: last.gate_version, passed: last.passed, checks: last.checks as unknown as Json[], levels: last.levels } : null,
 		};
+		if (active && run.current_stage === "DELIVER") view.requires = this.requiredDisclosures(run) as unknown as JsonObject;
+		if (!active && run.status !== "CANCELLED") view.limitations = this.engineLimitations(run);
+		return view;
 	}
 }
 
-// ---------------------------------------------------------------- RPC (port of engine_rpc.py)
+/** Read-only view of a protocol v1 run (eleven stages). */
+function v1View(snapshot: JsonObject, meta: JsonObject): JsonObject {
+	const run = PipelineRun.fromSnapshot(snapshot);
+	const active = run.status !== "COMPLETED" && run.status !== "CANCELLED";
+	const verifications = (meta.verifications as Json[] | undefined) ?? [];
+	const evidence = run.events.filter((e) => e.event_type === "EVIDENCE_CAPTURED");
+	return {
+		run_id: run.run_id,
+		engine_protocol_version: "1.0.0",
+		read_only: true,
+		status: run.status,
+		current_stage: active ? run.current_stage : null,
+		stage_status: Object.fromEntries(V1_STAGES.map((s) => [s, run.stage_status[s]])),
+		guidance: V1_READ_ONLY,
+		route: { intent: meta.intent ?? null, level: meta.level ?? null },
+		evidence_count: evidence.filter((e) => e.details.evidence_type !== ACTION).length,
+		actions_total: evidence.filter((e) => e.details.evidence_type === ACTION).length,
+		verified: run.verification_accepted,
+		last_verification: verifications.length ? verifications[verifications.length - 1]! : null,
+	};
+}
+
+// ---------------------------------------------------------------- RPC
 
 export const RUN_OPERATIONS = new Set([
 	"start_run", "get_run", "submit_stage", "record_evidence", "report_action", "verify", "reenter", "cancel_run", "delete_run",
 	"list_runs", "usage", "profile",
 ]);
-
-/** FAILED or BLOCKED actions that no later EXECUTED action resolves. */
-function unresolvedActions(actions: Action[]): string[] {
-	const resolved = new Set(actions.filter((a) => a.resolves && a.status === "EXECUTED").map((a) => a.resolves as string));
-	return actions.filter((a) => a.status !== "EXECUTED" && !resolved.has(a.id)).map((a) => a.id);
-}
 
 function encodeCursor(updatedAt: string, runId: string): string {
 	return btoa(JSON.stringify([updatedAt, runId])).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
@@ -617,7 +649,7 @@ export function dispatch(engine: HostEngine, ownerId: string, operation: string,
 				case "submit_stage": return engine.submitStage(ownerId, a.run_id, a);
 				case "record_evidence": return engine.recordEvidence(ownerId, a.run_id, a);
 				case "report_action": return engine.reportAction(ownerId, a.run_id, a);
-				case "verify": return engine.verify(ownerId, a.run_id, a.criteria);
+				case "verify": return engine.verify(ownerId, a.run_id, a.requirements);
 				case "reenter": return engine.reenter(ownerId, a.run_id, a);
 				case "cancel_run": return engine.cancelRun(ownerId, a.run_id, a.reason);
 				case "list_runs": return engine.listRuns(ownerId, a);
@@ -633,3 +665,5 @@ export function dispatch(engine: HostEngine, ownerId: string, operation: string,
 		throw e;
 	}
 }
+
+export { isMandatory, storedNote };

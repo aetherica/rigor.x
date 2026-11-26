@@ -49,6 +49,40 @@ def _target(options: argparse.Namespace, tmp: str):
     return StdioServerParameters(command=sys.executable, args=args, env=env)
 
 
+async def walk_protocol_v2(client) -> None:
+    """A full L03 run of engine protocol 2: stage contracts, evidence, gate and disclosure."""
+    run = show("start run", await client.call_tool("rigorx_start_run", {"task": "Research what gravity is, with sources"}))
+    if run.get("engine_protocol_version") != "2.0.0":
+        print(f"  ✗ expected engine protocol 2.0.0, got {run.get('engine_protocol_version')}")
+        raise SystemExit(1)
+    run_id = run["run_id"]
+    print(f"    level={run['level']} mandatory={','.join(run['mandatory_stages'])}")
+
+    async def submit(stage: str, summary: str, data: dict | None = None) -> dict:
+        return show(stage, await client.call_tool("rigorx_submit_stage", {"run_id": run_id, "stage": stage, "outcome": "completed", "summary": summary, "data": data or {}}))
+
+    await submit("QUERY", "A physics question about gravity; an encyclopedia source is available to cite.")
+    await submit("CLASSIFY", "Objective, deliverable and one pre-registered requirement are declared.", {
+        "objective": "Explain what gravity is in plain words",
+        "deliverable": "A short answer that cites one source",
+        "level": "L03_DEEP", "stakes": "low",
+        "requirements": [{"id": "R1", "text": "The answer cites a source for its definition"}],
+    })
+    await submit("SELECT_METHODS", "One method selected: read a reference source and summarize it.", {"methods": [{"name": "source review", "reason": "a reference source defines the term"}]})
+    await submit("IDENTIFY_CAPABILITIES", "Web search is available; nothing else is needed for this task.", {"available": ["web_search"], "missing": []})
+    await submit("PLAN", "One operation: look up the definition of gravity in a reference source.", {"operations": [{"id": "op1", "capability": "web_search", "depends_on": [], "completion_condition": "A reference source for the definition is recorded", "requirement_ids": ["R1"]}]})
+    evidence = show("record evidence", await client.call_tool("rigorx_record_evidence", {"run_id": run_id, "source_ref": "https://en.wikipedia.org/wiki/Gravity", "claim": "Masses attract each other through gravity", "as_of": "2026-11-26"}))
+    ev = evidence["evidence_id"]
+    await submit("EXECUTE", "The lookup was done and the reference source was recorded as evidence.", {"operations": [{"id": "op1", "status": "done", "evidence_ids": [ev]}]})
+    await submit("EVALUATE_EVIDENCE", "The one claim rests on the recorded source and is marked as supported.", {"claims": [{"id": "C1", "text": "Gravity is the mutual attraction between masses", "status": "SUPPORTED", "evidence_ids": [ev], "requirement_ids": ["R1"]}]})
+    verdict = show("verify", await client.call_tool("rigorx_verify", {"run_id": run_id, "requirements": [{"id": "R1", "met": True, "evidence_ids": [ev]}]}))
+    print(f"    {verdict['wording']} levels={verdict['levels']}")
+    done = await submit("DELIVER", "Answer: gravity is the mutual attraction between masses, per the cited source.")
+    print(f"\nRun status: {done['status']}")
+    if done["status"] != "COMPLETED":
+        raise SystemExit(1)
+
+
 async def main(options: argparse.Namespace) -> None:
     with tempfile.TemporaryDirectory() as tmp:
         async with Client(_target(options, tmp), mode=options.mode) as client:
@@ -68,6 +102,10 @@ async def main(options: argparse.Namespace) -> None:
                 else:
                     print(f"    {show('resolve /eli5', resolved)['applied_modifiers']}")
 
+            if options.url:
+                # The Worker serves engine protocol 2 (twelve stages); the local Python server stays on protocol 1.
+                await walk_protocol_v2(client)
+                return
             run = show("start run", await client.call_tool("rigorx_start_run", {"task": "What is gravity?"}))
             run_id = run["run_id"]
             show("CONTEXT", await client.call_tool("rigorx_submit_stage", {"run_id": run_id, "stage": "CONTEXT", "outcome": "completed", "summary": "A physics question about gravity; one encyclopedia source is available."}))

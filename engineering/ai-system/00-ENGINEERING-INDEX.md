@@ -30,8 +30,9 @@
 - [Canonical 18 Functional Groups](functional-groups.json)
 - [Registry reconciliation & completion ledger](23-REGISTRY-RECONCILIATION-AND-COMPLETION-LEDGER.md)
 - [WS31 Host Plugin Architecture (DRAFT)](24-HOST-PLUGIN-ARCHITECTURE.md)
-- [WS32 Major Upgrade Spec and ADRs (DRAFT)](25-MAJOR-UPGRADE-SPEC-AND-ADRS.md) and [2026-11-25 session handoff](26-SESSION-HANDOFF-2026-11-25.md) (on branch `ccr-5630b1ba-fp2mi5` until merged)
+- [WS32 Major Upgrade Spec and ADRs (DRAFT)](25-MAJOR-UPGRADE-SPEC-AND-ADRS.md) and [2026-11-25 session handoff](26-SESSION-HANDOFF-2026-11-25.md) 
 - [WS32 Cognitive OS reassessment: audit, target architecture, roadmap (DRAFT, 2026-11-26)](27-COGNITIVE-OS-REASSESSMENT-2026-11-26.md)
+- [WS32 Engine protocol v2 specification and ADR-012 (implemented)](28-ENGINE-PROTOCOL-V2.md)
 
 ## Registry alignment (WS18)
 - The candidate slash-command library's 18 taxonomy groups are distinct from the canonical 18 Functional Groups.

@@ -70,7 +70,7 @@ test("anonymous callers get stateless tools only; owners run the engine", async 
 	assert.match(runId, /^rx_[A-Za-z0-9_-]{32}$/);
 	const other = await handleMessage(call(4, "rigorx_get_run", { run_id: runId }), b, "owner-b");
 	assert.match((other!.result as any).content[0].text, /^RUN_NOT_FOUND/);
-	const wrong = await handleMessage(call(5, "rigorx_submit_stage", { run_id: runId, stage: "INTENT", outcome: "completed", summary: "x" }), b, "owner-a");
+	const wrong = await handleMessage(call(5, "rigorx_submit_stage", { run_id: runId, stage: "CLASSIFY", outcome: "completed", summary: "x" }), b, "owner-a");
 	assert.match((wrong!.result as any).content[0].text, /^STAGE_CONFLICT/);
 	const missing = await handleMessage(call(6, "rigorx_get_run", {}), b, "owner-a");
 	assert.match((missing!.result as any).content[0].text, /^INVALID_REQUEST/);

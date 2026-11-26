@@ -28,8 +28,8 @@ test("daily call quota refuses the call after the limit, keeps reads and deletes
 	const run = call("google:a", "start_run", { task: "quota test task" });
 	assert.equal(run.ok, true);
 	const id = (run as any).result.run_id;
-	for (let i = 0; i < 2; i++) assert.equal(call("google:a", "reenter", { run_id: id, target_stage: "CONTEXT", trigger: "t", reason: "r" }).ok, true);
-	const refused = call("google:a", "reenter", { run_id: id, target_stage: "CONTEXT", trigger: "t", reason: "r" });
+	for (let i = 0; i < 2; i++) assert.equal(call("google:a", "reenter", { run_id: id, target_stage: "QUERY", trigger: "t", reason: "r" }).ok, true);
+	const refused = call("google:a", "reenter", { run_id: id, target_stage: "QUERY", trigger: "t", reason: "r" });
 	assert.equal(refused.ok, false);
 	assert.equal((refused as any).code, "QUOTA_EXCEEDED");
 	assert.match((refused as any).message, /3 tool calls.*2026-11-27T00:00:00\.000Z/);
@@ -43,7 +43,7 @@ test("daily call quota refuses the call after the limit, keeps reads and deletes
 	assert.equal(call("google:b", "start_run", { task: "other owner task" }).ok, true);
 	// A new UTC day starts a new counter.
 	c.advance(60_000);
-	assert.equal(call("google:a", "reenter", { run_id: id, target_stage: "CONTEXT", trigger: "t", reason: "r" }).ok, true);
+	assert.equal(call("google:a", "reenter", { run_id: id, target_stage: "QUERY", trigger: "t", reason: "r" }).ok, true);
 	assert.equal((call("google:a", "usage") as any).result.day, "2026-11-27");
 	assert.equal(call("google:a", "delete_run", { run_id: id }).ok, true);
 });
@@ -97,8 +97,8 @@ test("list_runs pages newest first, only the caller's runs, with a stable cursor
 	assert.deepEqual([...listed].sort(), [...ids].sort()); // all five, none of owner b
 	const first = page1.runs[0];
 	assert.equal(first.status, "IN_PROGRESS");
-	assert.equal(first.current_stage, "CONTEXT");
-	assert.equal(first.engine_protocol_version, "1.0.0");
+	assert.equal(first.current_stage, "QUERY");
+	assert.equal(first.engine_protocol_version, "2.0.0");
 	assert.equal((call("google:a", "list_runs", { limit: 0 }) as any).code, "INVALID_REQUEST");
 	assert.equal((call("google:a", "list_runs", { limit: 51 }) as any).code, "INVALID_REQUEST");
 	assert.equal((call("google:a", "list_runs", { cursor: "not-a-cursor" }) as any).code, "INVALID_REQUEST");

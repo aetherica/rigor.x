@@ -36,7 +36,7 @@ export class WriteMeter extends DurableObject<Env> {
 		};
 		const start = measure("start_run", { task: "measure rows written per call" });
 		const id = start.result.run_id;
-		const submit = measure("submit_stage", { run_id: id, stage: "CONTEXT", outcome: "completed", summary: "Collected the context, constraints and the available tools for this run." });
+		const submit = measure("submit_stage", { run_id: id, stage: "QUERY", outcome: "completed", summary: "Collected the context, constraints and the available tools for this run." });
 		const evidence = measure("record_evidence", { run_id: id, source_ref: "https://example.org/a", claim: "The source supports one specific claim here" });
 		const action = measure("report_action", { run_id: id, tool_name: "bash", status: "EXECUTED" });
 		const read = measure("get_run", { run_id: id });

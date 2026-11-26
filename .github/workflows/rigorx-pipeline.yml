@@ -116,8 +116,6 @@ jobs:
       - name: Durable Object storage on workerd (migrations, quotas, listing, rows written)
         working-directory: deploy/cloudflare-ts
         run: node test/integration/run.mjs
-      - name: Parity fixtures still match the Python engine
-        run: PYTHONPATH=src python deploy/cloudflare-ts/scripts/parity_fixtures.py --check
       - name: Conformance with the official MCP SDK client (auto, handshake and stateless eras)
         run: |
           node --no-warnings --experimental-strip-types deploy/cloudflare-ts/scripts/dev-server.ts 8787 ci-token &

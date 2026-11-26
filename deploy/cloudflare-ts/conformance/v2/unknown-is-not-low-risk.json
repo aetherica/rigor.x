@@ -1,0 +1,168 @@
+{
+ "name": "unknown-is-not-low-risk",
+ "description": "WS32 N2 and directive §2.2 (Unknown is not Zero): a task with no router signal (here Bengali) is UNKNOWN with seed L02; CLASSIFY requires a declared level and stakes; critical stakes raise the level to L05, where all twelve stages are mandatory and none can be skipped.",
+ "steps": [
+  {
+   "op": "start_run",
+   "args": {
+    "task": "আমার ব্যাংক অ্যাকাউন্টের পাসওয়ার্ড ফাঁস হয়েছে, প্রোডাকশন সার্ভার থেকে সব ডেটা স্থায়ীভাবে মুছে ফেলতে হবে"
+   },
+   "expect": {
+    "ok": true,
+    "fields": {
+     "intent": "UNKNOWN",
+     "level": "L02_STANDARD",
+     "classification_unknown": true,
+     "mandatory_stages": [
+      "QUERY",
+      "CLASSIFY",
+      "PLAN",
+      "EXECUTE",
+      "VALIDATE",
+      "DELIVER"
+     ]
+    }
+   },
+   "capture": {
+    "run": "run_id"
+   }
+  },
+  {
+   "op": "submit_stage",
+   "args": {
+    "run_id": "$run",
+    "stage": "QUERY",
+    "outcome": "skipped",
+    "summary": "skip",
+    "reason": "the user wants an answer quickly today"
+   },
+   "expect": {
+    "ok": false,
+    "code": "STAGE_CONFLICT",
+    "message": "cannot be skipped"
+   }
+  },
+  {
+   "op": "submit_stage",
+   "args": {
+    "run_id": "$run",
+    "stage": "QUERY",
+    "outcome": "completed",
+    "summary": "ব্যবহারকারীর ব্যাংক পাসওয়ার্ড ফাঁস হয়েছে এবং প্রোডাকশন ডেটা মুছে ফেলার অনুরোধ এসেছে।"
+   },
+   "expect": {
+    "ok": true,
+    "fields": {
+     "current_stage": "CLASSIFY"
+    }
+   }
+  },
+  {
+   "op": "submit_stage",
+   "args": {
+    "run_id": "$run",
+    "stage": "CLASSIFY",
+    "outcome": "completed",
+    "summary": "লক্ষ্য, ফলাফল ও একটি পূর্বনির্ধারিত শর্ত ঘোষণা করা হয়েছে, কিন্তু স্তর নয়।",
+    "data": {
+     "objective": "ফাঁস হওয়া পাসওয়ার্ড নিয়ন্ত্রণ এবং মুছে ফেলার পরিকল্পনা",
+     "deliverable": "একটি ঘটনা-প্রতিক্রিয়া পরিকল্পনা",
+     "requirements": [
+      {
+       "id": "R1",
+       "text": "পাসওয়ার্ড বদলানোর আগে কোনো ডেটা মুছে ফেলা হবে না"
+      }
+     ]
+    }
+   },
+   "expect": {
+    "ok": false,
+    "code": "INVALID_REQUEST",
+    "message": "classification_unknown"
+   }
+  },
+  {
+   "op": "submit_stage",
+   "args": {
+    "run_id": "$run",
+    "stage": "CLASSIFY",
+    "outcome": "completed",
+    "summary": "লক্ষ্য, ফলাফল, শর্ত, স্তর ও ঝুঁকি (critical) এখন ঘোষণা করা হয়েছে।",
+    "data": {
+     "objective": "ফাঁস হওয়া পাসওয়ার্ড নিয়ন্ত্রণ এবং মুছে ফেলার পরিকল্পনা",
+     "deliverable": "একটি ঘটনা-প্রতিক্রিয়া পরিকল্পনা",
+     "level": "L02_STANDARD",
+     "stakes": "critical",
+     "language": "bn",
+     "requirements": [
+      {
+       "id": "R1",
+       "text": "পাসওয়ার্ড বদলানোর আগে কোনো ডেটা মুছে ফেলা হবে না"
+      }
+     ]
+    }
+   },
+   "expect": {
+    "ok": true,
+    "fields": {
+     "level": "L05_CRITICAL",
+     "current_stage": "SELECT_METHODS",
+     "mandatory_stages": [
+      "QUERY",
+      "CLASSIFY",
+      "SELECT_METHODS",
+      "ASSESS_COMPLEXITY",
+      "IDENTIFY_CAPABILITIES",
+      "PLAN",
+      "EXECUTE",
+      "EVALUATE_EVIDENCE",
+      "VALIDATE",
+      "STRESS_TEST",
+      "OPTIMIZE",
+      "DELIVER"
+     ]
+    }
+   }
+  },
+  {
+   "op": "submit_stage",
+   "args": {
+    "run_id": "$run",
+    "stage": "SELECT_METHODS",
+    "outcome": "completed",
+    "summary": "ঘটনা-প্রতিক্রিয়ার ধাপ এবং ঝুঁকি বিশ্লেষণ পদ্ধতি বেছে নেওয়া হয়েছে।",
+    "data": {
+     "methods": [
+      {
+       "name": "incident response",
+       "reason": "একটি নিরাপত্তা ঘটনা চলমান আছে"
+      }
+     ]
+    }
+   },
+   "expect": {
+    "ok": true,
+    "fields": {
+     "current_stage": "ASSESS_COMPLEXITY"
+    }
+   }
+  },
+  {
+   "op": "submit_stage",
+   "args": {
+    "run_id": "$run",
+    "stage": "ASSESS_COMPLEXITY",
+    "outcome": "completed",
+    "summary": "জটিলতা যাচাই করা হয়েছে; স্তর কমানোর চেষ্টা করা হচ্ছে।",
+    "data": {
+     "level": "L03_DEEP"
+    }
+   },
+   "expect": {
+    "ok": false,
+    "code": "INVALID_REQUEST",
+    "message": "only rise"
+   }
+  }
+ ]
+}

@@ -34,12 +34,14 @@ export const UNSUPPORTED_PROTOCOL_VERSION = -32022;
 export const LIST_TTL_MS = 3_600_000;
 
 export const SERVER_INSTRUCTIONS =
-	"RIGOR-X is a control-plane engine for rigorous multi-step work. For a non-trivial task, call " +
-	"rigorx_start_run, then work through the stages in order with rigorx_submit_stage, following the " +
-	"guidance each response returns. Record sources with rigorx_record_evidence and actions you take with " +
-	"other tools with rigorx_report_action. Pass the gate with rigorx_verify before deciding. RIGOR-X checks " +
-	"structure and completeness, not truth: report results honestly, including failures. " +
-	"rigorx_route and rigorx_resolve_commands work without a run.";
+	"RIGOR-X is a control-plane engine for rigorous multi-step work (engine protocol 2: twelve stages QUERY, " +
+	"CLASSIFY, SELECT_METHODS, ASSESS_COMPLEXITY, IDENTIFY_CAPABILITIES, PLAN, EXECUTE, EVALUATE_EVIDENCE, VALIDATE, " +
+	"STRESS_TEST, OPTIMIZE, DELIVER; the level L01-L06 decides which are mandatory, the others are skipped automatically). " +
+	"Call rigorx_start_run, then submit each current stage with rigorx_submit_stage, putting the stage's structured " +
+	"fields in data as the returned guidance says. Pre-register the acceptance requirements at CLASSIFY; they cannot " +
+	"be changed at VALIDATE. Record sources with rigorx_record_evidence and actions you take with other tools with " +
+	"rigorx_report_action, failures included. Pass VALIDATE with rigorx_verify. DELIVER must disclose what was not met " +
+	"or not verified. RIGOR-X checks structure and completeness, not truth: report results honestly.";
 
 /** Engine operations the MCP layer needs; implemented locally or over RPC to a Durable Object. */
 export interface EngineBackend {
@@ -73,25 +75,25 @@ export const TOOLS: ToolSpec[] = [
 		description: "Resolve leading slash commands in text against the RIGOR-X catalogue. Stores nothing.",
 		properties: { text: str() }, required: ["text"] },
 	{ name: "rigorx_start_run", title: "Start a RIGOR-X run", hint: "additive", operation: "start_run",
-		description: "Start a run for a task. Returns run_id, the first stage and what it requires. The task text is stored only as a digest.",
+		description: "Start a run for a task (engine protocol 2). Returns run_id, the seed level, the mandatory stages and the first stage's guidance. The task text is stored only as a digest.",
 		properties: { task: str() }, required: ["task"] },
 	{ name: "rigorx_get_run", title: "Get run state", hint: "read", operation: "get_run",
 		description: "Current stage, stage statuses, guidance, evidence count, the 10 most recent reported actions (with the total and the IDs of unresolved failures) and re-entry budget.",
 		properties: { run_id: str() }, required: ["run_id"] },
 	{ name: "rigorx_submit_stage", title: "Submit stage result", hint: "additive", operation: "submit_stage",
-		description: "Submit the result of the current stage. outcome: completed, partial, blocked or skipped (partial, blocked and skipped need a reason of at least 15 characters and 3 words). A completed stage needs a summary of what was done in it: at least 40 characters and 6 words, not a repeat of another stage's summary. VERIFICATION is passed only with rigorx_verify.",
-		properties: { run_id: str(), stage: str(), outcome: str(), summary: str(), reason: optStr() }, required: ["run_id", "stage", "outcome", "summary"] },
+		description: "Submit the current stage. outcome: completed, partial or blocked (partial and blocked need a reason of at least 15 characters and 3 words); mandatory stages cannot be skipped. A completed stage needs a summary (at least 40 characters and 6 words, not a repeat of another stage's) and the stage's structured fields in data, as its guidance lists (for example CLASSIFY: objective, deliverable, requirements, level, stakes). VALIDATE is passed only with rigorx_verify.",
+		properties: { run_id: str(), stage: str(), outcome: str(), summary: str(), reason: optStr(), data: { anyOf: [{ type: "object", additionalProperties: true }, { type: "null" }], default: null, description: "Stage-specific structured fields (see the stage guidance)." } }, required: ["run_id", "stage", "outcome", "summary"] },
 	{ name: "rigorx_record_evidence", title: "Record evidence", hint: "additive", operation: "record_evidence",
-		description: "Record a source (URL, document ID, receipt) and the claim it supports (at least 15 characters and 3 words). Returns an evidence_id (ev-N) to cite in rigorx_verify. IDs are ledger sequence numbers, so they are not consecutive.",
-		properties: { run_id: str(), source_ref: str(), claim: str(), evidence_type: { type: "string", default: "SOURCE" } }, required: ["run_id", "source_ref", "claim"] },
+		description: "Record a source (URL, DOI, document ID, receipt) and the claim it supports (at least 15 characters and 3 words). as_of: the date the source's information refers to (ISO 8601), needed when a requirement sets max_age_days. Returns an evidence_id (ev-N) to cite in data and rigorx_verify. IDs are ledger sequence numbers, so they are not consecutive.",
+		properties: { run_id: str(), source_ref: str(), claim: str(), evidence_type: { type: "string", default: "SOURCE" }, as_of: optStr("ISO 8601 date, for example 2026-11-26") }, required: ["run_id", "source_ref", "claim"] },
 	{ name: "rigorx_report_action", title: "Report a host action", hint: "additive", operation: "report_action",
 		description: "Report an action you performed with another tool. status: EXECUTED, FAILED or BLOCKED. Use resolves=<ev-N> when a later action fixes an earlier failure. Recorded as host-reported, not verified.",
 		properties: { run_id: str(), tool_name: str(), status: str(), receipt_ref: optStr(), resolves: optStr() }, required: ["run_id", "tool_name", "status"] },
 	{ name: "rigorx_verify", title: "Run verification gate", hint: "additive", operation: "verify",
-		description: "Run the deterministic gate. criteria: list of {criterion, passed, evidence_ids}; each criterion at least 15 characters and 3 words. Every passed criterion must cite evidence IDs, including at least one that no other criterion cites. Result is 'structurally verified' at most, never a truth guarantee.",
-		properties: { run_id: str(), criteria: { type: "array", items: { type: "object", additionalProperties: true } } }, required: ["run_id", "criteria"] },
+		description: "Run the deterministic gate at VALIDATE. requirements: one answer per requirement registered at CLASSIFY: {id, met: true|false|\"partial\", evidence_ids, items?: [{id, evidence_ids}]}. Must-requirements must be met; each met requirement and each enumerated item needs evidence of its own; failed actions must be resolved; higher levels add claim-status, assumption, freshness, independent-source and computation checks. Reports a verification level per requirement; 'structurally verified' at most, never a truth guarantee.",
+		properties: { run_id: str(), requirements: { type: "array", items: { type: "object", additionalProperties: true } } }, required: ["run_id", "requirements"] },
 	{ name: "rigorx_reenter", title: "Return to an earlier stage", hint: "additive", operation: "reenter",
-		description: "Return to the current or an earlier stage within the re-entry budget, for example after a failed verification.",
+		description: "Return to the current or an earlier stage within the re-entry budget, for example after a failed validation; stages from the target on are done again. Changing the requirements means re-entering CLASSIFY (recorded as a revision).",
 		properties: { run_id: str(), target_stage: str(), trigger: str(), reason: str() }, required: ["run_id", "target_stage", "trigger", "reason"] },
 	{ name: "rigorx_cancel_run", title: "Cancel run", hint: "destructive", operation: "cancel_run",
 		description: "Cancel one of your runs. A cancelled run cannot be resumed.",

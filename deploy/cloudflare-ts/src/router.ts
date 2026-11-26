@@ -1,6 +1,7 @@
-// Port of src/rigorx/adaptive_router.py: deterministic, inspectable routing heuristics.
-// Parity with Python is checked against fixtures generated from the Python implementation.
-// Known difference: JavaScript `\b` is ASCII-only; Python's is Unicode-aware. Fixtures use ASCII text.
+// Deterministic, inspectable routing heuristics (seed only). The keyword lists are English, so a
+// task with no signal — every task in most other languages — is UNKNOWN, not "simple": its level
+// seed is L02_STANDARD and CLASSIFY must declare a level and stakes (WS32 N2, directive §2.2).
+// The level can only rise from here. Derived from src/rigorx/adaptive_router.py (frozen v1).
 
 export type TaskIntent =
 	| "INFORMATION" | "RESEARCH" | "ANALYSIS" | "DECISION" | "EXECUTION"
@@ -47,6 +48,9 @@ const RISK_PATTERNS = [
 	"medical", "health", "diagnos", "medication", "legal", "lawyer", "financial",
 	"investment", "banks?\\b", "security", "credential", "password", "privacy",
 	"safety", "emergency", "irreversible", "delete permanently", "production system",
+	// WS32 N2: security and incident vocabulary the original list missed ("authentication bypass" scored 0).
+	"authenticat", "authoriz", "bypass", "vulnerab", "exploit", "breach", "leak", "secret",
+	"tokens?\\b", "privilege", "malware", "incident", "encrypt",
 ];
 const HYPER_PATTERNS = ["hyper.?rigorous", "l06", "adversarial", "red.?team", "failure analysis", "stress test", "full audit", "forensic"];
 const LEVEL_TOKENS: Array<[AdaptiveLevel, string[]]> = [
@@ -106,7 +110,7 @@ export function route(prompt: string, overrideLevel?: AdaptiveLevel): AdaptivePr
 	let intent: TaskIntent = INTENT_ORDER.reduce((best, c) =>
 		scores[c] > scores[best] || (scores[c] === scores[best] && PRIORITY[c] > PRIORITY[best]) ? c : best,
 	);
-	if (scores[intent] === 0) intent = "INFORMATION";
+	if (scores[intent] === 0) intent = "UNKNOWN";
 
 	let modes = MODE_PATTERNS.filter(([, ps]) => ps.some((p) => wordStart(p).test(text))).map(([m]) => m);
 	if (!modes.length) modes = DEFAULT_MODES[intent];
@@ -132,6 +136,7 @@ export function route(prompt: string, overrideLevel?: AdaptiveLevel): AdaptivePr
 	else if (riskScore >= 1) level = "L05_CRITICAL";
 	else if ((intent === "TECHNICAL" || intent === "EXECUTION") && complexHits >= 1) level = "L04_COMPLEX";
 	else if (intent === "RESEARCH" || intent === "ANALYSIS" || intent === "DECISION" || complexHits >= 1) level = "L03_DEEP";
+	else if (intent === "UNKNOWN") level = "L02_STANDARD";
 	else if (words(text) <= 24 && intent === "INFORMATION") level = "L01_BASIC";
 	else level = "L02_STANDARD";
 

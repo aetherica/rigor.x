@@ -1,0 +1,92 @@
+{
+ "name": "l01-delivered-unverified",
+ "description": "ADR-003 L01: only QUERY, CLASSIFY, EXECUTE and DELIVER are mandatory; the other eight stages are skipped automatically with a recorded reason; without a validation the run ends DELIVERED_UNVERIFIED, never COMPLETED.",
+ "steps": [
+  {
+   "op": "start_run",
+   "args": {
+    "task": "What is gravity?"
+   },
+   "expect": {
+    "ok": true,
+    "fields": {
+     "intent": "INFORMATION",
+     "level": "L01_BASIC",
+     "classification_unknown": false
+    }
+   },
+   "capture": {
+    "run": "run_id"
+   }
+  },
+  {
+   "op": "submit_stage",
+   "args": {
+    "run_id": "$run",
+    "stage": "QUERY",
+    "outcome": "completed",
+    "summary": "A short definitional physics question; no prior context is needed."
+   },
+   "expect": {
+    "ok": true
+   }
+  },
+  {
+   "op": "submit_stage",
+   "args": {
+    "run_id": "$run",
+    "stage": "CLASSIFY",
+    "outcome": "completed",
+    "summary": "A basic information request: define gravity in two plain sentences.",
+    "data": {
+     "objective": "Define gravity in plain words for the user",
+     "deliverable": "Two plain sentences",
+     "level": "L01_BASIC",
+     "stakes": "low"
+    }
+   },
+   "expect": {
+    "ok": true,
+    "fields": {
+     "current_stage": "EXECUTE",
+     "stage_status.SELECT_METHODS": "AUTO_SKIPPED",
+     "stage_status.PLAN": "AUTO_SKIPPED"
+    }
+   }
+  },
+  {
+   "op": "submit_stage",
+   "args": {
+    "run_id": "$run",
+    "stage": "EXECUTE",
+    "outcome": "completed",
+    "summary": "The definition was written from general physics knowledge without tools."
+   },
+   "expect": {
+    "ok": true,
+    "fields": {
+     "current_stage": "DELIVER",
+     "stage_status.VALIDATE": "AUTO_SKIPPED",
+     "stage_status.OPTIMIZE": "AUTO_SKIPPED"
+    }
+   }
+  },
+  {
+   "op": "submit_stage",
+   "args": {
+    "run_id": "$run",
+    "stage": "DELIVER",
+    "outcome": "completed",
+    "summary": "Gravity is the attraction between masses; it keeps planets in orbit."
+   },
+   "expect": {
+    "ok": true,
+    "fields": {
+     "status": "DELIVERED_UNVERIFIED",
+     "verified": false,
+     "last_verification": null
+    }
+   }
+  }
+ ]
+}
