@@ -33,6 +33,14 @@
 			"id": "2c84dcf183d041bbb7dd8f98a4f4b1ad"
 		}
 	],
+	"d1_databases": [
+		{
+			"binding": "ACCOUNTS_DB",
+			"database_name": "aetherica-accounts",
+			"database_id": "e1453025-e6f2-4b9d-9d47-98b3980a2629",
+			"migrations_dir": "migrations/accounts"
+		}
+	],
 	"migrations": [
 		{
 			"tag": "v1",

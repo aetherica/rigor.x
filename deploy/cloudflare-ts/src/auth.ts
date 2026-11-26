@@ -1,19 +1,20 @@
-// OAuth for the MCP endpoint (WS31 phase P4).
+// OAuth for the MCP endpoint (WS31 phase P4), and the Aetherica account.
 //
 // This Worker is both the OAuth authorization server and the protected resource (/mcp), using
 // Cloudflare's workers-oauth-provider. The provider serves the metadata documents, /token,
 // /register (dynamic client registration) and Client ID Metadata Documents; this file owns the
-// interactive part: /authorize shows a consent page, then hands the user to Google, and
-// /oauth/google/callback finishes the grant.
+// interactive part: /authorize shows a consent page with the enabled sign-in methods (Google,
+// GitHub, ChatGPT), hands the user to that provider, and /oauth/<provider>/callback finishes the grant.
 //
-// OAuth access tokens issued by this provider are the only credential /mcp accepts. There is no
-// static or shared token (the WS31 spike token was removed in WS32 P0.1): every owner is a
-// Google account that signed in through /authorize.
+// An Aetherica account (accounts.ts) can have one sign-in of each kind; all lead to the same owner
+// storage. OAuth access tokens issued by this provider are the only credential /mcp accepts.
 //
 // Worker configuration:
-//   OAUTH_KV                  KV namespace for clients, grants and tokens (stored hashed/encrypted)
-//   GOOGLE_CLIENT_ID          secret: Google OAuth client ID (Web application)
-//   GOOGLE_CLIENT_SECRET      secret: Google OAuth client secret
+//   OAUTH_KV                          KV namespace for clients, grants and tokens (stored hashed/encrypted)
+//   ACCOUNTS_DB                       D1 database: the account registry (optional; without it no linking)
+//   GOOGLE_CLIENT_ID / _SECRET        secrets: Google OAuth client (Web application)
+//   GITHUB_CLIENT_ID / _SECRET        secrets: GitHub OAuth app
+//   OPENAI_CLIENT_ID / _SECRET        secrets: OpenAI "Sign in with ChatGPT" client
 
 import {
 	AuthorizationError,
@@ -22,31 +23,36 @@ import {
 	type OAuthHelpers,
 } from "@cloudflare/workers-oauth-provider";
 import {
-	GOOGLE_CALLBACK_PATH,
-	GOOGLE_TOKEN_URL,
 	HOME_PAGE,
 	PRIVACY_PAGE,
 	TERMS_PAGE,
 	consentPage,
-	googleAuthorizeUrl,
-	googleTokenRequestBody,
 	approvalPage,
 	accountPage,
+	signInChoicePage,
 	ACCOUNT_DELETE_CONFIRMATION,
 	messagePage,
 	type AccountView,
-	ownerFromGoogle,
-	parseGoogleIdToken,
+	type SignInOption,
 	randomVerifier,
 	s256,
-	userIdFromGoogle,
 } from "./google.ts";
+import {
+	PROVIDERS,
+	authorizeUrl,
+	enabledProviders,
+	exchangeCode,
+	isProviderId,
+	providerForCallbackPath,
+	type ProviderEnv,
+	type ProviderId,
+} from "./providers.ts";
+import { AccountError, AccountRegistry, type SqlDatabase } from "./accounts.ts";
 
-export interface AuthEnv {
+export interface AuthEnv extends ProviderEnv {
 	OAUTH_KV: KVNamespace;
 	OAUTH_PROVIDER: OAuthHelpers;
-	GOOGLE_CLIENT_ID?: string;
-	GOOGLE_CLIENT_SECRET?: string;
+	ACCOUNTS_DB?: SqlDatabase;
 }
 
 /**
@@ -57,13 +63,18 @@ export type OwnerCall = (env: AuthEnv, owner: string, operation: string, args: R
 /** Extra non-MCP routes (version, health) served before the 404. */
 export type ExtraRoutes = (request: Request, env: AuthEnv) => Promise<Response | null>;
 
-const APPROVAL_STATE_PREFIX = "apv.";
-const ACCOUNT_STATE_PREFIX = "acc.";
+/** Sign-ins that are not an MCP grant (account page, approval page, linking) keep their state in KV under this prefix. */
+const PAGE_STATE_PREFIX = "acc.";
+const PAGE_STATE_TTL_S = 600;
 const ACCOUNT_TTL_S = 900;
 const ACCOUNT_COOKIE = "rx_acc";
 
 const APPROVAL_TTL_S = 600;
 const COOKIE = "rx_apv";
+
+const registry = (env: AuthEnv) => new AccountRegistry(env.ACCOUNTS_DB ?? null);
+const options = (ids: ProviderId[]): SignInOption[] => ids.map((id) => ({ id, label: PROVIDERS[id].label }));
+const NOT_CONFIGURED = () => html(messagePage("Sign-in is not configured", "The server has no sign-in method yet. Try again later."), 503);
 
 function randomToken(bytes = 24): string {
 	const b = crypto.getRandomValues(new Uint8Array(bytes));
@@ -77,7 +88,73 @@ function cookieValue(request: Request, name: string): string | null {
 	return null;
 }
 
-/** GET /approve/<id>: show the decision page to the signed-in owner, or start a Google sign-in first. */
+// ---------------------------------------------------------------- page sign-ins (account, approval, linking)
+
+type PagePurpose = { kind: "account" } | { kind: "approval"; approval_id: string } | { kind: "link"; owner: string };
+interface PageState { purpose: PagePurpose; provider: ProviderId; verifier: string; nonce: string }
+
+/**
+ * Starts a page sign-in: with ?with=<provider> (or a single enabled provider) it redirects to that
+ * provider; otherwise it shows the choice of sign-in methods.
+ */
+async function startPageSignIn(request: Request, env: AuthEnv, origin: string, purpose: PagePurpose, choice: { title: string; intro: string; path: string }): Promise<Response> {
+	const enabled = enabledProviders(env);
+	if (enabled.length === 0) return NOT_CONFIGURED();
+	const asked = new URL(request.url).searchParams.get("with");
+	const provider = isProviderId(asked) && enabled.includes(asked) ? asked : enabled.length === 1 ? enabled[0]! : null;
+	if (!provider) return html(signInChoicePage(choice.title, choice.intro, choice.path, options(enabled)));
+	return redirectToProvider(env, origin, purpose, provider);
+}
+
+async function redirectToProvider(env: AuthEnv, origin: string, purpose: PagePurpose, provider: ProviderId): Promise<Response> {
+	const state = PAGE_STATE_PREFIX + randomToken();
+	const verifier = randomVerifier();
+	const nonce = randomToken(16);
+	await env.OAUTH_KV.put(`acc:state:${state}`, JSON.stringify({ purpose, provider, verifier, nonce } satisfies PageState), { expirationTtl: PAGE_STATE_TTL_S });
+	return redirect(authorizeUrl(env, provider, { origin, state, codeChallenge: await s256(verifier), nonce }));
+}
+
+/** Callback of a page sign-in (state "acc.…"): verify the identity, then open the session for its purpose. */
+async function pageCallback(request: Request, env: AuthEnv, origin: string, provider: ProviderId, fetcher: typeof fetch): Promise<Response> {
+	const params = new URL(request.url).searchParams;
+	const state = params.get("state") ?? "";
+	const saved = await env.OAUTH_KV.get<PageState>(`acc:state:${state}`, "json");
+	if (!saved) return html(messagePage("Sign-in expired", "Open the page again and sign in."), 400);
+	await env.OAUTH_KV.delete(`acc:state:${state}`); // single use
+	const code = params.get("code");
+	if (saved.provider !== provider || params.get("error") || !code) return html(messagePage("Sign-in did not complete", "You are not signed in. Nothing was changed."), 400);
+	let identity;
+	try {
+		identity = await exchangeCode(env, provider, { origin, code, verifier: saved.verifier, nonce: saved.nonce }, fetcher);
+	} catch (e) {
+		console.log(JSON.stringify({ evt: "rigorx_security", kind: "page_signin_rejected", provider, reason: e instanceof Error ? e.message : "error" }));
+		return html(messagePage("Sign-in rejected", "You are not signed in. Nothing was changed."), 400);
+	}
+	const purpose = saved.purpose;
+	if (purpose.kind === "link") {
+		try {
+			const r = await registry(env).link(purpose.owner, identity.provider, identity.subject);
+			return redirect(`/account?done=${r === "linked" ? "linked" : "already"}`);
+		} catch (e) {
+			return html(messagePage("Not added", e instanceof AccountError ? e.message : "The sign-in method could not be added."), 409);
+		}
+	}
+	const owner = await registry(env).signIn(identity.provider, identity.subject);
+	const sid = randomToken();
+	const h = new Headers();
+	if (purpose.kind === "approval") {
+		await env.OAUTH_KV.put(`apv:sess:${sid}`, JSON.stringify({ owner, approval_id: purpose.approval_id, csrf: randomToken() }), { expirationTtl: APPROVAL_TTL_S });
+		h.append("Set-Cookie", `${COOKIE}=${sid}; Path=/approve; Max-Age=${APPROVAL_TTL_S}; HttpOnly; Secure; SameSite=Lax`);
+		return redirect(`/approve/${encodeURIComponent(purpose.approval_id)}`, h);
+	}
+	await env.OAUTH_KV.put(`acc:sess:${sid}`, JSON.stringify({ owner, csrf: randomToken() } satisfies AccountSession), { expirationTtl: ACCOUNT_TTL_S });
+	h.append("Set-Cookie", `${ACCOUNT_COOKIE}=${sid}; Path=/account; Max-Age=${ACCOUNT_TTL_S}; HttpOnly; Secure; SameSite=Lax`);
+	return redirect("/account", h);
+}
+
+// ---------------------------------------------------------------- approval page (/approve/<id>)
+
+/** GET /approve/<id>: show the decision page to the signed-in owner, or sign in first. */
 async function approveGet(request: Request, env: AuthEnv, origin: string, id: string, call: OwnerCall): Promise<Response> {
 	const sid = cookieValue(request, COOKIE);
 	const session = sid ? await env.OAUTH_KV.get<{ owner: string; approval_id: string; csrf: string }>(`apv:sess:${sid}`, "json") : null;
@@ -89,41 +166,8 @@ async function approveGet(request: Request, env: AuthEnv, origin: string, id: st
 			return html(messagePage("Approval request not found", "This request does not exist for the account you signed in with, or it was removed."), 404);
 		}
 	}
-	if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET) return html(messagePage("Sign-in is not configured", "The server has no Google client yet."), 503);
-	const state = APPROVAL_STATE_PREFIX + randomToken();
-	const verifier = randomVerifier();
-	const nonce = randomToken(16);
-	await env.OAUTH_KV.put(`apv:state:${state}`, JSON.stringify({ approval_id: id, verifier, nonce }), { expirationTtl: APPROVAL_TTL_S });
-	return redirect(googleAuthorizeUrl({ clientId: env.GOOGLE_CLIENT_ID, redirectUri: origin + GOOGLE_CALLBACK_PATH, state, codeChallenge: await s256(verifier), nonce }));
-}
-
-/** Google callback for an approval sign-in (state "apv.…"): verify the account, open a short session. */
-async function approveCallback(request: Request, env: AuthEnv, origin: string): Promise<Response> {
-	const params = new URL(request.url).searchParams;
-	const state = params.get("state") ?? "";
-	const saved = await env.OAUTH_KV.get<{ approval_id: string; verifier: string; nonce: string }>(`apv:state:${state}`, "json");
-	if (!saved) return html(messagePage("Sign-in expired", "Open the approval link again."), 400);
-	await env.OAUTH_KV.delete(`apv:state:${state}`); // single use
-	const code = params.get("code");
-	if (params.get("error") || !code || !env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET) return html(messagePage("Sign-in did not complete", "Nothing was approved."), 400);
-	const tokenResponse = await fetch(GOOGLE_TOKEN_URL, {
-		method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded", Accept: "application/json" },
-		body: googleTokenRequestBody({ code, clientId: env.GOOGLE_CLIENT_ID, clientSecret: env.GOOGLE_CLIENT_SECRET, redirectUri: origin + GOOGLE_CALLBACK_PATH, verifier: saved.verifier }),
-	});
-	const tokens = (await tokenResponse.json().catch(() => ({}))) as { id_token?: string };
-	if (!tokenResponse.ok || !tokens.id_token) return html(messagePage("Sign-in failed", "Nothing was approved."), 502);
-	let sub: string;
-	try {
-		sub = parseGoogleIdToken(tokens.id_token, env.GOOGLE_CLIENT_ID, Math.floor(Date.now() / 1000), saved.nonce).sub;
-	} catch (e) {
-		console.log(JSON.stringify({ evt: "rigorx_security", kind: "approval_signin_rejected", reason: e instanceof Error ? e.message : "error" }));
-		return html(messagePage("Sign-in rejected", "Nothing was approved."), 400);
-	}
-	const sid = randomToken();
-	await env.OAUTH_KV.put(`apv:sess:${sid}`, JSON.stringify({ owner: ownerFromGoogle(sub), approval_id: saved.approval_id, csrf: randomToken() }), { expirationTtl: APPROVAL_TTL_S });
-	const h = new Headers();
-	h.append("Set-Cookie", `${COOKIE}=${sid}; Path=/approve; Max-Age=${APPROVAL_TTL_S}; HttpOnly; Secure; SameSite=Lax`);
-	return redirect(`/approve/${encodeURIComponent(saved.approval_id)}`, h);
+	return startPageSignIn(request, env, origin, { kind: "approval", approval_id: id },
+		{ title: "Sign in to decide", intro: "Sign in with the account your assistant uses, then approve or deny the request.", path: `/approve/${id}` });
 }
 
 /** POST /approve/<id>: record the signed-in owner's decision (session cookie + CSRF token). */
@@ -148,7 +192,7 @@ async function approvePost(request: Request, env: AuthEnv, id: string, call: Own
 }
 
 // ---------------------------------------------------------------- account page (/account)
-// The user manages their own data here, signed in with Google: usage, deleting a task or a topic,
+// The user manages their own account here: sign-in methods, usage, deleting a task or a topic,
 // deleting everything. The assistant has no tool for these (2026-11-27). Short KV session (15 min),
 // HttpOnly cookie scoped to /account, CSRF token on every POST, owner taken only from the session.
 
@@ -161,65 +205,41 @@ async function accountSession(request: Request, env: AuthEnv): Promise<{ sid: st
 }
 
 async function accountView(env: AuthEnv, owner: string, call: OwnerCall, notice?: string): Promise<AccountView> {
-	const [usage, runs, topics] = await Promise.all([
+	const reg = registry(env);
+	const [usage, runs, topics, linked] = await Promise.all([
 		call(env, owner, "usage", {}),
 		call(env, owner, "list_runs", { limit: 50 }),
 		call(env, owner, "memory_topic", { action: "list" }),
+		reg.identities(owner),
 	]);
+	const have = new Set(linked.map((i) => i.provider));
 	return {
 		usage, runs: (runs.runs as Record<string, unknown>[]) ?? [], more_runs: runs.next_cursor !== null && runs.next_cursor !== undefined,
 		topics: (topics.topics as Record<string, unknown>[]) ?? [], confirmation: ACCOUNT_DELETE_CONFIRMATION, notice,
+		identities: linked.filter((i) => isProviderId(i.provider)).map((i) => ({ provider: i.provider, label: PROVIDERS[i.provider].label, since: i.created_at })),
+		linkable: options(enabledProviders(env).filter((p) => !have.has(p))),
+		linking: reg.linkingAvailable,
 	};
 }
 
-/** GET /account: the page for a signed-in owner, otherwise a Google sign-in first. */
+/** GET /account: the page for a signed-in owner, otherwise a sign-in first. */
 async function accountGet(request: Request, env: AuthEnv, origin: string, call: OwnerCall): Promise<Response> {
 	const found = await accountSession(request, env);
 	if (found) {
 		const notice = new URL(request.url).searchParams.get("done") ?? undefined;
 		return html(accountPage(await accountView(env, found.session.owner, call, notice ? ACCOUNT_NOTICES[notice] : undefined), found.session.csrf));
 	}
-	if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET) return html(messagePage("Sign-in is not configured", "The server has no Google client yet."), 503);
-	const state = ACCOUNT_STATE_PREFIX + randomToken();
-	const verifier = randomVerifier();
-	const nonce = randomToken(16);
-	await env.OAUTH_KV.put(`acc:state:${state}`, JSON.stringify({ verifier, nonce }), { expirationTtl: 600 });
-	return redirect(googleAuthorizeUrl({ clientId: env.GOOGLE_CLIENT_ID, redirectUri: origin + GOOGLE_CALLBACK_PATH, state, codeChallenge: await s256(verifier), nonce }));
+	return startPageSignIn(request, env, origin, { kind: "account" },
+		{ title: "Sign in to your account", intro: "Use any sign-in method of your Aetherica account. A new account is created if this sign-in has none yet.", path: "/account" });
 }
 
-const ACCOUNT_NOTICES: Record<string, string> = { run: "Task deleted.", topic: "Topic and its notes deleted." };
-
-/** Google callback for an account sign-in (state "acc.…"). */
-async function accountCallback(request: Request, env: AuthEnv, origin: string): Promise<Response> {
-	const params = new URL(request.url).searchParams;
-	const state = params.get("state") ?? "";
-	const saved = await env.OAUTH_KV.get<{ verifier: string; nonce: string }>(`acc:state:${state}`, "json");
-	if (!saved) return html(messagePage("Sign-in expired", "Open your account page again."), 400);
-	await env.OAUTH_KV.delete(`acc:state:${state}`); // single use
-	const code = params.get("code");
-	if (params.get("error") || !code || !env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET) return html(messagePage("Sign-in did not complete", "You are not signed in."), 400);
-	const tokenResponse = await fetch(GOOGLE_TOKEN_URL, {
-		method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded", Accept: "application/json" },
-		body: googleTokenRequestBody({ code, clientId: env.GOOGLE_CLIENT_ID, clientSecret: env.GOOGLE_CLIENT_SECRET, redirectUri: origin + GOOGLE_CALLBACK_PATH, verifier: saved.verifier }),
-	});
-	const tokens = (await tokenResponse.json().catch(() => ({}))) as { id_token?: string };
-	if (!tokenResponse.ok || !tokens.id_token) return html(messagePage("Sign-in failed", "You are not signed in."), 502);
-	let sub: string;
-	try {
-		sub = parseGoogleIdToken(tokens.id_token, env.GOOGLE_CLIENT_ID, Math.floor(Date.now() / 1000), saved.nonce).sub;
-	} catch (e) {
-		console.log(JSON.stringify({ evt: "rigorx_security", kind: "account_signin_rejected", reason: e instanceof Error ? e.message : "error" }));
-		return html(messagePage("Sign-in rejected", "You are not signed in."), 400);
-	}
-	const sid = randomToken();
-	await env.OAUTH_KV.put(`acc:sess:${sid}`, JSON.stringify({ owner: ownerFromGoogle(sub), csrf: randomToken() } satisfies AccountSession), { expirationTtl: ACCOUNT_TTL_S });
-	const h = new Headers();
-	h.append("Set-Cookie", `${ACCOUNT_COOKIE}=${sid}; Path=/account; Max-Age=${ACCOUNT_TTL_S}; HttpOnly; Secure; SameSite=Lax`);
-	return redirect("/account", h);
-}
+const ACCOUNT_NOTICES: Record<string, string> = {
+	run: "Task deleted.", topic: "Topic and its notes deleted.", linked: "Sign-in method added.",
+	already: "That sign-in method was already part of this account.", unlinked: "Sign-in method removed.",
+};
 
 /** POST /account: one action by the signed-in owner (session cookie + CSRF token). */
-async function accountPost(request: Request, env: AuthEnv, call: OwnerCall): Promise<Response> {
+async function accountPost(request: Request, env: AuthEnv, origin: string, call: OwnerCall): Promise<Response> {
 	const found = await accountSession(request, env);
 	const form = await request.formData();
 	if (!found || form.get("csrf") !== found.session.csrf) {
@@ -235,6 +255,17 @@ async function accountPost(request: Request, env: AuthEnv, call: OwnerCall): Pro
 			h.append("Set-Cookie", `${ACCOUNT_COOKIE}=; Path=/account; Max-Age=0; HttpOnly; Secure; SameSite=Lax`);
 			return html(messagePage("Signed out", "You are signed out of your account page."), 200, h);
 		}
+		if (action === "link" || action === "unlink") {
+			const provider = form.get("provider");
+			if (!isProviderId(provider)) return html(messagePage("Unknown sign-in method", "Nothing was changed."), 400);
+			if (action === "unlink") {
+				await registry(env).unlink(session.owner, provider);
+				return redirect("/account?done=unlinked");
+			}
+			if (!enabledProviders(env).includes(provider)) return html(messagePage("Not available", `${PROVIDERS[provider].label} sign-in is not available yet. Nothing was changed.`), 400);
+			if (!registry(env).linkingAvailable) return html(messagePage("Not available", "Adding sign-in methods is not available on this server yet."), 503);
+			return redirectToProvider(env, origin, { kind: "link", owner: session.owner }, provider);
+		}
 		if (action === "delete_run") {
 			await call(env, session.owner, "delete_run", { run_id: String(form.get("run_id") ?? "") });
 			return redirect("/account?done=run");
@@ -248,8 +279,9 @@ async function accountPost(request: Request, env: AuthEnv, call: OwnerCall): Pro
 				return html(messagePage("Not deleted", `Type ${ACCOUNT_DELETE_CONFIRMATION} exactly to delete all of your data. Nothing was changed.`), 400);
 			}
 			const r = await call(env, session.owner, "delete_account_data", { confirm: ACCOUNT_DELETE_CONFIRMATION, decided_by: "user" });
+			await registry(env).deleteAccount(session.owner);
 			await env.OAUTH_KV.delete(`acc:sess:${sid}`);
-			return html(messagePage("All data deleted", `Deleted ${r.runs ?? 0} tasks and ${r.memory_items ?? 0} notes. To stop your assistant from connecting again, remove the connector in that app.`));
+			return html(messagePage("All data deleted", `Deleted ${r.runs ?? 0} tasks and ${r.memory_items ?? 0} notes, and your account with its sign-in methods. To stop your assistant from connecting again, remove the connector in that app.`));
 		}
 		return html(messagePage("Unknown action", "Nothing was changed."), 400);
 	} catch (e) {
@@ -280,12 +312,31 @@ const redirect = (location: string, headers?: Headers) => {
 	return new Response(null, { status: 302, headers: h });
 };
 
+const html = (body: string, status = 200, headers?: Headers): Response => {
+	const h = new Headers(headers);
+	h.set("Content-Type", "text/html; charset=utf-8");
+	h.set("Cache-Control", "no-store");
+	// Pages carry no scripts; the sign-in and approval pages must not be framed (clickjacking).
+	h.set("Content-Security-Policy", "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'");
+	h.set("X-Frame-Options", "DENY");
+	h.set("Referrer-Policy", "no-referrer");
+	return new Response(body, { status, headers: h });
+};
+
+const redirect = (location: string, headers?: Headers) => {
+	const h = new Headers(headers);
+	h.set("Location", location);
+	return new Response(null, { status: 302, headers: h });
+};
+
 async function authorizeGet(request: Request, env: AuthEnv): Promise<Response> {
 	const oauth = env.OAUTH_PROVIDER;
 	const authRequest = await oauth.parseAuthRequest(request);
 	const facts = await oauth.describeConsent(authRequest);
 	const consent = await oauth.beginConsent(authRequest);
-	return html(consentPage(facts, consent.handle), 200, consent.headers);
+	const enabled = enabledProviders(env);
+	if (enabled.length === 0) return NOT_CONFIGURED();
+	return html(consentPage(facts, consent.handle, options(enabled)), 200, consent.headers);
 }
 
 async function authorizePost(request: Request, env: AuthEnv, origin: string): Promise<Response> {
@@ -296,62 +347,42 @@ async function authorizePost(request: Request, env: AuthEnv, origin: string): Pr
 		const denied = await oauth.denyConsent(request, handle);
 		return new Response(null, { status: 302, headers: denied.headers });
 	}
-	if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET) {
-		return html(messagePage("Sign-in is not configured", "The server has no Google client yet. Try again later."), 503);
-	}
+	const enabled = enabledProviders(env);
+	const asked = form.get("provider") ?? "google";
+	if (!isProviderId(asked) || !enabled.includes(asked)) return NOT_CONFIGURED();
 	const approved = await oauth.approveConsent(request, handle);
 	const verifier = randomVerifier();
-	const { state, headers } = await oauth.beginUpstream(approved.request, { data: { verifier }, headers: approved.headers });
-	return redirect(googleAuthorizeUrl({
-		clientId: env.GOOGLE_CLIENT_ID,
-		redirectUri: origin + GOOGLE_CALLBACK_PATH,
-		state,
-		codeChallenge: await s256(verifier),
-	}), headers);
+	const nonce = randomToken(16);
+	const { state, headers } = await oauth.beginUpstream(approved.request, { data: { verifier, nonce, provider: asked }, headers: approved.headers });
+	return redirect(authorizeUrl(env, asked, { origin, state, codeChallenge: await s256(verifier), nonce }), headers);
 }
 
-async function googleCallback(request: Request, env: AuthEnv, origin: string): Promise<Response> {
+/** /oauth/<provider>/callback: page sign-ins (state "acc.…") or the MCP grant. */
+async function providerCallback(request: Request, env: AuthEnv, origin: string, provider: ProviderId, fetcher: typeof fetch): Promise<Response> {
 	const upstreamState = new URL(request.url).searchParams.get("state") ?? "";
-	if (upstreamState.startsWith(APPROVAL_STATE_PREFIX)) return approveCallback(request, env, origin);
-	if (upstreamState.startsWith(ACCOUNT_STATE_PREFIX)) return accountCallback(request, env, origin);
+	if (upstreamState.startsWith(PAGE_STATE_PREFIX)) return pageCallback(request, env, origin, provider, fetcher);
 	const oauth = env.OAUTH_PROVIDER;
-	const { request: original, data, headers } = await oauth.finishUpstream<{ verifier: string }>(request);
+	const { request: original, data, headers } = await oauth.finishUpstream<{ verifier: string; nonce?: string; provider?: ProviderId }>(request);
 	const params = new URL(request.url).searchParams;
 	const code = params.get("code");
 	if (params.get("error") || !code) return redirect(authorizationErrorRedirect(original, "access_denied"), headers);
-	if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET) {
+	// Grants begun before multi-provider sign-in carry no provider: they were Google.
+	if ((data.provider ?? "google") !== provider || !enabledProviders(env).includes(provider)) {
 		return redirect(authorizationErrorRedirect(original, "temporarily_unavailable"), headers);
 	}
-
-	const tokenResponse = await fetch(GOOGLE_TOKEN_URL, {
-		method: "POST",
-		headers: { "Content-Type": "application/x-www-form-urlencoded", Accept: "application/json" },
-		body: googleTokenRequestBody({
-			code,
-			clientId: env.GOOGLE_CLIENT_ID,
-			clientSecret: env.GOOGLE_CLIENT_SECRET,
-			redirectUri: origin + GOOGLE_CALLBACK_PATH,
-			verifier: data.verifier,
-		}),
-	});
-	const tokens = (await tokenResponse.json().catch(() => ({}))) as { id_token?: string; error?: string };
-	if (!tokenResponse.ok || !tokens.id_token) {
-		console.error("RIGORX_AUTH google token exchange failed", tokenResponse.status, tokens.error ?? "");
-		return redirect(authorizationErrorRedirect(original, "server_error"), headers);
-	}
-
 	let identity;
 	try {
-		identity = parseGoogleIdToken(tokens.id_token, env.GOOGLE_CLIENT_ID, Math.floor(Date.now() / 1000));
+		identity = await exchangeCode(env, provider, { origin, code, verifier: data.verifier, nonce: data.nonce }, fetcher);
 	} catch (e) {
-		console.error("RIGORX_AUTH id token rejected", e instanceof Error ? e.message : String(e));
+		console.error("RIGORX_AUTH sign-in rejected", provider, e instanceof Error ? e.message : String(e));
 		return redirect(authorizationErrorRedirect(original, "server_error"), headers);
 	}
-
-	const props: AuthProps = { owner: ownerFromGoogle(identity.sub) };
+	const owner = await registry(env).signIn(identity.provider, identity.subject);
+	const props: AuthProps = { owner };
 	const { redirectTo } = await oauth.completeAuthorization({
 		request: original,
-		userId: userIdFromGoogle(identity.sub),
+		// The OAuth library's user ID must not contain ':'.
+		userId: owner.replace(/:/g, "-"),
 		metadata: {},
 		scope: original.scope,
 		props,
@@ -359,7 +390,7 @@ async function googleCallback(request: Request, env: AuthEnv, origin: string): P
 	return redirect(redirectTo, headers);
 }
 
-function defaultHandler(origin: string, call: OwnerCall | null, extra: ExtraRoutes | null): ExportedHandler<AuthEnv> {
+function defaultHandler(origin: string, call: OwnerCall | null, extra: ExtraRoutes | null, fetcher: typeof fetch): ExportedHandler<AuthEnv> {
 	return {
 		async fetch(request, env) {
 			const { pathname } = new URL(request.url);
@@ -368,7 +399,7 @@ function defaultHandler(origin: string, call: OwnerCall | null, extra: ExtraRout
 				if (approve && call && request.method === "GET") return await approveGet(request, env, origin, approve[1]!, call);
 				if (approve && call && request.method === "POST") return await approvePost(request, env, approve[1]!, call);
 				if (pathname === "/account" && call && request.method === "GET") return await accountGet(request, env, origin, call);
-				if (pathname === "/account" && call && request.method === "POST") return await accountPost(request, env, call);
+				if (pathname === "/account" && call && request.method === "POST") return await accountPost(request, env, origin, call);
 				const handled = extra ? await extra(request, env) : null;
 				if (handled) return handled;
 				if (pathname === "/" && request.method === "GET") return html(HOME_PAGE);
@@ -376,7 +407,8 @@ function defaultHandler(origin: string, call: OwnerCall | null, extra: ExtraRout
 				if (pathname === "/terms" && request.method === "GET") return html(TERMS_PAGE);
 				if (pathname === "/authorize" && request.method === "GET") return await authorizeGet(request, env);
 				if (pathname === "/authorize" && request.method === "POST") return await authorizePost(request, env, origin);
-				if (pathname === GOOGLE_CALLBACK_PATH && request.method === "GET") return await googleCallback(request, env, origin);
+				const callback = providerForCallbackPath(pathname);
+				if (callback && request.method === "GET") return await providerCallback(request, env, origin, callback, fetcher);
 				return new Response("Not found", { status: 404 });
 			} catch (e) {
 				if (e instanceof AuthorizationError) {
@@ -390,7 +422,8 @@ function defaultHandler(origin: string, call: OwnerCall | null, extra: ExtraRout
 }
 
 type McpServe<Env> = (request: Request, env: Env, owner: string) => Promise<Response>;
-export interface ProviderDeps { call?: OwnerCall; extra?: ExtraRoutes }
+/** fetcher: used for the token and user-info requests to the sign-in providers (tests substitute it). */
+export interface ProviderDeps { call?: OwnerCall; extra?: ExtraRoutes; fetcher?: typeof fetch }
 const providers = new Map<string, OAuthProvider<any>>();
 
 /**
@@ -407,7 +440,7 @@ export function buildProvider<Env extends AuthEnv>(origin: string, serveMcp: Mcp
 				return serveMcp(request, env, (ctx.props as AuthProps).owner);
 			},
 		},
-		defaultHandler: defaultHandler(origin, deps.call ?? null, deps.extra ?? null) as ExportedHandler<Env>,
+		defaultHandler: defaultHandler(origin, deps.call ?? null, deps.extra ?? null, deps.fetcher ?? ((input, init) => fetch(input, init))) as ExportedHandler<Env>,
 		authorizeEndpoint: "/authorize",
 		tokenEndpoint: "/token",
 		clientRegistrationEndpoint: "/register",

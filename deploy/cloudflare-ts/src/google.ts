@@ -54,11 +54,12 @@ export function googleTokenRequestBody(o: { code: string; clientId: string; clie
 }
 
 /**
- * Reads the ID token returned by Google's token endpoint. The token came straight from Google over
- * TLS in exchange for our client secret, so OpenID Connect Core 3.1.3.7 allows skipping the
- * signature check; issuer, audience and expiry are still checked.
+ * Reads an ID token returned by a provider's token endpoint. The token came straight from the provider
+ * over TLS in exchange for our client secret, so OpenID Connect Core 3.1.3.7 allows skipping the
+ * signature check; issuer, audience, authorized party, expiry and nonce are still checked.
  */
-export function parseGoogleIdToken(idToken: string, clientId: string, nowSeconds: number, expectedNonce?: string): GoogleIdentity {
+export function parseIdToken(idToken: string, o: { issuers: readonly string[]; clientId: string; nowSeconds: number; expectedNonce?: string }): { sub: string } {
+	const { clientId, nowSeconds, expectedNonce } = o;
 	const parts = idToken.split(".");
 	if (parts.length !== 3) throw new Error("Malformed ID token");
 	let claims: Record<string, unknown>;
@@ -68,7 +69,7 @@ export function parseGoogleIdToken(idToken: string, clientId: string, nowSeconds
 	} catch {
 		throw new Error("Malformed ID token");
 	}
-	if (typeof claims.iss !== "string" || !GOOGLE_ISSUERS.has(claims.iss)) throw new Error("ID token issuer is not Google");
+	if (typeof claims.iss !== "string" || !o.issuers.includes(claims.iss)) throw new Error("ID token issuer is not the expected provider");
 	const aud = claims.aud;
 	if (!(aud === clientId || (Array.isArray(aud) && aud.includes(clientId)))) throw new Error("ID token audience mismatch");
 	// OIDC Core 3.1.3.7: with several audiences, azp must be present and be this client.
@@ -79,6 +80,16 @@ export function parseGoogleIdToken(idToken: string, clientId: string, nowSeconds
 	if (expectedNonce !== undefined && claims.nonce !== expectedNonce) throw new Error("ID token nonce mismatch");
 	if (typeof claims.sub !== "string" || claims.sub === "") throw new Error("ID token has no subject");
 	return { sub: claims.sub };
+}
+
+/** Google-specific wrapper kept for existing callers and tests. */
+export function parseGoogleIdToken(idToken: string, clientId: string, nowSeconds: number, expectedNonce?: string): GoogleIdentity {
+	try {
+		return parseIdToken(idToken, { issuers: [...GOOGLE_ISSUERS], clientId, nowSeconds, expectedNonce });
+	} catch (e) {
+		if (e instanceof Error && e.message === "ID token issuer is not the expected provider") throw new Error("ID token issuer is not Google");
+		throw e;
+	}
 }
 
 export const escapeHtml = (value: string) => value.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
@@ -125,7 +136,9 @@ ul{padding-left:20px}li{margin:0 0 8px}code{font-size:13px;padding:1px 5px;borde
 footer{position:absolute;left:0;right:0;bottom:16px;display:flex;gap:20px;justify-content:center;font-size:12px;color:var(--muted)}footer a{color:var(--muted)}
 .doc{max-width:680px}
 .rows{list-style:none;padding:0;margin:0 0 14px}.rows li{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
-form.inline button{flex:0 0 auto;padding:6px 14px;font-size:14px}.field{width:100%;font:inherit;padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:transparent;color:var(--text)}`;
+form.inline button{flex:0 0 auto;padding:6px 14px;font-size:14px}.stack{display:flex;flex-direction:column;gap:10px;margin:22px 0 6px}
+.signin,a.btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;flex:none}a.btn{font-weight:500;padding:11px 18px;border-radius:999px;border:1px solid var(--line);color:var(--text)}a.btn:hover{background:var(--chip);text-decoration:none}.small{font-size:13px;margin-top:18px}
+button.signin .g{background:#fff;border-radius:50%;padding:2px;width:22px;height:22px}.field{width:100%;font:inherit;padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:transparent;color:var(--text)}`;
 
 /** Wraps page content in the shared layout: head, top bar with the emblem, card and footer links. */
 function page(title: string, body: string, wide = false): string {
@@ -140,21 +153,40 @@ function page(title: string, body: string, wide = false): string {
 const MARK = `<img class="mark" src="/icon-192.png" width="64" height="64" alt="${BRAND}">`;
 const LEGAL = `<p class="legal">By continuing, you agree to ${BRAND}'s <a href="/terms">Terms of Service</a> and <a href="/privacy">Privacy Policy</a>.</p>`;
 
-export function consentPage(facts: ConsentFacts, handle: string): string {
+/** A sign-in method offered on a page: provider ID and its public label. */
+export interface SignInOption { id: string; label: string }
+const DEFAULT_OPTIONS: SignInOption[] = [{ id: "google", label: "Google" }];
+
+/** "Continue with …" button content; Google keeps its mark (branding guidelines), others are text. */
+const optionLabel = (o: SignInOption) => (o.id === "google" ? `${GOOGLE_G}<span>Continue with Google</span>` : `<span>Continue with ${escapeHtml(o.label)}</span>`);
+
+export function consentPage(facts: ConsentFacts, handle: string, options: SignInOption[] = DEFAULT_OPTIONS): string {
 	const name = escapeHtml(facts.clientName);
 	// Who receives the access stays visible: an app can register itself under any name.
 	const origin = facts.clientDomain
 		? `Access goes to <strong>${escapeHtml(facts.redirectHost)}</strong>.`
 		: `This app named itself; ${BRAND} has not verified it. Access goes to <strong>${escapeHtml(facts.redirectHost)}</strong>.`;
+	const buttons = options.map((o) => `<button class="primary signin" name="provider" value="${escapeHtml(o.id)}">${optionLabel(o)}</button>`).join("");
 	return page(`Allow ${facts.clientName} to use ${BRAND}?`, `${MARK}
 <h1>Allow ${name} to use ${BRAND}?</h1>
-<div class="chip">${GOOGLE_G}<span>Continue with your Google account</span></div>
 <p class="muted">${name} will be able to use your ${BRAND} work and memory. ${origin}</p>
 ${facts.redirectIsLoopback ? '<p class="warn"><strong>This sends access to an app on your computer.</strong> Continue only if you just started signing in from it.</p>' : ""}
-${LEGAL}
-<form method="post"><input type="hidden" name="handle" value="${escapeHtml(handle)}">
-<div class="actions"><button name="decision" value="deny">Cancel</button><button class="primary" name="decision" value="approve">Continue</button></div>
-</form>`);
+<form method="post"><input type="hidden" name="handle" value="${escapeHtml(handle)}"><input type="hidden" name="decision" value="approve">
+<div class="stack">${buttons}</div>
+</form>
+<form method="post"><input type="hidden" name="handle" value="${escapeHtml(handle)}"><input type="hidden" name="decision" value="deny"><div class="actions"><button>Cancel</button></div></form>
+<p class="muted small">New to ${BRAND}? Your account is created the first time you continue. One account can have Google, GitHub and ChatGPT sign-ins; add them on <a href="/account">your account page</a>.</p>
+${LEGAL}`);
+}
+
+/** Choose a sign-in method before the account or approval page (links carry ?with=<provider>). */
+export function signInChoicePage(title: string, intro: string, basePath: string, options: SignInOption[]): string {
+	const links = options.map((o) => `<a class="btn signin" href="${escapeHtml(basePath)}?with=${encodeURIComponent(o.id)}">${optionLabel(o)}</a>`).join("");
+	return page(`${title} — ${BRAND}`, `${MARK}
+<h1>${escapeHtml(title)}</h1>
+<p class="muted">${escapeHtml(intro)}</p>
+<div class="stack">${links}</div>
+${LEGAL}`);
 }
 
 const REPO_URL = "https://github.com/aetherica/rigor.x";
@@ -164,7 +196,7 @@ export const PRIVACY_PAGE = page(`${BRAND} privacy policy`, `${MARK}
 <h1>Privacy policy</h1>
 <p class="muted">${BRAND} is a service that AI assistants (such as ChatGPT and Claude) call to structure, track and verify multi-step work. This page describes what it stores. Status: early development.</p>
 <h2>Sign-in</h2>
-<p>You sign in with Google. ${BRAND} asks Google only for your account ID (the <code>openid</code> scope), not your name or e-mail address. Your work is stored under that account ID.</p>
+<p>You sign in with Google, GitHub or ChatGPT (OpenAI). ${BRAND} asks each only for your stable account ID (Google and OpenAI: the <code>openid</code> scope; GitHub: no scope, the public numeric user ID), not your name or e-mail address. Your ${BRAND} account records which of these sign-ins belong to it (provider, account ID and dates, nothing else); your work is stored under the account.</p>
 <h2>What is stored</h2>
 <ul>
 <li>Task text, stage summaries, objectives, requirement and claim texts, assumptions, scenarios and evidence claims: stored only as SHA-256 digests and lengths, not as text.</li>
@@ -174,7 +206,7 @@ export const PRIVACY_PAGE = page(`${BRAND} privacy policy`, `${MARK}
 </ul>
 <p>Each account's data lives in separate storage on Cloudflare. ${BRAND} does not sell data, show ads or use your data to train models, and does not call any AI model itself. It fetches a web page only when your assistant asks it to check that source.</p>
 <h2>Managing and deleting your data</h2>
-<p>Open <a href="/account">your account page</a> and sign in with the same Google account: it shows your usage and lets you delete a task, a topic with its notes, or all of your data. Deletion is done by you, not by your assistant. For anything else, open an issue at <a href="${REPO_URL}">${REPO_URL}</a>.</p>`, true);
+<p>Open <a href="/account">your account page</a> and sign in with any sign-in method of your account: it shows your usage and lets you delete a task, a topic with its notes, or all of your data. Deleting everything also deletes the account and its sign-in methods. Deletion is done by you, not by your assistant. For anything else, open an issue at <a href="${REPO_URL}">${REPO_URL}</a>.</p>`, true);
 
 export const TERMS_PAGE = page(`${BRAND} terms of service`, `${MARK}
 <h1>Terms of service</h1>
@@ -205,7 +237,7 @@ export function messagePage(title: string, message: string): string {
 /** The landing page at "/": the brand, what the service is, and the legal links. */
 export const HOME_PAGE = page(BRAND, `${MARK}
 <h1>${BRAND}</h1>
-<p class="muted">Rigorous, verifiable multi-step work for AI assistants. Connect ${BRAND} in Claude or ChatGPT as a connector; you sign in with your Google account.</p>
+<p class="muted">Rigorous, verifiable multi-step work for AI assistants. Connect ${BRAND} in Claude or ChatGPT as a connector; you sign in with Google, GitHub or ChatGPT.</p>
 <p class="legal">Connector address: <code>/mcp</code> on this host. <a href="/account">Manage your account</a>.</p>`);
 
 /** Typed by the user to delete everything; must equal engine.ts ACCOUNT_DELETE_CONFIRMATION (tested). */
@@ -219,6 +251,10 @@ export interface AccountView {
 	topics: Record<string, unknown>[];
 	confirmation: string;
 	notice?: string;
+	/** Sign-in methods linked to this account, and those that can still be added. */
+	identities?: { provider: string; label: string; since: string }[];
+	linkable?: SignInOption[];
+	linking?: boolean;
 }
 
 /** The signed-in account page: usage, tasks and topics, each deletable by the user (POST with CSRF). */
@@ -236,9 +272,13 @@ export function accountPage(v: AccountView, csrf: string): string {
 	const topics = v.topics.length
 		? `<ul class="rows">${v.topics.map((t) => `<li><span><strong>${e(t.name)}</strong><br><span class="muted">${e(t.items)} notes</span></span>${form("delete_topic", `<input type="hidden" name="topic_id" value="${e(t.id)}">`, "Delete")}</li>`).join("")}</ul>`
 		: '<p class="muted">No saved topics.</p>';
+	const ids = v.identities ?? [];
+	const methods = `<ul class="rows">${ids.map((i) => `<li><span><strong>${e(i.label)}</strong>${i.since ? `<br><span class="muted">since ${e(i.since.slice(0, 10))}</span>` : ""}</span>${v.linking && ids.length > 1 ? form("unlink", `<input type="hidden" name="provider" value="${e(i.provider)}">`, "Remove") : ""}</li>`).join("")}</ul>`
+		+ (v.linking && v.linkable?.length ? `<p class="muted">Add another way to sign in to this same account:</p><div class="stack">${v.linkable.map((o) => form("link", `<input type="hidden" name="provider" value="${e(o.id)}">`, `Add ${e(o.label)}`)).join("")}</div>` : "");
 	return page(`Your account — ${BRAND}`, `${MARK}
 <h1>Your account</h1>
 ${v.notice ? `<p class="chip">${e(v.notice)}</p>` : ""}
+<h2>Sign-in methods</h2>${methods}
 <h2>Today's usage</h2>
 <dl><dt>Requests</dt><dd>${pair("calls")}</dd><dt>New tasks</dt><dd>${pair("runs_started")}</dd><dt>Stored tasks</dt><dd>${pair("stored_runs")}</dd><dt>Resets</dt><dd>${e(v.usage.resets_at)}</dd></dl>
 <h2>Tasks</h2>${runs}

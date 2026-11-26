@@ -5,6 +5,7 @@ This project is in pre-release development. Entries summarize notable changes; t
 ## Unreleased — 0.4.0.dev0
 
 ### Added
+- Aetherica account: sign-in with Google, GitHub or ChatGPT into one account (registry in Cloudflare D1 storing only provider subjects and timestamps), sign-in methods managed on `/account`, provider choice on the consent, account and approval pages.
 - Deterministic 11-stage pipeline controller, typed artifacts, verification gates, bounded re-entry and durable SQLite event/snapshot storage.
 - Registry validation/resolution, adaptive reasoning controls, transparent adaptive intensity and analysis-mode profiles.
 - Fail-closed command runtime and bounded live model/tool loop with injected backend and host callbacks.
