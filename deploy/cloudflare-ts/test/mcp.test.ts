@@ -33,10 +33,10 @@ test("tools/list is complete, ordered and annotated (Python's 12 plus the Worker
 		"rigorx_route", "rigorx_resolve_commands", "rigorx_start_run", "rigorx_get_run", "rigorx_submit_stage",
 		"rigorx_record_evidence", "rigorx_report_action", "rigorx_verify", "rigorx_reenter", "rigorx_cancel_run",
 		"rigorx_delete_run", "rigorx_list_runs", "rigorx_usage", "rigorx_compute", "rigorx_check_source",
-		"rigorx_memory_topic", "rigorx_memory_write", "rigorx_memory_recall", "rigorx_memory_delete", "rigorx_profile",
+		"rigorx_memory_topic", "rigorx_memory_write", "rigorx_memory_recall", "rigorx_memory_delete", "rigorx_humor_policy", "rigorx_profile",
 	]);
 	assert.deepEqual(tools.map((t) => t.name), TOOLS.map((t) => t.name));
-	const readOnly = new Set(["rigorx_route", "rigorx_resolve_commands", "rigorx_get_run", "rigorx_list_runs", "rigorx_usage", "rigorx_memory_recall", "rigorx_profile"]);
+	const readOnly = new Set(["rigorx_route", "rigorx_resolve_commands", "rigorx_get_run", "rigorx_list_runs", "rigorx_usage", "rigorx_memory_recall", "rigorx_humor_policy", "rigorx_profile"]);
 	const destructive = new Set(["rigorx_cancel_run", "rigorx_delete_run", "rigorx_memory_topic", "rigorx_memory_delete"]);
 	for (const t of tools) {
 		assert.ok(t.title && t.description, t.name);

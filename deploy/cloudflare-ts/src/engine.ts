@@ -14,7 +14,7 @@ import {
 	storedNote, substantial, text, type Json, type JsonObject, type TextPolicy,
 } from "./text.ts";
 import {
-	STAGE_LEDGER_KEY, capabilitiesContract, classifyContract, complexityContract, deliveryContract, evaluationContract,
+	STAGE_LEDGER_KEY, UNKNOWN_VALUES, capabilitiesContract, classifyContract, complexityContract, deliveryContract, evaluationContract,
 	executeContract, methodsContract, optimizeContract, planContract, queryContract, stressContract, type ContractContext,
 } from "./ledger.ts";
 import { ACTION, COMPUTE, ENGINE_TYPES, GATE_VERSION, SOURCE_CHECK, parseAnswers, runGate, unresolvedActions } from "./gate.ts";
@@ -316,7 +316,7 @@ export class HostEngine {
 				run.ledger.plan = planContract(data, ctx);
 				break;
 			case "EXECUTE":
-				run.ledger.execution = executeContract(data, ctx);
+				run.ledger.execution = executeContract(data, ctx, new Set(run.evidence.filter((x) => x.type === "USER_APPROVAL").map((x) => x.id)));
 				break;
 			case "EVALUATE_EVIDENCE":
 				run.ledger.evaluation = evaluationContract(data, ctx);
@@ -343,6 +343,7 @@ export class HostEngine {
 				need("missing_capabilities", delivery.missing_capabilities);
 				need("unverified_assumptions", delivery.unverified_assumptions);
 				need("broken_scenarios", delivery.broken_scenarios);
+				need("unknown_values", delivery.unknown_values);
 				if (missing.length) throw invalid(`DELIVER must disclose what is not achieved or not verified. Missing: ${missing.join("; ")}`);
 				run.ledger.delivery = delivery;
 				const limitations = this.engineLimitations(run);
@@ -361,7 +362,7 @@ export class HostEngine {
 	}
 
 	/** What DELIVER must disclose, computed from the ledger and the last validation. */
-	private requiredDisclosures(run: RunState): { unmet_requirements: string[]; missing_capabilities: string[]; unverified_assumptions: string[]; broken_scenarios: string[] } {
+	private requiredDisclosures(run: RunState): { unmet_requirements: string[]; missing_capabilities: string[]; unverified_assumptions: string[]; broken_scenarios: string[]; unknown_values: string[] } {
 		const last = run.verifications[run.verifications.length - 1];
 		const validated = run.stage_status.VALIDATE === "COMPLETED";
 		const requirements = run.ledger.classify?.requirements ?? [];
@@ -375,7 +376,8 @@ export class HostEngine {
 		const missingCaps = caps ? (plan.length ? [...new Set(plan.map((o) => o.capability).filter((c) => caps.missing.includes(c)))] : caps.missing) : [];
 		const assumptions = (run.ledger.evaluation?.assumptions ?? []).filter((a) => a.status !== "verified").map((a) => a.id);
 		const scenarios = (run.ledger.stress?.scenarios ?? []).filter((s) => s.outcome !== "survives").map((s) => s.id);
-		return { unmet_requirements: unmet, missing_capabilities: missingCaps, unverified_assumptions: assumptions, broken_scenarios: scenarios };
+		const unknownValues = (run.ledger.evaluation?.claims ?? []).filter((c) => c.value && UNKNOWN_VALUES.has(c.value.status)).map((c) => c.id);
+		return { unmet_requirements: unmet, missing_capabilities: missingCaps, unverified_assumptions: assumptions, broken_scenarios: scenarios, unknown_values: unknownValues };
 	}
 
 	/** Limitations the engine itself records (not left to the host). */

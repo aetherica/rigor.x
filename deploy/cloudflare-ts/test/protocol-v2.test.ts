@@ -176,7 +176,7 @@ function toValidate(h: ReturnType<typeof harness>, level: Level, requirements: u
 	if (stages.includes("ASSESS_COMPLEXITY")) r.must("ASSESS_COMPLEXITY");
 	if (stages.includes("IDENTIFY_CAPABILITIES")) r.must("IDENTIFY_CAPABILITIES", { available: ["web_search"], missing: [] });
 	const ev = Array.from({ length: opts.evidence ?? 2 }, (_, i) => r.evidence(`https://source${i}.example.org/doc`));
-	r.must("PLAN", { operations: [{ id: "op1", capability: "web_search", depends_on: [], completion_condition: "All sources for the comparison are recorded", requirement_ids: [] }] });
+	r.must("PLAN", { operations: [{ id: "op1", capability: "web_search", depends_on: [], completion_condition: "All sources for the comparison are recorded", requirement_ids: [], tier: "A1" }] });
 	r.must("EXECUTE", { operations: [{ id: "op1", status: "done", evidence_ids: [ev[0]] }] });
 	if (stages.includes("EVALUATE_EVIDENCE")) {
 		r.must("EVALUATE_EVIDENCE", { claims: opts.claims ? opts.claims(ev) : ev.map((e, i) => ({ id: `C${i + 1}`, text: `Claim ${i + 1} is supported by its recorded source`, status: "SUPPORTED", evidence_ids: [e] })), contradictions: [], ...(opts.assumptions ? { assumptions: opts.assumptions } : {}) });
@@ -455,4 +455,32 @@ test("hosts with a cached older schema: JSON-string arguments are accepted, crit
 	assert.match(old.message, /takes requirements .* refresh the RIGOR-X connector/);
 	const v = h.ok("verify", { run_id: r.id, requirements: JSON.stringify([{ id: "R1", met: true, evidence_ids: [ev] }]) });
 	assert.equal(v.passed, true);
+});
+
+test("autonomy tiers (directive §15): a done A4 operation needs the user's approval on record", () => {
+	const h = harness();
+	const r = runner(h, "Prepare the list of options for the team");
+	r.must("QUERY");
+	r.must("CLASSIFY", classify("L02_STANDARD", [req("R1")]));
+	assert.match((r.submit("PLAN", { operations: [{ id: "op1", capability: "email", depends_on: [], completion_condition: "The options are sent to the team", tier: "A9" }] }) as any).message, /tier must be one of/);
+	r.must("PLAN", { operations: [{ id: "op1", capability: "email", depends_on: [], completion_condition: "The options are sent to the team", requirement_ids: ["R1"], tier: "A4" }] });
+	const sent = h.ok("report_action", { run_id: r.id, tool_name: "send_email", status: "EXECUTED" }).action_id;
+	const refused = r.submit("EXECUTE", { operations: [{ id: "op1", status: "done", evidence_ids: [sent] }] }) as any;
+	assert.match(refused.message, /tier A4: a done A4 operation must cite the user's approval/);
+	const approval = r.evidence("chat:message:approve-sending", { evidence_type: "USER_APPROVAL" });
+	r.must("EXECUTE", { operations: [{ id: "op1", status: "done", evidence_ids: [sent, approval] }] });
+	const v = (r.verify([{ id: "R1", met: true, evidence_ids: [sent] }]) as any).result;
+	assert.equal(v.checks.find((c: any) => c.check === "approvals_recorded").passed, true);
+	assert.equal(v.passed, true);
+});
+
+test("from L05 every planned operation needs an autonomy tier", () => {
+	const h = harness();
+	const r = runner(h, "Prepare the list of options for the team");
+	r.must("QUERY");
+	r.must("CLASSIFY", classify("L05_CRITICAL", [req("R1")]));
+	r.must("SELECT_METHODS", { methods: [{ name: "review", reason: "the options need a careful review" }] });
+	r.must("ASSESS_COMPLEXITY");
+	r.must("IDENTIFY_CAPABILITIES", { available: ["web_search"], missing: [] });
+	assert.match((r.submit("PLAN", { operations: [{ id: "op1", capability: "web_search", depends_on: [], completion_condition: "The options are researched and listed" }] }) as any).message, /needs an autonomy tier/);
 });

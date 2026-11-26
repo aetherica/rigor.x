@@ -5,13 +5,15 @@
 // rigorx_check_source) raise the reported verification level.
 import { DISQUALIFYING_STATUSES, SUPPORTING_STATUSES, levelRank, type VerificationLevel } from "./protocol.ts";
 import type { EvidenceRecord, RunState } from "./run.ts";
-import type { Requirement } from "./ledger.ts";
+import { UNKNOWN_VALUES, type Requirement } from "./ledger.ts";
 import { evidenceIds, ident, invalid, list, object, type Json, type JsonObject } from "./text.ts";
 
 export const GATE_VERSION = "2.0.0";
 export const ACTION = "HOST_REPORTED_ACTION";
 export const COMPUTE = "COMPUTE_RECEIPT";
 export const SOURCE_CHECK = "SOURCE_CHECK";
+/** Host-recorded evidence of the user's approval for an A4/A5 operation (directive §15). */
+export const USER_APPROVAL = "USER_APPROVAL";
 /** Evidence types only the engine creates. */
 export const ENGINE_TYPES: ReadonlySet<string> = new Set([ACTION, COMPUTE, SOURCE_CHECK]);
 
@@ -163,6 +165,17 @@ export function runGate(run: RunState, answers: Answer[], at: Date): GateResult 
 	}).map((id) => `${a.id} cites ${id}, a ${evidence.get(id)!.type} that failed`)));
 
 	const claims = run.ledger.evaluation?.claims ?? [];
+	// 11b. An unknown value never supports a met requirement (directive §2.2: unknown is not zero).
+	if (claims.some((c) => c.value)) {
+		add("unknown_values_not_supporting", claims.filter((c) => c.value && UNKNOWN_VALUES.has(c.value.status) && c.requirement_ids.some((r) => answered.get(r)?.met === true))
+			.map((c) => `claim ${c.id} has a ${c.value!.status} value, so ${c.requirement_ids.filter((r) => answered.get(r)?.met === true).join(", ")} cannot be met on it`));
+	}
+	// 11c. Approved consequential operations (A4/A5) cite the user's approval.
+	const gated = plan.filter((op) => op.tier === "A4" || op.tier === "A5");
+	if (gated.length) {
+		add("approvals_recorded", gated.filter((op) => reports.get(op.id)?.status === "done" && !(reports.get(op.id)?.evidence_ids ?? []).some((id) => evidence.get(id)?.type === USER_APPROVAL))
+			.map((op) => `${op.id} (${op.tier}) has no USER_APPROVAL evidence`));
+	}
 	// 12. L03+ (ADR-003 "claim status required for cited evidence"): every evidence ID a met requirement
 	// cites (actions and engine receipts excepted) is given a status by some claim; at least one cited
 	// source rests on an ESTABLISHED, VERIFIED or SUPPORTED claim; disqualified claims block it.

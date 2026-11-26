@@ -1,0 +1,379 @@
+{
+ "name": "value-status-market-share",
+ "description": "Brief §10 example (P3 exit): a draft states a 30% market share, but the only source does not measure it. A measured ZERO needs evidence and an unknown value has no number; a requirement cannot be met on a NOT_COLLECTED value; DELIVER must disclose the unknown value, the unmet requirement and the missing capability. The engine checks structure only: a ZERO that cites a source is accepted, because whether the source really measured zero is a question of content, not structure.",
+ "steps": [
+  {
+   "op": "start_run",
+   "args": {
+    "task": "Prepare the market section of the brief"
+   },
+   "expect": {
+    "ok": true,
+    "fields": {
+     "intent": "UNKNOWN"
+    }
+   },
+   "capture": {
+    "run": "run_id"
+   }
+  },
+  {
+   "op": "submit_stage",
+   "args": {
+    "run_id": "$run",
+    "stage": "QUERY",
+    "outcome": "completed",
+    "summary": "The brief's draft says the product has a 30% market share; the source is a press release."
+   },
+   "expect": {
+    "ok": true
+   }
+  },
+  {
+   "op": "submit_stage",
+   "args": {
+    "run_id": "$run",
+    "stage": "CLASSIFY",
+    "outcome": "completed",
+    "summary": "Objective, deliverable and the market share requirement are registered at L03.",
+    "data": {
+     "objective": "State the product's market share with a source",
+     "deliverable": "One sentence with the share and its source",
+     "level": "L03_DEEP",
+     "stakes": "medium",
+     "requirements": [
+      {
+       "id": "R1",
+       "text": "The brief states the product's market share with its source",
+       "importance": "should"
+      }
+     ]
+    }
+   },
+   "expect": {
+    "ok": true
+   }
+  },
+  {
+   "op": "submit_stage",
+   "args": {
+    "run_id": "$run",
+    "stage": "SELECT_METHODS",
+    "outcome": "completed",
+    "summary": "One method: read the cited source and check whether it measures market share.",
+    "data": {
+     "methods": [
+      {
+       "name": "source review",
+       "reason": "the number must come from the source"
+      }
+     ]
+    }
+   },
+   "expect": {
+    "ok": true
+   }
+  },
+  {
+   "op": "submit_stage",
+   "args": {
+    "run_id": "$run",
+    "stage": "IDENTIFY_CAPABILITIES",
+    "outcome": "completed",
+    "summary": "Web search is available; no paid market research database is available.",
+    "data": {
+     "available": [
+      "web_search"
+     ],
+     "missing": [
+      "market_database"
+     ]
+    }
+   },
+   "expect": {
+    "ok": true
+   }
+  },
+  {
+   "op": "record_evidence",
+   "args": {
+    "run_id": "$run",
+    "source_ref": "https://press.example.com/launch",
+    "claim": "The press release reports unit sales but no market share"
+   },
+   "expect": {
+    "ok": true
+   },
+   "capture": {
+    "s1": "evidence_id"
+   }
+  },
+  {
+   "op": "submit_stage",
+   "args": {
+    "run_id": "$run",
+    "stage": "PLAN",
+    "outcome": "completed",
+    "summary": "Read the press release; a market database would be needed for the share itself.",
+    "data": {
+     "operations": [
+      {
+       "id": "op1",
+       "capability": "web_search",
+       "depends_on": [],
+       "completion_condition": "The press release has been read and recorded",
+       "requirement_ids": [
+        "R1"
+       ]
+      },
+      {
+       "id": "op2",
+       "capability": "market_database",
+       "depends_on": [
+        "op1"
+       ],
+       "completion_condition": "The share is taken from a market database"
+      }
+     ]
+    }
+   },
+   "expect": {
+    "ok": true
+   }
+  },
+  {
+   "op": "submit_stage",
+   "args": {
+    "run_id": "$run",
+    "stage": "EXECUTE",
+    "outcome": "completed",
+    "summary": "The press release was read; the market database could not be used.",
+    "data": {
+     "operations": [
+      {
+       "id": "op1",
+       "status": "done",
+       "evidence_ids": [
+        "$s1"
+       ]
+      },
+      {
+       "id": "op2",
+       "status": "not_done",
+       "evidence_ids": []
+      }
+     ]
+    }
+   },
+   "expect": {
+    "ok": true
+   }
+  },
+  {
+   "op": "submit_stage",
+   "args": {
+    "run_id": "$run",
+    "stage": "EVALUATE_EVIDENCE",
+    "outcome": "completed",
+    "summary": "Trying to record the unmeasured share as zero without evidence, which must be refused.",
+    "data": {
+     "claims": [
+      {
+       "id": "C1",
+       "text": "The market share of the product in the brief's market",
+       "status": "UNVERIFIED",
+       "evidence_ids": [],
+       "requirement_ids": [
+        "R1"
+       ],
+       "value": {
+        "status": "ZERO"
+       }
+      }
+     ]
+    }
+   },
+   "expect": {
+    "ok": false,
+    "code": "INVALID_REQUEST",
+    "message": "never ZERO"
+   }
+  },
+  {
+   "op": "submit_stage",
+   "args": {
+    "run_id": "$run",
+    "stage": "EVALUATE_EVIDENCE",
+    "outcome": "completed",
+    "summary": "Trying to keep the draft's 30% as an unknown value, which must be refused.",
+    "data": {
+     "claims": [
+      {
+       "id": "C1",
+       "text": "The market share of the product in the brief's market",
+       "status": "UNVERIFIED",
+       "evidence_ids": [
+        "$s1"
+       ],
+       "requirement_ids": [
+        "R1"
+       ],
+       "value": {
+        "status": "UNKNOWN",
+        "number": 30,
+        "unit": "%"
+       }
+      }
+     ]
+    }
+   },
+   "expect": {
+    "ok": false,
+    "code": "INVALID_REQUEST",
+    "message": "has no number"
+   }
+  },
+  {
+   "op": "submit_stage",
+   "args": {
+    "run_id": "$run",
+    "stage": "EVALUATE_EVIDENCE",
+    "outcome": "completed",
+    "summary": "The share was not collected by the only source; the claim stays unverified.",
+    "data": {
+     "claims": [
+      {
+       "id": "C1",
+       "text": "The market share of the product in the brief's market",
+       "status": "UNVERIFIED",
+       "evidence_ids": [
+        "$s1"
+       ],
+       "requirement_ids": [
+        "R1"
+       ],
+       "value": {
+        "status": "NOT_COLLECTED",
+        "unit": "%"
+       }
+      }
+     ]
+    }
+   },
+   "expect": {
+    "ok": true,
+    "fields": {
+     "current_stage": "VALIDATE"
+    }
+   }
+  },
+  {
+   "op": "verify",
+   "args": {
+    "run_id": "$run",
+    "requirements": [
+     {
+      "id": "R1",
+      "met": true,
+      "evidence_ids": [
+       "$s1"
+      ]
+     }
+    ]
+   },
+   "expect": {
+    "ok": true,
+    "fields": {
+     "passed": false,
+     "checks.[check=unknown_values_not_supporting].detail": [
+      "claim C1 has a NOT_COLLECTED value, so R1 cannot be met on it"
+     ]
+    }
+   }
+  },
+  {
+   "op": "reenter",
+   "args": {
+    "run_id": "$run",
+    "target_stage": "VALIDATE",
+    "trigger": "gate_failed",
+    "reason": "the share is not known, so R1 is not met"
+   },
+   "expect": {
+    "ok": true
+   }
+  },
+  {
+   "op": "verify",
+   "args": {
+    "run_id": "$run",
+    "requirements": [
+     {
+      "id": "R1",
+      "met": false,
+      "evidence_ids": []
+     }
+    ]
+   },
+   "expect": {
+    "ok": true,
+    "fields": {
+     "passed": true,
+     "requires.unmet_requirements": [
+      "R1"
+     ],
+     "requires.unknown_values": [
+      "C1"
+     ],
+     "requires.missing_capabilities": [
+      "market_database"
+     ]
+    }
+   }
+  },
+  {
+   "op": "submit_stage",
+   "args": {
+    "run_id": "$run",
+    "stage": "DELIVER",
+    "outcome": "completed",
+    "summary": "The brief must not state 30%: the share is not collected by any available source.",
+    "data": {}
+   },
+   "expect": {
+    "ok": false,
+    "code": "INVALID_REQUEST",
+    "message": "data.unknown_values: C1"
+   }
+  },
+  {
+   "op": "submit_stage",
+   "args": {
+    "run_id": "$run",
+    "stage": "DELIVER",
+    "outcome": "completed",
+    "summary": "The brief states that the share is not known and why, instead of the draft's 30%.",
+    "data": {
+     "unmet_requirements": [
+      "R1"
+     ],
+     "unknown_values": [
+      "C1"
+     ],
+     "missing_capabilities": [
+      "market_database"
+     ]
+    }
+   },
+   "expect": {
+    "ok": true,
+    "fields": {
+     "status": "DELIVERED_WITH_LIMITATIONS",
+     "limitations": [
+      "planned operations not done: op2"
+     ]
+    }
+   }
+  }
+ ]
+}

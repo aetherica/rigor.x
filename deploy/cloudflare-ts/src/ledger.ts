@@ -25,9 +25,20 @@ export interface Operation {
 	parallel_group: string | null;
 	completion_condition: StoredText;
 	requirement_ids: string[];
+	/** Autonomy tier (directive §15): A0 observe … A5 restricted; A4/A5 need a USER_APPROVAL receipt when done. */
+	tier: AutonomyTier | null;
 }
+export const AUTONOMY_TIERS = ["A0", "A1", "A2", "A3", "A4", "A5"] as const;
+export type AutonomyTier = (typeof AUTONOMY_TIERS)[number];
+/** Value status of a claimed quantity (WS32 P3): an unknown value is never a zero. */
+export const VALUE_STATUSES = ["KNOWN", "ZERO", "UNKNOWN", "NOT_COLLECTED", "UNAVAILABLE", "NOT_APPLICABLE"] as const;
+export type ValueStatus = (typeof VALUE_STATUSES)[number];
+export const UNKNOWN_VALUES: ReadonlySet<ValueStatus> = new Set(["UNKNOWN", "NOT_COLLECTED", "UNAVAILABLE"]);
 export interface OperationReport { id: string; status: "done" | "failed" | "not_done"; evidence_ids: string[] }
-export interface Claim { id: string; text: StoredText; status: ClaimStatus; evidence_ids: string[]; requirement_ids: string[]; numeric: boolean }
+export interface Claim {
+	id: string; text: StoredText; status: ClaimStatus; evidence_ids: string[]; requirement_ids: string[]; numeric: boolean;
+	value: { status: ValueStatus; number: number | null; unit: string | null } | null;
+}
 export interface Contradiction { claim_ids: string[]; resolved: boolean; note: StoredText }
 export interface Assumption { id: string; text: StoredText; consequence_if_false: StoredText; status: "unverified" | "verified" | "refuted"; evidence_ids: string[] }
 export interface Scenario { id: string; requirement_ids: string[]; failure_mode: StoredText; outcome: "survives" | "breaks" | "unknown"; mitigation: StoredText | null }
@@ -48,7 +59,7 @@ export interface Ledger {
 	optimize?: { changed: boolean; result: StoredText; fingerprint: string };
 	delivery?: {
 		unmet_requirements: string[]; missing_capabilities: string[]; unverified_assumptions: string[];
-		broken_scenarios: string[]; limitations: StoredText[];
+		broken_scenarios: string[]; unknown_values: string[]; limitations: StoredText[];
 	};
 }
 
@@ -171,8 +182,11 @@ export function planContract(data: Record<string, unknown>, ctx: ContractContext
 	const raw = list("data.operations", data.operations, 100);
 	if (!raw.length) throw invalid("data.operations must contain at least one operation");
 	const declared = ctx.ledger.capabilities ? new Set([...ctx.ledger.capabilities.available, ...ctx.ledger.capabilities.missing]) : null;
+	const tierRequired = levelRank(ctx.level) >= levelRank("L05_CRITICAL");
 	const ops = uniqueIds("data.operations", raw.map((r, i) => {
 		const o = object(`data.operations[${i}]`, r);
+		const tier = o.tier === undefined || o.tier === null ? null : oneOf(`data.operations[${i}].tier`, o.tier, AUTONOMY_TIERS);
+		if (tierRequired && tier === null) throw invalid(`At ${ctx.level} every operation needs an autonomy tier: data.operations[${i}].tier (A0 observe, A1 analyze, A2 recommend, A3 reversible action, A4 consequential approved action, A5 restricted)`);
 		const capability = capabilityName(`data.operations[${i}].capability`, o.capability);
 		if (declared && !declared.has(capability)) throw invalid(`data.operations[${i}].capability ${capability} was not declared at IDENTIFY_CAPABILITIES (available or missing)`);
 		return {
@@ -182,6 +196,7 @@ export function planContract(data: Record<string, unknown>, ctx: ContractContext
 			parallel_group: o.parallel_group === undefined || o.parallel_group === null ? null : ident(`data.operations[${i}].parallel_group`, o.parallel_group),
 			completion_condition: storedNote(`data.operations[${i}].completion_condition`, o.completion_condition, ctx.policy, MAX_NOTE, "say how you will know it is done"),
 			requirement_ids: requirementRefs(`data.operations[${i}].requirement_ids`, o.requirement_ids, ctx, false),
+			tier,
 		};
 	}));
 	const ids = new Set(ops.map((o) => o.id));
@@ -221,7 +236,7 @@ export function findCycle(ops: { id: string; depends_on: string[] }[]): string[]
 	return [...path.slice(path.indexOf(cur)), cur];
 }
 
-export function executeContract(data: Record<string, unknown>, ctx: ContractContext): NonNullable<Ledger["execution"]> {
+export function executeContract(data: Record<string, unknown>, ctx: ContractContext, approvals: ReadonlySet<string> = new Set()): NonNullable<Ledger["execution"]> {
 	const planned = ctx.ledger.plan?.operations ?? [];
 	const raw = list("data.operations", data.operations, 100, planned.length > 0);
 	const reports = uniqueIds("data.operations", raw.map((r, i) => {
@@ -236,6 +251,12 @@ export function executeContract(data: Record<string, unknown>, ctx: ContractCont
 	if (unknown.length) throw invalid(`Not in the plan: ${unknown.join(", ")}`);
 	const missing = planned.filter((p) => !reported.has(p.id)).map((p) => p.id);
 	if (missing.length) throw invalid(`Report every planned operation; missing: ${missing.join(", ")}`);
+	for (const p of planned) {
+		const rep = reports.find((r) => r.id === p.id)!;
+		if ((p.tier === "A4" || p.tier === "A5") && rep.status === "done" && !rep.evidence_ids.some((e) => approvals.has(e))) {
+			throw invalid(`Operation ${p.id} is tier ${p.tier}: a done ${p.tier} operation must cite the user's approval, recorded with rigorx_record_evidence (evidence_type USER_APPROVAL)`);
+		}
+	}
 	return { operations: reports };
 }
 
@@ -247,13 +268,28 @@ export function evaluationContract(data: Record<string, unknown>, ctx: ContractC
 		const ids = evidenceIds(`data.claims[${i}].evidence_ids`, o.evidence_ids, ctx.evidence, false);
 		if (needsEvidence && ids.length === 0) throw invalid(`data.claims[${i}]: status ${status} needs evidence_ids`);
 		if (o.numeric !== undefined && o.numeric !== null && typeof o.numeric !== "boolean") throw invalid(`data.claims[${i}].numeric must be true or false`);
+		let value: Claim["value"] = null;
+		if (o.value !== undefined && o.value !== null) {
+			const v = object(`data.claims[${i}].value`, o.value);
+			const vs = oneOf(`data.claims[${i}].value.status`, v.status, VALUE_STATUSES);
+			const num = v.number === undefined || v.number === null ? null : v.number;
+			if (num !== null && (typeof num !== "number" || !Number.isFinite(num))) throw invalid(`data.claims[${i}].value.number must be a finite number`);
+			if (vs === "KNOWN" && num === null) throw invalid(`data.claims[${i}].value: a KNOWN value needs its number`);
+			if (vs === "ZERO" && num !== null && num !== 0) throw invalid(`data.claims[${i}].value: a ZERO value is 0`);
+			if (vs === "ZERO" && ids.length === 0) throw invalid(`data.claims[${i}].value: a measured ZERO needs evidence_ids; if the value is not known use UNKNOWN or NOT_COLLECTED, never ZERO`);
+			if (UNKNOWN_VALUES.has(vs) || vs === "NOT_APPLICABLE") {
+				if (num !== null) throw invalid(`data.claims[${i}].value: a ${vs} value has no number (do not fill an unknown with a guess or a zero)`);
+			}
+			value = { status: vs, number: vs === "ZERO" ? 0 : (num as number | null), unit: v.unit === undefined || v.unit === null ? null : text(`data.claims[${i}].value.unit`, v.unit, 40) };
+		}
 		return {
 			id: ident(`data.claims[${i}].id`, o.id),
 			text: storedNote(`data.claims[${i}].text`, o.text, ctx.policy, ctx.maxText, "state the claim"),
 			status,
 			evidence_ids: ids,
 			requirement_ids: requirementRefs(`data.claims[${i}].requirement_ids`, o.requirement_ids, ctx, false),
-			numeric: o.numeric === true,
+			numeric: o.numeric === true || value !== null,
+			value,
 		};
 	}));
 	const claimIds = new Set(claims.map((c) => c.id));
@@ -317,6 +353,7 @@ export function deliveryContract(data: Record<string, unknown>, ctx: ContractCon
 		missing_capabilities: [...new Set(list("data.missing_capabilities", data.missing_capabilities, 50, false).map((v, i) => capabilityName(`data.missing_capabilities[${i}]`, v)))],
 		unverified_assumptions: ids("data.unverified_assumptions"),
 		broken_scenarios: ids("data.broken_scenarios"),
+		unknown_values: ids("data.unknown_values"),
 		limitations: optionalNotes("data.limitations", data.limitations, ctx, 50),
 	};
 }

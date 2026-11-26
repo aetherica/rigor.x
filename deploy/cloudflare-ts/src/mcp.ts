@@ -12,6 +12,7 @@
 // single JSON response, which the Streamable HTTP transport allows.
 
 import { EngineError } from "./engine.ts";
+import { CONTEXTS, humorPolicy, type HumorInput } from "./humor.ts";
 import type { Json, JsonObject } from "./pipeline.ts";
 
 export const SERVER_VERSION = "0.4.0.dev0";
@@ -135,6 +136,10 @@ export const TOOLS: ToolSpec[] = [
 	{ name: "rigorx_memory_delete", title: "Topic memory: delete items", hint: "destructive", operation: "memory_delete",
 		description: "Permanently delete remembered items (rows and search index). Deleting is the user's decision: decided_by must be \"user\". An audit record keeps what was deleted and when, without the content.",
 		properties: { item_ids: { type: "array", items: { type: "string" } }, decided_by: str() }, required: ["item_ids", "decided_by"] },
+	{ name: "rigorx_humor_policy", title: "Humor policy", hint: "read",
+		description: "Decide whether humor fits the reply you are about to give, how strong it may be and which styles are allowed (RIGOR-X writes no jokes; you do). contexts: one or more of emergency, bereavement, medical, legal, security_incident, sensitive_personal, negotiation, professional, debugging, education, casual, creative (no context = no humor). Optional audience (individual|group|public), user_preference (none|light|playful), user_distress, last_reaction (positive|neutral|negative), multilingual_audience. The most restrictive rule wins. Stores nothing.",
+		properties: { contexts: { type: "array", items: { type: "string" } }, audience: optStr(), user_preference: optStr(), user_distress: { type: "boolean", default: false },
+			last_reaction: optStr(), multilingual_audience: { type: "boolean", default: false } }, required: ["contexts"] },
 	{ name: "rigorx_profile", title: "Account profile", hint: "read", operation: "profile",
 		description: "Stable, opaque identifier of the signed-in account (random, not derived from your Google account).",
 		properties: {}, required: [], meta: { "openai/profile": true },
@@ -203,12 +208,16 @@ export async function handleMessage(message: unknown, backend: EngineBackend, ow
 			const tool = TOOLS.find((t) => t.name === name);
 			if (!tool) return rpcError(m.id, -32602, `Unknown tool: ${JSON.stringify(name)}`);
 			const args = (params.arguments && typeof params.arguments === "object" && !Array.isArray(params.arguments) ? params.arguments : {}) as JsonObject;
+			if (tool.name === "rigorx_verify" && (args.requirements === undefined || args.requirements === null) && args.criteria !== undefined) {
+				return rpcResult(m.id, toolError("INVALID_REQUEST: rigorx_verify takes requirements (engine protocol 2), not criteria: answer each requirement registered at CLASSIFY with {id, met, evidence_ids}. If your tool list still shows criteria, refresh the RIGOR-X connector."));
+			}
 			const missing = tool.required.filter((k) => args[k] === undefined || args[k] === null);
 			if (missing.length) return rpcResult(m.id, toolError(`INVALID_REQUEST: missing required arguments: ${missing.join(", ")}`));
 			try {
 				if (tool.name === "rigorx_route") return rpcResult(m.id, toolResult(backend.route(args.task)));
 				if (tool.name === "rigorx_resolve_commands") return rpcResult(m.id, toolResult(backend.resolveCommands(args.text)));
 				if (tool.name === "rigorx_compute" && (args.run_id === undefined || args.run_id === null)) return rpcResult(m.id, toolResult(backend.compute(args)));
+				if (tool.name === "rigorx_humor_policy") return rpcResult(m.id, toolResult(humorTool(args)));
 				if (!owner) return rpcResult(m.id, toolError("AUTH_REQUIRED: sign in to use this tool"));
 				if (tool.name === "rigorx_check_source") return rpcResult(m.id, toolResult(await backend.checkSource(owner, args)));
 				return rpcResult(m.id, toolResult(await backend.run(owner, tool.operation!, args)));
@@ -220,6 +229,25 @@ export async function handleMessage(message: unknown, backend: EngineBackend, ow
 		default:
 			return rpcError(m.id, -32601, `Method not found: ${m.method}`);
 	}
+}
+
+function humorTool(args: JsonObject): JsonObject {
+	const raw = typeof args.contexts === "string" ? (() => { try { return JSON.parse(args.contexts as string) as unknown; } catch { return [args.contexts]; } })() : args.contexts;
+	if (!Array.isArray(raw) || raw.length > 12) throw new EngineError("contexts must be a list of up to 12 context names", "INVALID_REQUEST");
+	for (const c of raw) if (!(CONTEXTS as readonly unknown[]).includes(c)) throw new EngineError(`Unknown context ${JSON.stringify(c)}; contexts are ${CONTEXTS.join(", ")}`, "INVALID_REQUEST");
+	const pick = <T extends string>(name: string, v: unknown, options: readonly T[]): T | undefined => {
+		if (v === undefined || v === null) return undefined;
+		if (!(options as readonly unknown[]).includes(v)) throw new EngineError(`${name} must be one of ${options.join(", ")}`, "INVALID_REQUEST");
+		return v as T;
+	};
+	const input: HumorInput = { contexts: raw as HumorInput["contexts"], user_distress: args.user_distress === true, multilingual_audience: args.multilingual_audience === true };
+	const audience = pick("audience", args.audience, ["individual", "group", "public"] as const);
+	const preference = pick("user_preference", args.user_preference, ["none", "light", "playful"] as const);
+	const reaction = pick("last_reaction", args.last_reaction, ["positive", "neutral", "negative"] as const);
+	if (audience) input.audience = audience;
+	if (preference) input.user_preference = preference;
+	if (reaction) input.last_reaction = reaction;
+	return humorPolicy(input) as unknown as JsonObject;
 }
 
 // ---------------------------------------------------------------- stateless era (2026-07-28)

@@ -181,7 +181,8 @@
        "completion_condition": "The conductivity is computed with units checked",
        "requirement_ids": [
         "R1"
-       ]
+       ],
+       "tier": "A1"
       },
       {
        "id": "op2",
@@ -189,7 +190,8 @@
        "depends_on": [
         "op1"
        ],
-       "completion_condition": "The second source confirms the scaling law"
+       "completion_condition": "The second source confirms the scaling law",
+       "tier": "A1"
       }
      ]
     }
