@@ -9,7 +9,7 @@ import { TLSSocket } from "node:tls";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import pg from "pg";
-import { DatabaseConfigError, parseDatabaseSettings } from "../pg-config.ts";
+import { DatabaseConfigError, parseDatabaseSettings, storageErrorHint } from "../pg-config.ts";
 import { ConfigError, loadConfig } from "../config.ts";
 
 const PASSWORD = "s3cret-passw0rd-never-printed";
@@ -45,6 +45,39 @@ test("errors never contain the connection string or password", () => {
 		}
 	}
 	assert.throws(() => parse({}), /DATABASE_URL is required/);
+});
+
+test("copied placeholders and wrapped values get an instruction, never an echo of the value", () => {
+	const cases: [string, RegExp][] = [
+		[`postgresql://postgres.ref:[YOUR-PASSWORD]@aws-1-ap-southeast-1.pooler.supabase.com:5432/postgres`, /password placeholder/],
+		[`postgresql://postgres.ref:${PASSWORD}@aws-\u2026-ap-southeast-1.pooler.supabase.com:5432/postgres`, /placeholder or typographic character/],
+		[`DATABASE_URL=postgresql://u:${PASSWORD}@h.example.com:5432/x`, /bare connection string/],
+		[`"postgresql://u:${PASSWORD}@h.example.com:5432/x"`, /bare connection string/],
+		[`postgresql://u:pa/ss${PASSWORD}@h.example.com:5432/x`, /percent-encoded|host contains characters/],
+		[`postgresql://u:${PASSWORD}@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres`, /Session pooler string, port 5432/],
+	];
+	for (const [url, pattern] of cases) {
+		try {
+			parse({ DATABASE_URL: url.replace("\\u2026", "\u2026") });
+			assert.fail(`should refuse ${url}`);
+		} catch (e) {
+			assert.ok(e instanceof DatabaseConfigError, String(e));
+			assert.match((e as Error).message, pattern);
+			assert.equal((e as Error).message.includes(PASSWORD), false);
+		}
+	}
+});
+
+test("startup storage failures map to a concrete instruction", () => {
+	const hint = (e: object) => storageErrorHint(e) ?? "";
+	assert.match(hint({ code: "ENETUNREACH", message: "connect ENETUNREACH 2406:da18:1691:a200:0:45e7:13db:5b54:5432 - Local (:::0)" }), /IPv6.*Session pooler/);
+	assert.match(hint({ code: "ENOTFOUND", message: "getaddrinfo ENOTFOUND aws-%E2%80%A6-ap-southeast-1.pooler.supabase.com" }), /host name does not exist/);
+	assert.match(hint({ code: "XX000", message: "Tenant or user not found" }), /aws-0-ap-southeast-1 or aws-1-ap-southeast-1/);
+	assert.match(hint({ code: "28P01", message: "password authentication failed for user \"postgres\"" }), /Wrong database password/);
+	assert.match(hint({ code: "SELF_SIGNED_CERT_IN_CHAIN", message: "self-signed certificate in certificate chain" }), /DATABASE_CA_CERT/);
+	assert.match(hint({ code: "ECONNREFUSED", message: "connect ECONNREFUSED" }), /port is 5432/);
+	assert.equal(storageErrorHint(new Error("something else")), null);
+	for (const h of [hint({ code: "ENETUNREACH", message: "connect ENETUNREACH 2406::1" }), hint({ message: "Tenant or user not found" })]) assert.equal(h.includes("\u2026"), false); // no placeholders in hints
 });
 
 test("direct Supabase host warns about IPv6; CA must be PEM; pool size bounded", () => {
