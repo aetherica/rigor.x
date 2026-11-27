@@ -25,7 +25,9 @@ test("unauthenticated MCP: 401 with resource_metadata on the configured origin",
 test("public pages, icons, version and health", async () => {
 	const home = await fetch(`${base}/`);
 	assert.equal(home.status, 200);
-	assert.match(await home.text(), /<h1>Aetherica<\/h1>/);
+	const homeHtml = await home.text();
+	assert.match(homeHtml, /<title>Aetherica\b/); // the landing page (brand), not a placeholder
+	assert.ok(homeHtml.includes(`<code class="addr">${base}/mcp</code>`), "the connector address is the configured origin");
 	assert.match(home.headers.get("content-security-policy") ?? "", /frame-ancestors 'none'/);
 	const icon = await fetch(`${base}/icon-192.png`);
 	assert.equal(icon.status, 200);
