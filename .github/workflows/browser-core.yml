@@ -20,7 +20,7 @@ jobs:
         with:
           node-version: "22"
       - name: Install temporary type-check dependencies
-        run: npm install --no-save typescript @types/node
+        run: npm install --no-save typescript@5.9.3 @types/node
       - name: Type-check browser implementation
         run: npx tsc -p browser/tsconfig.json
       - name: Test browser core and GeckoDriver adapter
