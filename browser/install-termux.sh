@@ -9,7 +9,21 @@ pkg install -y nodejs-lts proot-distro git
 echo "[2/3] Install Debian container (first run may take time)"
 if ! proot-distro list | grep -q '^debian'; then proot-distro install debian; fi
 echo "[3/3] Install Firefox ESR and GeckoDriver in Debian"
-proot-distro login debian -- sh -lc 'apt-get update && apt-get install -y firefox-esr geckodriver'
+# Debian has no geckodriver package; Mozilla publishes an official linux-aarch64 build on GitHub.
+proot-distro login debian -- sh -lc '
+set -e
+apt-get update
+apt-get install -y firefox-esr curl ca-certificates
+if ! command -v geckodriver >/dev/null 2>&1; then
+ case "$(uname -m)" in aarch64|arm64) arch=linux-aarch64;; x86_64) arch=linux64;; *) echo "No official geckodriver build for $(uname -m)" >&2; exit 1;; esac
+ tag=$(curl -fsSLI -o /dev/null -w "%{url_effective}" https://github.com/mozilla/geckodriver/releases/latest | sed "s#.*/tag/##")
+ [ -n "$tag" ] || tag=v0.36.0
+ curl -fL "https://github.com/mozilla/geckodriver/releases/download/$tag/geckodriver-$tag-$arch.tar.gz" | tar -xz -C /usr/local/bin geckodriver
+ chmod +x /usr/local/bin/geckodriver
+fi
+firefox-esr --version
+geckodriver --version | head -1
+'
 cat <<'MSG'
 
 Security: keep GeckoDriver on 127.0.0.1. Binding it to 0.0.0.0 lets anyone on the same Wi-Fi
