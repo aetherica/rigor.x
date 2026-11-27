@@ -23,5 +23,7 @@ jobs:
         run: npm install --no-save typescript@5.9.3 @types/node
       - name: Type-check browser implementation
         run: npx tsc -p browser/tsconfig.json
-      - name: Check Termux installer syntax\n        run: bash -n browser/install-termux.sh\n      - name: Test browser core and GeckoDriver adapter
+      - name: Check Termux installer syntax
+        run: bash -n browser/install-termux.sh
+      - name: Test browser core and GeckoDriver adapter
         run: node --no-warnings --experimental-strip-types --test browser/core/*.test.ts browser/geckodriver/*.test.ts browser/*.test.ts
