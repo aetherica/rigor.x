@@ -65,7 +65,21 @@ export class GeckoDriverEngine implements BrowserEngine {
  }
  private async start(): Promise<void> {
   if (this.sessionId) return;
-  const response = await fetch(this.endpoint+"/session",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({capabilities:{alwaysMatch:{"moz:firefoxOptions":{args:["-headless"],prefs:{"browser.download.dir":join(SAFE_DIR,"downloads"),"browser.download.folderList":2,"browser.download.useDownloadDir":true,"browser.helperApps.neverAsk.saveToDisk":"application/pdf,text/csv,application/json,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet","pdfjs.disabled":true}}}})});
+  const capabilities = {
+   alwaysMatch: {
+    "moz:firefoxOptions": {
+     args: ["-headless"],
+     prefs: {
+      "browser.download.dir": join(SAFE_DIR, "downloads"),
+      "browser.download.folderList": 2,
+      "browser.download.useDownloadDir": true,
+      "browser.helperApps.neverAsk.saveToDisk": "application/pdf,text/csv,application/json,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "pdfjs.disabled": true
+     }
+    }
+   }
+  };
+  const response = await fetch(this.endpoint + "/session", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ capabilities }) });
   const json=await response.json() as WdResponse<unknown>;
   if(!response.ok)throw new Error((json as any).message??"WebDriver session creation failed");
   this.sessionId=json.sessionId??(json.value as any)?.sessionId;
