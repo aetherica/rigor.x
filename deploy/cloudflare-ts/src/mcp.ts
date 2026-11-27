@@ -149,7 +149,7 @@ export const TOOLS: ToolSpec[] = [
 		description: "Ask the user to approve one A4/A5 planned operation on the RIGOR-X site, signed in with the same Google account: returns approval_id and approve_url to give to the user. Call again with approval_id to read the decision (pending, approved, denied, expired) and the evidence_id of the engine-verified USER_APPROVAL to cite in EXECUTE. A5 operations require this; for A4 it is stronger than a host-declared approval. Never approve on the user's behalf.",
 		properties: { run_id: optStr(), operation_id: optStr(), description: optStr("What the user is approving, in one or two plain sentences (shown to the user)"), approval_id: optStr("Read the status of an earlier request") }, required: [] },
 	{ name: "rigorx_profile", title: "Account ID", hint: "read", operation: "profile",
-		description: "Stable, opaque identifier of the signed-in account (random, not derived from your Google account).",
+		description: "Stable, opaque identifier of the signed-in account (random, not derived from your sign-in).",
 		properties: {}, required: [], meta: { "openai/profile": true },
 		outputSchema: { type: "object", properties: { id: { type: "string" } }, required: ["id"] } },
 ];
