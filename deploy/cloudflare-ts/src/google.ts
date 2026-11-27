@@ -273,6 +273,46 @@ export function messagePage(title: string, message: string): string {
 	return page(`${title} — ${BRAND}`, `${MARK}<h1>${escapeHtml(title)}</h1><p class="muted">${escapeHtml(message)}</p>`);
 }
 
+
+/** Public user documentation (/docs): setup, usage, tools, account and data. Factual, no internals. */
+export function docsPage(origin: string): string {
+	const url = escapeHtml(`${origin}/mcp`);
+	return page(`${BRAND} documentation`, `${MARK}
+<h1>Documentation</h1>
+<p class="muted">${BRAND} gives your AI assistant a disciplined, inspectable way to do multi-step work: requirements are set before the work starts, sources and actions are recorded, numbers can be recomputed, and a verification gate checks the result before it is delivered. Anything not met or not verified is disclosed.</p>
+<h2>1. Connect</h2>
+<p><strong>Claude</strong> (web, desktop or mobile): Settings &rarr; Connectors &rarr; <em>Add custom connector</em> (or choose ${BRAND} from the directory once listed). Name: ${BRAND}. URL:</p>
+<p><code>${url}</code></p>
+<p><strong>ChatGPT</strong> and other MCP clients: add a custom connector or MCP server with the same URL.</p>
+<p>When you connect, you are asked to sign in with Google or GitHub. The first time, you accept the Terms of Service and Privacy Policy and your ${BRAND} account is created.</p>
+<h2>2. Use</h2>
+<p>Ask your assistant for rigorous work in plain language, for example:</p>
+<ul>
+<li>"Use ${BRAND} to research the three largest competitors of a company and cite and check every source."</li>
+<li>"With ${BRAND}, review this report: list what it claims, which claims have a source, and which do not."</li>
+<li>"Check this calculation with units before I send it."</li>
+</ul>
+<p>You can also start a message with a shortcut such as <code>/research</code>, <code>/verify</code>, <code>/factcheck</code> or <code>/audit</code>.</p>
+<p>The assistant then works through ${BRAND}'s stages. Simple tasks use a light level (L01); consequential ones use stricter levels up to L06, which add evidence, freshness and computation checks. At the end the assistant reports whether the work was <em>structurally verified</em> and what was not met or not verified.</p>
+<h2>3. What the tools do</h2>
+<ul>
+<li><strong>Plan the approach</strong>, <strong>Read shortcut commands</strong>: choose the level and method for a task.</li>
+<li><strong>Start a structured task</strong>, <strong>Save a step</strong>, <strong>Check task progress</strong>, <strong>Revisit an earlier step</strong>, <strong>Cancel a task</strong>, <strong>List my tasks</strong>: run and track the work.</li>
+<li><strong>Add a source</strong>, <strong>Open and check a source</strong>, <strong>Review sources</strong>: record where each claim comes from and check that the source exists (status, redirects, hash, title, date, retraction status; an archived copy if the page is gone). Page content is not stored.</li>
+<li><strong>Calculate with units</strong>: unit-aware arithmetic that can check a claimed number.</li>
+<li><strong>Log an action taken</strong>: record actions done with other tools, including failures.</li>
+<li><strong>Check the work</strong>: the verification gate.</li>
+<li><strong>Organize topics</strong>, <strong>Remember a note</strong>, <strong>Recall notes</strong>: topic memory you can search later.</li>
+<li><strong>Ask for your approval</strong>: high-risk operations wait until you approve them on a signed-in page.</li>
+</ul>
+<h2>4. What "structurally verified" means</h2>
+<p>Every requirement registered at the start had its own recorded evidence, failed actions were resolved and the gate's checks passed. It does not guarantee that every statement is true; it shows what was checked and how.</p>
+<h2>5. Your account and data</h2>
+<p>On <a href="/account">your account page</a> you can see today's usage, add or remove sign-in methods, and delete a task, a topic or your whole account. Daily limits currently allow 2,000 requests and 100 new tasks per account. See the <a href="/privacy">privacy policy</a> for what is stored.</p>
+<h2>6. Support</h2>
+<p>Questions and problems: <a href="${REPO_URL}/issues">${REPO_URL}/issues</a> or aetherica.inc@gmail.com. Source code (Apache-2.0): <a href="${REPO_URL}">${REPO_URL}</a>.</p>`, true);
+}
+
 /** The landing page at "/": the brand, what the service is, and the legal links. */
 export const HOME_PAGE = page(BRAND, `${MARK}
 <h1>${BRAND}</h1>

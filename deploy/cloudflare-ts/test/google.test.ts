@@ -98,3 +98,11 @@ test("account page: plain usage, deletable tasks and topics, escaped values, CSR
 	for (const action of ["delete_run", "delete_topic", "delete_all", "sign_out"]) assert.ok(html.includes(`value="${action}"`), action);
 	assert.doesNotMatch(html, /RIGOR-X|workers\.dev|humou?r/);
 });
+
+test("docs page: setup with the serving host's connector URL, tools, data and support, no internals", async () => {
+	const g = await import("../src/google.ts");
+	const html = g.docsPage("https://x.aetherica.workers.dev");
+	assert.ok(html.includes("https://x.aetherica.workers.dev/mcp") && html.includes("Add custom connector"));
+	assert.ok(html.includes("structurally verified") && html.includes('href="/account"') && html.includes('href="/privacy"'));
+	assert.doesNotMatch(html, /RIGOR-X|workers\.dev\/(?!mcp)|humou?r|rigorx_/);
+});

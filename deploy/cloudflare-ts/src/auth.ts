@@ -29,6 +29,7 @@ import {
 	approvalPage,
 	accountPage,
 	signInChoicePage,
+	docsPage,
 	termsPage,
 	TERMS_VERSION,
 	ACCOUNT_DELETE_CONFIRMATION,
@@ -457,6 +458,7 @@ function defaultHandler(origin: string, call: OwnerCall | null, extra: ExtraRout
 				if (pathname === "/" && request.method === "GET") return html(landingPage(origin));
 				if (pathname === "/privacy" && request.method === "GET") return html(PRIVACY_PAGE);
 				if (pathname === "/terms" && request.method === "GET") return html(TERMS_PAGE);
+				if (pathname === "/docs" && request.method === "GET") return html(docsPage(origin));
 				if (pathname === "/signup" && request.method === "POST") return await signupPost(request, env);
 				if (pathname === "/authorize" && request.method === "GET") return await authorizeGet(request, env);
 				if (pathname === "/authorize" && request.method === "POST") return await authorizePost(request, env, origin);
