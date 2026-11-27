@@ -1,5 +1,5 @@
 import { blockedHost, checkUrl } from "../../deploy/cloudflare-ts/src/source.ts";
-export function isPrivateIPv4(host:string):boolean{return blockedHost(host)!==null;}
+export function isPrivateIPv4(host:string):boolean{return /^\\d+\\.\\d+\\.\\d+\\.\\d+$/.test(host)&&blockedHost(host)!==null;}
 export function isBlockedHost(hostname:string,allowLocalhost=false):boolean{
  const h=hostname.toLowerCase().replace(/^\[|\]$/g,"").replace(/\.$/,"");
  const local=h==="localhost"||h.endsWith(".localhost")||h.endsWith(".local")||h.endsWith(".internal")||h.endsWith(".lan")||h.endsWith(".home.arpa");

@@ -15,16 +15,7 @@ const MAX_REDIRECTS = 10;
 const pageCounters = new Map<string, number>();
 const lastRequest = new Map<string, number>();
 
-function layerFor(url: string): DiscoveryLayer {
- const host = new URL(url).hostname.toLowerCase();
- if (host.endsWith(".onion")) return "DL04";
- if (/web\.archive\.org|archive\.today|archive\.ph|perma\.cc/.test(host)) return "DL05";
- if (/wikipedia\.org|wikidata\.org|google\.(com|co\.)|bing\.com|duckduckgo\.com/.test(host)) return "DL02";
- if (/doi\.org|arxiv\.org|pubmed\.ncbi\.nlm\.nih\.gov|crossref\.org|openalex\.org|\.edu$/.test(host)) return "DL03";
- if (/x\.com|twitter\.com|reddit\.com|youtube\.com|youtu\.be|facebook\.com|instagram\.com|tiktok\.com/.test(host)) return "DL07";
- if (/blogspot\.|wordpress\.com|medium\.com|substack\.com/.test(host)) return "DL12";
- return "DL01";
-}
+function layerFor(url: string): DiscoveryLayer { return webLayer(canonicalRef(url)); }
 function prefixKey(url: URL): string { const first = url.pathname.split("/").filter(Boolean)[0] ?? ""; return url.origin + "/" + first; }
 async function safeFetch(url: string, options: RequestInit = {}, allowLocalhost = false): Promise<Response> {
  let current = url;
