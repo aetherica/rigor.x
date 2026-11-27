@@ -8,7 +8,7 @@ export function isBlockedHost(hostname:string,allowLocalhost=false):boolean{
  const h=hostname.toLowerCase().replace(/^\[|\]$/g,"").replace(/\.$/,"");
  if(h==="localhost"||h.endsWith(".localhost")||h.endsWith(".local")||h.endsWith(".internal")||h.endsWith(".home.arpa")||h.endsWith(".lan"))return!allowLocalhost;
  if(/^\d+(?:\.\d+){0,3}$/.test(h))return isPrivateIPv4(h);
- if(h.includes(":")){if(h==="::"||h==="::1"||h.startsWith("fe80:")||h.startsWith("fc")||h.startsWith("fd")||h.startsWith("ff")||h.startsWith("2001:db8:"))return true;const m=h.match(/::ffff:(\d+\.\d+\.\d+\.\d+)$/);if(m)return isPrivateIPv4(m[1]!);}
+ if(h.includes(":")){if(h==="::"||h==="::1"||h.startsWith("fe80:")||h.startsWith("fc")||h.startsWith("fd")||h.startsWith("ff")||h.startsWith("2001:db8:"))return true;const mapped=h.match(/^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/);if(mapped){const hi=parseInt(mapped[1]!,16),lo=parseInt(mapped[2]!,16);return isPrivateIPv4([(hi>>8)&255,hi&255,(lo>>8)&255,lo&255].join("."));}}
  if(!h.includes(".")&&!allowLocalhost)return true;return false;
 }
 export function validateUrl(raw:string,options:{hosted?:boolean;allowLocalhost?:boolean}={}):{ok:true;url:URL}|{ok:false;reason:string}{
