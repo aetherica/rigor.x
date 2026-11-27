@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { guardClick, guardDownload, guardSubmit, guardType, guardUrl, challengeResult } from "../core/safety.ts";
 import { decideRobots, parseRobots, robotsFetchStatusAllowed, type RobotsRule } from "../core/robots.ts";
 import { MAX_IDLE_MS, MAX_PAGES_PER_PREFIX, MIN_SITE_DELAY_MS, validateUrl } from "../core/policy.ts";
-import { canonicalRef, webLayer } from "../../deploy/cloudflare-ts/src/sources.ts";
+const SOURCE_CLASSIFIER_PATH = "../../deploy/cloudflare-ts/src/sources.ts";
 import type { BrowserEngine, BrowserResult, EvidencePacket, OpenOptions, ReadOptions, ClickOptions, TypeOptions, SubmitOptions, ScreenshotOptions, DownloadOptions, DiscoveryLayer } from "../core/types.ts";
 
 type WdResponse<T> = { value: T; sessionId?: string };
@@ -16,7 +16,7 @@ const MAX_REDIRECTS = 10;
 const pageCounters = new Map<string, number>();
 const lastRequest = new Map<string, number>();
 
-function layerFor(url: string): DiscoveryLayer { return webLayer(canonicalRef(url)); }
+async function layerFor(url: string): Promise<DiscoveryLayer> { const shared = await import(SOURCE_CLASSIFIER_PATH); return shared.webLayer(shared.canonicalRef(url)) as DiscoveryLayer; }
 function prefixKey(url: URL): string { const first = url.pathname.split("/").filter(Boolean)[0] ?? ""; return url.origin + "/" + first; }
 async function safeFetch(url: string, options: RequestInit = {}, allowLocalhost = false): Promise<Response> {
  let current = url;
@@ -89,7 +89,7 @@ export class GeckoDriverEngine implements BrowserEngine {
   const text=await this.script<string>("const e=document.querySelector(arguments[0]);return e?e.innerText:'';",[selector]);
   const title=await this.command<string>("/session/"+this.sessionId+"/title"),url=await this.command<string>("/session/"+this.sessionId+"/url");
   const html=await this.script<string>("return document.documentElement.outerHTML;");
-  const packet:EvidencePacket={requested_url:this.requestedUrl||url,final_url:url,redirects:[],fetched_at:new Date().toISOString(),status:null,content_type:null,sha256:await sha256(html),title,layer:layerFor(url),via_tor:url.endsWith(".onion"),engine:this.name};
+  const packet:EvidencePacket={requested_url:this.requestedUrl||url,final_url:url,redirects:[],fetched_at:new Date().toISOString(),status:null,content_type:null,sha256:await sha256(html),title,layer:await layerFor(url),via_tor:url.endsWith(".onion"),engine:this.name};
   const challenge=challengeResult(text);return{status:challenge?.status??"OK",message:challenge?.message,data:{text:text.slice(0,max),title,url},evidence:packet};
  }
  async click(options:ClickOptions):Promise<BrowserResult>{await this.expireIfIdle();await this.start();const meta=await this.script<{tag:string;type:string;role:string}>("const e=document.querySelector(arguments[0]);return e?{tag:e.tagName,type:e.type||'',role:e.getAttribute('role')||''}:{};",[options.selector]);const guard=guardClick(meta);if(guard.status!=="OK")return guard;const el=await this.find(options.selector);await this.command("/session/"+this.sessionId+"/element/"+el[ELEMENT]+"/click","POST",{});return{status:"OK"};}
