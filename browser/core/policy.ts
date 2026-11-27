@@ -1,4 +1,4 @@
-const V4_BLOCKED:[[number,number,number,number,number,string]]=[
+const V4_BLOCKED:Array<[number,number,number,number,number,string]>=[
 [0,0,0,0,8,"this network"],[10,0,0,0,8,"private"],[100,64,0,0,10,"shared"],[127,0,0,0,8,"loopback"],[169,254,0,0,16,"link-local"],[172,16,0,0,12,"private"],[192,0,0,0,24,"special"],[192,0,2,0,24,"documentation"],[192,88,99,0,24,"6to4 relay"],[192,168,0,0,16,"private"],[198,18,0,0,15,"benchmark"],[198,51,100,0,24,"documentation"],[203,0,113,0,24,"documentation"],[224,0,0,0,4,"multicast"],[240,0,0,0,4,"reserved"]
 ];
 function ipv4Number(p:number[]):number{return p.reduce((n,v)=>(n*256+v)>>>0,0)}
