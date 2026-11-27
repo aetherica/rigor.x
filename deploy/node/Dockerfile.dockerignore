@@ -9,3 +9,4 @@
 !deploy/node/package-lock.json
 !deploy/node/*.ts
 !deploy/node/*.mjs
+!deploy/node/docker-entrypoint.sh
