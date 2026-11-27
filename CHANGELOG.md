@@ -32,6 +32,12 @@ This project is in pre-release development. Entries summarize notable changes; t
 - Topic memory: atomic operations (storage transactions), merge preflight, move-collision check, whole-word short-token recall, scoped supersession, run_validated bound to a validated claim by SHA-256.
 - Router risk floor for explicit low levels and a multilingual risk lexicon; compute exponents validated (no runtime exceptions); MCP request limits (1 MiB, depth 32, string/integer IDs).
 
+### Node runtime: account registry and clearer storage errors (2026-11-27)
+- The shared account registry (sign-in methods linked into one account, terms accepted once per version) now runs on the Node runtime: SQLite (the D1 migration files) or PostgreSQL (migration 2: `rigorx_private.accounts`/`identities`, same RLS and privilege rules).
+- Configuration and connection errors name the fix: password placeholder, copied `…`/curly quotes, `DATABASE_URL=` prefix or quotes, unencoded password, transaction pooler port; IPv6-only direct host, unknown host, wrong pooler cluster or user, wrong password, TLS CA, refused connection, paused project. Warnings are logged before connecting.
+- Version-conflict retries wait a short random time (no lockstep collisions or starvation under load).
+- Rollout: apply migration 2 to the database before deploying this release (the server refuses a schema without it; a running server is unaffected).
+
 ### PostgreSQL storage for the Node runtime (2026-11-27)
 - `STORAGE=postgres` (for example Supabase): each owner's engine database stored as one snapshot row, written with compare-and-swap under a per-owner advisory lock; bounded retries on version conflicts; deletion tombstones (generation) so a stale operation cannot recreate a deleted account; account deletion, tombstone and OAuth grant/token removal in one transaction; HMAC-keyed owner rows with secret rotation; SHA-256, integrity and schema checks before a snapshot is used; snapshot size limit. OAuth KV in PostgreSQL with Workers KV TTL semantics (one conformance suite for both KV stores). Private schema with RLS and no API-role privileges; explicit, locked migration command; fail-closed startup on a missing or incompatible schema. Session pooler only (port 6543 refused), mandatory TLS with certificate and hostname verification. Cloudflare production code unchanged.
 - Node runtime test: the landing page at `/` (the pipeline was red on main since 4fe5204).

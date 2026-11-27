@@ -16,7 +16,7 @@ deployment has its own accounts, runs and sign-ins.
 | One Durable Object per owner            | `STORAGE=sqlite`: one SQLite file per owner (`DATA_DIR/owners/<sha256>.sqlite`); `STORAGE=postgres`: one snapshot row per owner in PostgreSQL | `owners.ts`, `pg-owners.ts` |
 | `ctx.storage.transactionSync`           | SQLite savepoint per operation (rolled back on error) | `sqlite.ts`  |
 | KV namespace `OAUTH_KV`                 | SQLite KV (`DATA_DIR/oauth-kv.sqlite`) or PostgreSQL KV, both with Workers KV TTL semantics | `kv.ts`, `pg-kv.ts` |
-| Accounts registry (D1, `accounts.ts`)   | **Not available yet**: without it, terms are asked at every sign-in and identities are not linked into one account | — |
+| Accounts registry (D1 `ACCOUNTS_DB`, `accounts.ts`) | `STORAGE=sqlite`: `DATA_DIR/accounts.sqlite` running the D1 migration files; `STORAGE=postgres`: `rigorx_private.accounts` / `identities` (migration 2). Same registry code: sign-in methods linked into one account, terms accepted once per version | `accounts-db.ts` |
 | Static assets (`public/`)               | Icons and favicon served by the HTTP layer    | `server.ts`        |
 | `global_fetch_strictly_public`          | Address check at connection time (all resolved addresses must be public) | `guarded-fetch.ts` |
 | Version metadata                        | `RIGORX_VERSION_TAG`, `RENDER_GIT_COMMIT` or `RAILWAY_GIT_COMMIT_SHA` | `config.ts` |
@@ -104,7 +104,7 @@ Durable Object code; each owner's whole SQLite database is stored as one row (a 
 3. If it changed anything, write the new snapshot in one PostgreSQL transaction under a per-owner
    advisory lock, compare-and-swap on (version, generation). The result is returned only after
    COMMIT; on any failure the local copy is discarded and nothing is reported as saved.
-4. **Version conflict** (another process wrote first): reload and re-run, at most
+4. **Version conflict** (another process wrote first): wait a short random time (5–25 ms × attempt), reload and re-run, at most
    `STORAGE_MAX_ATTEMPTS` times (default 4, maximum 5), then `STORAGE_CONFLICT`. **Generation
    conflict** (the account was deleted meanwhile): `OWNER_DELETED_DURING_OPERATION`, no retry.
 
@@ -148,6 +148,13 @@ node --import ./deploy/node/register.mjs --experimental-strip-types deploy/node/
 # or with the image:
 docker run --rm --env-file deploy/node/.env aetherica-node node --import ./deploy/node/register.mjs --experimental-strip-types deploy/node/migrate.ts
 ```
+
+**Startup messages.** A configuration problem stops the server with exit 78 and a message naming
+what to change: a leftover `[YOUR-PASSWORD]`, a `…` or curly quote copied from an example, a
+`DATABASE_URL=` prefix or quotes, an unencoded password, or the transaction pooler port. A failure to
+reach the database is logged with a `hint`: IPv6-only direct host, unknown host name, wrong pooler
+cluster or user (`Tenant or user not found`), wrong password, TLS verification (CA certificate),
+refused connection or a paused project. Configuration warnings are logged before connecting.
 
 **Connection** (`pg-config.ts`):
 
