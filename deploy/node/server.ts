@@ -4,8 +4,10 @@
 // Google sign-in, approvals, quotas, account deletion) bound to node:http instead of workerd:
 //
 //   Cloudflare                         Node (this directory)
-//   Durable Object per owner      ->   SQLite file per owner          (owners.ts)
-//   KV namespace OAUTH_KV         ->   SQLite KV with TTL             (kv.ts)
+//   Durable Object per owner      ->   SQLite file per owner          (owners.ts), or
+//                                      PostgreSQL snapshot per owner  (pg-owners.ts, STORAGE=postgres)
+//   KV namespace OAUTH_KV         ->   SQLite KV with TTL             (kv.ts), or
+//                                      PostgreSQL KV with TTL         (pg-kv.ts, STORAGE=postgres)
 //   static assets (public/)       ->   icon and favicon files served here
 //   global_fetch_strictly_public  ->   connection-time address check  (guarded-fetch.ts)
 //   version metadata              ->   commit from the host's environment (config.ts)
@@ -19,8 +21,12 @@ import { Readable } from "node:stream";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { createApp, type AppEnv, type Platform, type RequestContext } from "../cloudflare-ts/src/app.ts";
 import { ConfigError, loadConfig, type NodeConfig } from "./config.ts";
+import pg from "pg";
 import { SqliteKv } from "./kv.ts";
 import { OwnerStorage } from "./owners.ts";
+import { PgKv } from "./pg-kv.ts";
+import { PgOwnerStore, type PgOwnerOptions } from "./pg-owners.ts";
+import { SchemaError, assertSchema } from "./pg-migrations.ts";
 import { createGuardedFetch } from "./guarded-fetch.ts";
 
 const PUBLIC_DIR = fileURLToPath(new URL("../cloudflare-ts/public/", import.meta.url));
@@ -30,10 +36,15 @@ const STATIC_TYPES: Record<string, string> = { png: "image/png", ico: "image/vnd
 
 type NodeEnv = AppEnv & Record<string, unknown>;
 
+export type KvStore = SqliteKv | PgKv;
+export type OwnerStore = OwnerStorage | PgOwnerStore;
+
 export interface RunningServer {
 	server: Server;
-	kv: SqliteKv;
-	owners: OwnerStorage;
+	kv: KvStore;
+	owners: OwnerStore;
+	/** The PostgreSQL pool when STORAGE=postgres. */
+	pool: pg.Pool | null;
 	url: string;
 	/** Stops accepting requests, waits for in-flight ones (up to the grace period), closes storage. */
 	shutdown(reason: string): Promise<void>;
@@ -83,9 +94,30 @@ async function writeResponse(res: ServerResponse, response: Response): Promise<v
 	});
 }
 
-export function startServer(config: NodeConfig, deps: { fetcher?: typeof fetch; kv?: SqliteKv } = {}): Promise<RunningServer> {
-	const kv = deps.kv ?? new SqliteKv(join(config.dataDir, "oauth-kv.sqlite"));
-	const owners = new OwnerStorage(config.dataDir, config.appVars);
+/** Opens the configured storage. PostgreSQL: checks the schema first and refuses to start on a mismatch. */
+async function openStorage(config: NodeConfig, hooks?: PgOwnerOptions["hooks"]): Promise<{ kv: KvStore; owners: OwnerStore; pool: pg.Pool | null }> {
+	const s = config.storage;
+	if (s.kind === "sqlite") return { kv: new SqliteKv(join(config.dataDir, "oauth-kv.sqlite")), owners: new OwnerStorage(config.dataDir, config.appVars), pool: null };
+	const pool = new pg.Pool(s.db.pool);
+	pool.on("error", (e) => log("rigorx_error", { where: "pg_pool", error: e.message })); // idle-client errors must not crash the process
+	pool.on("connect", (client) => { client.query("SET statement_timeout = 15000").catch(() => {}); });
+	try {
+		await assertSchema(pool);
+	} catch (e) {
+		await pool.end().catch(() => {});
+		throw e;
+	}
+	const owners = new PgOwnerStore(pool, {
+		dataDir: config.dataDir, limits: config.appVars, secret: s.ownerKeySecret, previousSecret: s.previousOwnerKeySecret,
+		maxSnapshotBytes: s.maxSnapshotBytes, maxAttempts: s.maxAttempts, ...(hooks ? { hooks } : {}),
+	});
+	return { kv: new PgKv(pool), owners, pool };
+}
+
+export async function startServer(config: NodeConfig, deps: { fetcher?: typeof fetch; kv?: SqliteKv; hooks?: PgOwnerOptions["hooks"] } = {}): Promise<RunningServer> {
+	const opened = await openStorage(config, deps.hooks);
+	const kv: KvStore = deps.kv ?? opened.kv;
+	const { owners, pool } = opened;
 	const platform: Platform<NodeEnv> = {
 		callOwner: async (_env, key, ownerId, operation, payloadJson) => owners.call(key, ownerId, operation, payloadJson),
 		version: () => config.version,
@@ -98,7 +130,7 @@ export function startServer(config: NodeConfig, deps: { fetcher?: typeof fetch; 
 	let draining = false;
 	const pending = new Set<Promise<unknown>>();
 	const purge = setInterval(() => {
-		try { kv.purgeExpired(); } catch (e) { log("rigorx_error", { where: "kv_purge", error: String(e) }); }
+		Promise.resolve().then(() => kv.purgeExpired()).catch((e) => log("rigorx_error", { where: "kv_purge", error: String(e) }));
 	}, 10 * 60_000);
 	purge.unref();
 
@@ -172,6 +204,7 @@ export function startServer(config: NodeConfig, deps: { fetcher?: typeof fetch; 
 		clearInterval(purge);
 		owners.close();
 		kv.close();
+		if (pool) await pool.end(); // after in-flight work: no query is cut off
 		log("rigorx_shutdown", { phase: "complete", forced_connections: forced });
 	}
 
@@ -180,8 +213,9 @@ export function startServer(config: NodeConfig, deps: { fetcher?: typeof fetch; 
 		server.listen(config.port, config.host, () => {
 			const address = server.address();
 			const port = typeof address === "object" && address ? address.port : config.port;
-			log("rigorx_start", { origin: config.origin, listen: `${config.host}:${port}`, data_dir: config.dataDir, version: config.version.tag, warnings: config.warnings });
-			ready({ server, kv, owners, url: `http://127.0.0.1:${port}`, shutdown });
+			const storage = config.storage.kind === "postgres" ? { kind: "postgres", ...config.storage.db.summary } : { kind: "sqlite" }; // no credentials
+			log("rigorx_start", { origin: config.origin, listen: `${config.host}:${port}`, data_dir: config.dataDir, storage, version: config.version.tag, warnings: config.warnings });
+			ready({ server, kv, owners, pool, url: `http://127.0.0.1:${port}`, shutdown });
 		});
 	});
 }
@@ -197,7 +231,18 @@ async function main(): Promise<void> {
 		}
 		throw e;
 	}
-	const running = await startServer(config);
+	let running: RunningServer;
+	try {
+		running = await startServer(config);
+	} catch (e) {
+		if (e instanceof SchemaError) {
+			console.error(JSON.stringify({ evt: "rigorx_config_error", error: e.message }));
+			process.exit(78); // fail closed on an uninitialized or incompatible database schema
+		}
+		const code = (e as { code?: string }).code;
+		console.error(JSON.stringify({ evt: "rigorx_error", where: "storage", error: e instanceof Error ? e.message : String(e), ...(code ? { code } : {}) }));
+		process.exit(1);
+	}
 	let signals = 0;
 	for (const sig of ["SIGTERM", "SIGINT"] as const) {
 		process.on(sig, () => {

@@ -2,6 +2,9 @@
 # Portable Node runtime for the Aetherica (RIGOR-X) MCP server.
 # Build from the repository root:  docker build -f deploy/node/Dockerfile -t aetherica-node .
 # Run:  docker run --env-file deploy/node/.env -p 8787:8787 -v aetherica-data:/data aetherica-node
+# PostgreSQL storage: run the explicit migration once (and after upgrades) before starting servers:
+#   docker run --rm --env-file deploy/node/.env aetherica-node \
+#     node --import ./deploy/node/register.mjs --experimental-strip-types deploy/node/migrate.ts
 # (No VOLUME instruction: some hosts refuse it; mount persistent storage at DATA_DIR yourself.)
 # NODE_IMAGE may point at a registry mirror of the SAME digest, e.g.
 #   --build-arg NODE_IMAGE=mirror.gcr.io/library/node:24.11.1-bookworm-slim@sha256:48abc13a19400ca3985071e287bd405a1d99306770eb81d61202fb6b65cf0b57
@@ -16,6 +19,12 @@ COPY deploy/cloudflare-ts/package.json deploy/cloudflare-ts/package-lock.json ./
 RUN --mount=type=secret,id=npm_ca,required=false \
     if [ -f /run/secrets/npm_ca ]; then export NODE_EXTRA_CA_CERTS=/run/secrets/npm_ca; fi; \
     npm ci --omit=dev --ignore-scripts --no-audit --no-fund
+# The Node runtime's own production dependency: the PostgreSQL driver (STORAGE=postgres).
+WORKDIR /app/deploy/node
+COPY deploy/node/package.json deploy/node/package-lock.json ./
+RUN --mount=type=secret,id=npm_ca,required=false \
+    if [ -f /run/secrets/npm_ca ]; then export NODE_EXTRA_CA_CERTS=/run/secrets/npm_ca; fi; \
+    npm ci --omit=dev --ignore-scripts --no-audit --no-fund
 
 FROM ${NODE_IMAGE}
 ENV NODE_ENV=production \
@@ -24,6 +33,7 @@ ENV NODE_ENV=production \
     PORT=8787
 WORKDIR /app
 COPY --from=deps /app/deploy/cloudflare-ts/node_modules deploy/cloudflare-ts/node_modules
+COPY --from=deps /app/deploy/node/node_modules deploy/node/node_modules
 COPY deploy/cloudflare-ts/package.json deploy/cloudflare-ts/
 COPY deploy/cloudflare-ts/src deploy/cloudflare-ts/src
 COPY deploy/cloudflare-ts/public deploy/cloudflare-ts/public

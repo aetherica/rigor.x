@@ -4,6 +4,8 @@ import { DatabaseSync } from "node:sqlite";
 import type { SqlLike } from "../cloudflare-ts/src/store.ts";
 
 export interface FileSql extends SqlLike {
+	/** The underlying handle (snapshots, change counting). */
+	readonly db: DatabaseSync;
 	readonly databaseSize: number;
 	/** Like ctx.storage.transactionSync: every write of fn is rolled back when it throws. */
 	transaction<T>(fn: () => T): T;
@@ -19,6 +21,7 @@ export function openSql(path: string): FileSql {
 	db.exec("PRAGMA foreign_keys = ON");
 	let depth = 0;
 	return {
+		db,
 		transaction<T>(fn: () => T): T {
 			const name = `sp${depth++}`;
 			db.exec(`SAVEPOINT ${name}`);

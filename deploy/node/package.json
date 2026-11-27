@@ -2,6 +2,14 @@
 	"name": "rigorx-node-runtime",
 	"private": true,
 	"type": "module",
-	"description": "Portable Node runtime for the Aetherica (RIGOR-X) MCP server; runs the code in ../cloudflare-ts/src. Dependencies are those of ../cloudflare-ts.",
-	"engines": { "node": ">=22.18" }
+	"description": "Portable Node runtime for the Aetherica (RIGOR-X) MCP server; runs the code in ../cloudflare-ts/src (whose dependencies it also uses) plus the PostgreSQL driver for persistent storage.",
+	"engines": {
+		"node": ">=22.18"
+	},
+	"dependencies": {
+		"pg": "8.23.1"
+	},
+	"devDependencies": {
+		"@types/pg": "8.23.1"
+	}
 }

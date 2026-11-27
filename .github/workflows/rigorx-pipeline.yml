@@ -90,6 +90,19 @@ jobs:
 
   cloudflare-worker-ts:
     runs-on: ubuntu-latest
+    services:
+      # Disposable PostgreSQL for the Node runtime's PostgreSQL storage tests (no credentials of any real system).
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: ci-local-only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 30
     steps:
       - name: Checkout
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
@@ -106,6 +119,12 @@ jobs:
       - name: Install Worker dependencies (locked)
         working-directory: deploy/cloudflare-ts
         run: npm ci --no-audit --no-fund
+      # Before the type check, which also covers deploy/node (it imports the PostgreSQL driver).
+      - name: "Portable Node runtime: install its locked dependencies (PostgreSQL driver) and audit them"
+        working-directory: deploy/node
+        run: |
+          npm ci --no-audit --no-fund
+          npm audit --omit=dev --audit-level=high
       - name: Audit production dependency tree
         working-directory: deploy/cloudflare-ts
         run: npm audit --omit=dev --audit-level=high
@@ -139,10 +158,11 @@ jobs:
           python examples/mcp_smoke.py --url http://127.0.0.1:8787/mcp --token ci-token --mode auto --expect-version 2026-07-28
           python examples/mcp_smoke.py --url http://127.0.0.1:8787/mcp --token ci-token --mode legacy --expect-version 2025-11-25
           python examples/mcp_smoke.py --url http://127.0.0.1:8787/mcp --token ci-token --mode 2026-07-28 --expect-version 2026-07-28
-      - name: "Portable Node runtime: KV TTL, owner isolation, OAuth with real tokens, MCP, SSRF guard, shutdown"
+      - name: "Portable Node runtime: KV TTL, owner isolation, OAuth with real tokens, MCP, SSRF guard, shutdown, PostgreSQL storage (CAS, deletion race, TLS, privileges, migrations)"
         env:
           RIGORX_NET_TESTS: "1"
-        run: node --import ./deploy/node/register.mjs --experimental-strip-types --disable-warning=ExperimentalWarning --test deploy/node/test/*.test.ts
+          PG_TEST_URL: postgres://postgres:ci-local-only@127.0.0.1:5432/postgres
+        run: node --import ./deploy/node/register.mjs --experimental-strip-types --disable-warning=ExperimentalWarning --test --test-timeout=120000 deploy/node/test/*.test.ts
       - name: "Portable Node runtime: the Worker's auth probe, unchanged, against node:http"
         working-directory: deploy/cloudflare-ts
         run: node test/integration/auth-probe.mjs --node
@@ -166,3 +186,18 @@ jobs:
           docker stop -t 15 aeth
           test "$(docker inspect aeth --format '{{.State.ExitCode}}')" = 0
           docker logs aeth 2>&1 | grep '"phase":"complete"'
+      - name: "Portable Node runtime: container with PostgreSQL storage (explicit migration, fail-closed start, health, 401, clean stop)"
+        run: |
+          DB=postgres://postgres:ci-local-only@127.0.0.1:5432/postgres
+          RUN="docker run --rm --network host -e NODE_ENV=development -e DATABASE_SSL=disable -e DATABASE_URL=$DB"
+          # Before migrating, the server must refuse to start (exit 78).
+          set +e; $RUN -e PORT=8793 -e PUBLIC_ORIGIN=http://127.0.0.1:8793 -e STORAGE=postgres -e OWNER_KEY_SECRET=ci-owner-key-secret-0123456789abcdefghij -e GOOGLE_CLIENT_ID=ci -e GOOGLE_CLIENT_SECRET=ci-not-a-secret aetherica-node:ci; code=$?; set -e
+          test "$code" = 78
+          $RUN aetherica-node:ci node --import ./deploy/node/register.mjs --experimental-strip-types --disable-warning=ExperimentalWarning deploy/node/migrate.ts
+          docker run -d --name aeth-pg --network host -e NODE_ENV=development -e DATABASE_SSL=disable -e DATABASE_URL=$DB -e PORT=8792 -e PUBLIC_ORIGIN=http://127.0.0.1:8792 -e STORAGE=postgres -e OWNER_KEY_SECRET=ci-owner-key-secret-0123456789abcdefghij -e GOOGLE_CLIENT_ID=ci -e GOOGLE_CLIENT_SECRET=ci-not-a-secret aetherica-node:ci
+          for i in $(seq 60); do curl -fsS http://127.0.0.1:8792/health >/dev/null && break; sleep 0.5; done
+          curl -fsS http://127.0.0.1:8792/health
+          test "$(curl -s -o /dev/null -w '%{http_code}' -X POST http://127.0.0.1:8792/mcp -H 'content-type: application/json' -d '{}')" = 401
+          docker logs aeth-pg 2>&1 | grep '"storage":{"kind":"postgres"'
+          docker stop -t 15 aeth-pg
+          test "$(docker inspect aeth-pg --format '{{.State.ExitCode}}')" = 0
