@@ -24,4 +24,4 @@ jobs:
       - name: Type-check browser implementation
         run: npx tsc -p browser/tsconfig.json
       - name: Test browser core and GeckoDriver adapter
-        run: node --no-warnings --experimental-strip-types --test browser/core/*.test.ts browser/geckodriver/*.test.ts
+        run: node --no-warnings --experimental-strip-types --test browser/core/*.test.ts browser/geckodriver/*.test.ts browser/*.test.ts

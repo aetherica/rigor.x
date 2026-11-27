@@ -1,0 +1,20 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { spawn } from "node:child_process";
+import { fileURLToPath } from "node:url";
+import { once } from "node:events";
+const serverPath=fileURLToPath(new URL("./server.ts",import.meta.url));
+test("stdio MCP initialize and tools/list advertise seven guarded browser tools",async()=>{
+ const child=spawn(process.execPath,["--no-warnings","--experimental-strip-types",serverPath],{stdio:["pipe","pipe","pipe"]});
+ let output="",stderr="";
+ child.stdout.setEncoding("utf8");child.stderr.setEncoding("utf8");child.stdout.on("data",chunk=>output+=chunk);child.stderr.on("data",chunk=>stderr+=chunk);
+ child.stdin.write(JSON.stringify({jsonrpc:"2.0",id:1,method:"initialize",params:{protocolVersion:"2025-03-26"}})+"\n");
+ child.stdin.write(JSON.stringify({jsonrpc:"2.0",id:2,method:"tools/list",params:{}})+"\n");
+ const lines=await new Promise<string[]>((resolve,reject)=>{const timer=setTimeout(()=>reject(new Error("MCP server timed out: "+stderr)),5000);const check=()=>{const a=output.split("\n").filter(Boolean);if(a.length>=2){clearTimeout(timer);resolve(a)}};child.stdout.on("data",check)});
+ const init=JSON.parse(lines[0]!),list=JSON.parse(lines[1]!);
+ assert.equal(init.id,1);assert.ok(init.result.capabilities.tools);assert.equal(init.result.serverInfo.name,"aetherica-browser");
+ const advertised=list.result.tools;assert.equal(advertised.length,7);
+ assert.ok(advertised.every((t:any)=>t.annotations.openWorldHint===true&&typeof t.title==="string"));
+ const submit=advertised.find((t:any)=>t.name==="browser_submit");assert.equal(submit.annotations.destructiveHint,true);assert.deepEqual(submit.inputSchema.required,["confirm"]);
+ child.stdin.end();await once(child,"exit");
+});
