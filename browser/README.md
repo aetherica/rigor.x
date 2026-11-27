@@ -15,6 +15,8 @@ Requirements: Node 22.18+, Firefox, and GeckoDriver on a local endpoint.
 The MCP surface is seven tools: `browser_open`, `browser_read`, `browser_screenshot`, `browser_scrape`, `browser_click`, `browser_type`, `browser_submit`.
 
 ## Android / Termux
+
+**Clone inside Termux home, not shared storage:** `cd ~ && git clone https://github.com/aetherica/x.git && cd x`. Git may report `dubious ownership` when repositories are cloned under `/storage/emulated/...`; keep the working copy in `$HOME`.
 The `browser/install-termux.sh` script is a best-effort installer: it installs Node and proot-distro, then attempts Firefox ESR and GeckoDriver in Debian. Android/ARM and the Firefox-in-proot compatibility matrix is not verified. Review the output and don't assume the packages installed if apt reports an error.
 
 ## Safety
@@ -28,7 +30,7 @@ The `browser/install-termux.sh` script is a best-effort installer: it installs N
 - Page content is untrusted; injection signals are returned with evidence.
 
 ## Evidence
-Each page read returns requested/final URL, timestamp, rendered-DOM SHA-256, title, shared DL01–DL12 layer classification, and injection signals. HTTP status, response content type and redirect chain are unavailable through this local WebDriver adapter; they are null/empty rather than fabricated.
+Open and read return requested/final URL, timestamp, rendered-DOM SHA-256, title, shared DL01–DL12 layer classification, and injection signals. HTTP status, response content type and redirect chain are not exposed by this WebDriver adapter; they remain null/empty and `metadata_note` explains why. Redirect history is not inferred from requested/final URL.
 
 ## CI
 The Browser Core workflow type-checks (TypeScript 5.9.3) and runs fake-WebDriver tests. It does not install Firefox or perform a real-browser smoke test.
