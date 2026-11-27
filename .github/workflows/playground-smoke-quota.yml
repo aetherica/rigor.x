@@ -32,10 +32,26 @@ jobs:
   quota:
     runs-on: ubuntu-latest
     steps:
-      - name: Check Cloudflare credentials are provisioned
+      - name: Validate Cloudflare, staging DB, and backup recipient without revealing values
         env:
           CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CF_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          STAGING_DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+          STAGING_DATABASE_CA_CERT: ${{ secrets.STAGING_DATABASE_CA_CERT }}
+          AGE_RECIPIENT: ${{ vars.AGE_BACKUP_RECIPIENT }}
         run: |
-          if [ -z "$CF_TOKEN" ] || [ -z "$CF_ACCOUNT" ]; then echo "Quota API check BLOCKED: Cloudflare credentials missing"; exit 0; fi
-          echo "Credentials present; analytics quota query is not enabled pending query/schema verification. This job does not assert usage."
+          set -euo pipefail
+          test -n "$CF_TOKEN" && test -n "$CF_ACCOUNT" || { echo "Cloudflare credential presence: FAIL"; exit 1; }
+          token_status="$(curl -fsS --max-time 20 https://api.cloudflare.com/client/v4/user/tokens/verify -H "Authorization: Bearer $CF_TOKEN" | jq -r '.result.status')"
+          test "$token_status" = "active" || { echo "Cloudflare token validation: FAIL"; exit 1; }
+          echo "Cloudflare token validation: PASS (active; value redacted)"
+          if [ -n "$STAGING_DATABASE_URL" ]; then
+            if [ -n "$STAGING_DATABASE_CA_CERT" ]; then printf '%s' "$STAGING_DATABASE_CA_CERT" > /tmp/staging-ca.pem; export PGSSLROOTCERT=/tmp/staging-ca.pem; fi
+            psql "$STAGING_DATABASE_URL" -X -v ON_ERROR_STOP=1 -Atc 'SELECT 1' >/dev/null
+            echo "Staging PostgreSQL authentication and read-only query: PASS"
+          else
+            echo "Staging database credential: MISSING"; exit 1
+          fi
+          test -n "$AGE_RECIPIENT" && [[ "$AGE_RECIPIENT" =~ ^age1[[:alnum:]]+$ ]] || { echo "Backup public recipient: FAIL"; exit 1; }
+          echo "Backup recipient format: PASS (public value redacted)"
+          echo "Quota GraphQL measurement: NOT IMPLEMENTED; no usage figures claimed."
