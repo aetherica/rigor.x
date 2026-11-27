@@ -15,7 +15,9 @@ This project is in pre-release development. Entries summarize notable changes; t
 - Apache License 2.0 adoption for the RIGOR-X core repository, with NOTICE, trademark policy, open-source contribution terms, and optional service monetization boundaries.
 
 ### Changed
-- Discovery layers (Source Intelligence Gate) re-implemented to the owner's nine: DL1 surface, DL2 deep, DL3 dark, DL4 social media, DL5 alternate media, DL6 mainstream media, DL7 conspiracy theory, DL8 independent journalism, DL9 blog. The old D01–D09 domains had no dark, blog or independent-journalism layer and used archive, local and restricted as layers; those are now source properties. Old IDs are still accepted and stored records keep their meaning. Dark-web hosts (.onion, .i2p, .loki, Tor2web gateways) are refused by the fetcher, and DL3 sources, like DL7, cannot meet a requirement alone.
+- Discovery layers (Source Intelligence Gate) re-implemented to the owner's twelve: DL01 direct, DL02 surface, DL03 deep, DL04 dark, DL05 archive, DL06 local media, DL07 social media, DL08 alternate media, DL09 mainstream media, DL10 independent journalism, DL11 conspiracy theory, DL12 blog. The old D01–D09 domains had no dark, blog or independent-journalism layer and merged direct with surface. Old IDs are still accepted and stored records keep their meaning. DL04 and DL11 sources cannot meet a requirement alone.
+- Dark web (DL04): onion sources are checked through a Tor egress (SOCKS5h, name resolved inside Tor) on the Node runtime (`TOR_SOCKS_URL`, or `TOR_ENABLED=1` in the container, which starts Tor); Tor2web gateway URLs are checked as the onion itself; only text and HTML are downloaded over Tor. Without an egress (Cloudflare) the check reports NOT_CONNECTED.
+- Deep web (DL03): OpenAlex work record (citations, open-access status and location, retraction flag) for DOIs and arXiv IDs; an OpenAlex retraction fails the source like a Crossref one.
 - Independence groups: on multi-author platforms (X, GitHub, YouTube, LinkedIn, Medium …) the origin is the account, not the whole platform, so two different people are no longer counted as one source.
 
 ### Fixed

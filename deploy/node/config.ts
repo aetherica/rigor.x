@@ -21,6 +21,8 @@ export interface NodeConfig {
 	appVars: Record<string, string>;
 	/** Where accounts' data and OAuth records live: SQLite files in DATA_DIR, or PostgreSQL (STORAGE=postgres). */
 	storage: StorageSettings;
+	/** DL04 dark-web layer: Tor SOCKS5h egress (socks5h://127.0.0.1:9050), or null when not configured. */
+	torSocksUrl: string | null;
 	warnings: string[];
 }
 
@@ -96,7 +98,10 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): NodeConfig {
 	const commit = env.RIGORX_VERSION_TAG || env.RENDER_GIT_COMMIT || env.RAILWAY_GIT_COMMIT_SHA || "";
 	const version = { id: commit || "node-local", tag: commit ? commit.slice(0, 12) : "local", timestamp: new Date().toISOString() };
 	const storage = storageSettings(env, production, warnings);
-	return { origin, host, port, dataDir, shutdownGraceMs, maxBodyBytes, production, version, appVars, storage, warnings };
+	const torSocksUrl = env.TOR_SOCKS_URL?.trim() || null;
+	if (torSocksUrl && !/^socks5h?:\/\/[^/]+$/i.test(torSocksUrl.replace(/\/$/, ""))) throw new ConfigError("TOR_SOCKS_URL must be socks5h://host:port");
+	if (!torSocksUrl) warnings.push("TOR_SOCKS_URL is not set: onion sources (dark-web layer DL04) are reported NOT_CONNECTED");
+	return { origin, host, port, dataDir, shutdownGraceMs, maxBodyBytes, production, version, appVars, storage, torSocksUrl, warnings };
 }
 
 function storageSettings(env: NodeJS.ProcessEnv, production: boolean, warnings: string[]): StorageSettings {

@@ -120,14 +120,17 @@ The stages are ordered control gates, not a claim that all work is strictly line
 Select one or more methods according to the task. This is an extensible method catalogue, not a mandatory checklist.
 
 **Acquisition channels**
+- DIRECT
 - SURFACE
 - DEEP
 - DARK
+- ARCHIVE
+- LOCAL MEDIA
 - SOCIAL MEDIA
 - ALTERNATE MEDIA
 - MAINSTREAM MEDIA
-- CONSPIRACY THEORY
 - INDEPENDENT JOURNALISM
+- CONSPIRACY THEORY
 - BLOG
 
 Channels describe acquisition paths, not source credibility. For each selected channel, record whether it is eligible, available, attempted, retrieved, partially retrieved, blocked, not connected or not collected. Never silently substitute one channel for another.

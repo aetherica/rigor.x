@@ -265,17 +265,20 @@ Intensity is dynamically selected from complexity, ambiguity, risk, freshness, d
 ## 9. Research and information acquisition
 
 Nine acquisition channels are distinct:
-1. SURFACE
-2. DEEP
-3. DARK
-4. SOCIAL MEDIA
-5. ALTERNATE MEDIA
-6. MAINSTREAM MEDIA
-7. CONSPIRACY THEORY
-8. INDEPENDENT JOURNALISM
-9. BLOG
+1. DIRECT
+2. SURFACE
+3. DEEP
+4. DARK
+5. ARCHIVE
+6. LOCAL MEDIA
+7. SOCIAL MEDIA
+8. ALTERNATE MEDIA
+9. MAINSTREAM MEDIA
+10. INDEPENDENT JOURNALISM
+11. CONSPIRACY THEORY
+12. BLOG
 
-Owner specification of 27 Nov 2026 (DL1–DL9 in the engine). DIRECT and LOCAL are no longer channels: whether a source was read directly, observed in the field or recovered from an archive is recorded on the evidence (`access`, archive identity), not as a layer. DARK is never fetched by RIGOR-X; DARK and CONSPIRACY THEORY sources cannot meet a requirement without an independent origin from another layer.
+Owner specification of 27–28 Nov 2026 (DL01–DL12 in the engine). DIRECT is an ordinary website visited directly; SURFACE is search engines, aggregators, encyclopedias and wikis; ARCHIVE is web archives (Wayback, archive.today, Perma.cc); LOCAL MEDIA is local and regional outlets and field reports. DARK is checked through a Tor egress on the Node runtime (not on Cloudflare Workers). DARK and CONSPIRACY THEORY sources cannot meet a requirement without an independent origin from another layer.
 
 These describe acquisition paths/types, not source credibility rankings. Discover first and evaluate claims after retrieval. Record attempted and successful channels separately. Never silently substitute one channel for another.
 

@@ -194,3 +194,17 @@ CI (`.github/workflows/rigorx-pipeline.yml`) runs all of these against a disposa
 service (the PostgreSQL tests cannot be skipped in CI), the official MCP SDK client against the
 Node runtime with a real OAuth token in all three protocol modes, and builds and starts the
 container with SQLite and with PostgreSQL storage (migration command, fail-closed start).
+
+## Dark-web layer (DL04): Tor egress
+
+Onion sources are checked only where the deployment has a Tor egress; the Cloudflare Worker
+cannot open SOCKS connections and reports them `NOT_CONNECTED`. On this runtime:
+
+- `TOR_ENABLED=1` (container): `docker-entrypoint.sh` starts Tor on `127.0.0.1:9050`, waits for
+  bootstrap and sets `TOR_SOCKS_URL`. Tor's state lives in `DATA_DIR/tor`.
+- `TOR_SOCKS_URL=socks5h://host:port`: use an existing Tor SOCKS port instead.
+
+`tor-fetch.ts` speaks SOCKS5 with the onion name (Tor resolves it, so there is no DNS lookup or
+leak here) and reaches `.onion` hosts only; clearnet sources never go through Tor. A Tor2web
+gateway URL is checked as the onion itself. Only text and HTML bodies are downloaded over Tor, and
+as for every source check the host receives metadata and a SHA-256, never the page body.

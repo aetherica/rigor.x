@@ -41,6 +41,8 @@ export interface Platform<Env extends AppEnv> {
 	callOwner(env: Env, key: string, ownerId: string, operation: string, payloadJson: string): Promise<string>;
 	version(env: Env): VersionInfo | undefined;
 	fetcher: typeof fetch;
+	/** DL04: fetch through a Tor SOCKS5h egress, where the deployment has one (Node runtime). */
+	overlayFetcher?: typeof fetch;
 }
 
 /** Context passed to the OAuth provider (props are set by it for authenticated API calls). */
@@ -98,7 +100,7 @@ export function createApp<Env extends AppEnv>(platform: Platform<Env>) {
 			resolveCommands: (text) => localEngine.resolveCommands(text),
 			compute: (args) => localEngine.computeOp(null, args),
 			run,
-			checkSource: (ownerId, args) => runSourceCheck((operation, a) => run(ownerId, operation, a), args, platform.fetcher, { registry }),
+			checkSource: (ownerId, args) => runSourceCheck((operation, a) => run(ownerId, operation, a), args, platform.fetcher, { registry, ...(platform.overlayFetcher ? { overlay: platform.overlayFetcher } : {}) }),
 		};
 	}
 

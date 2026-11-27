@@ -375,7 +375,7 @@ test("discovery gaps: acquisition outcomes stay apart (NOT_FOUND ≠ ACCESS_BLOC
 	h.ok("google:g", "record_evidence", { run_id: id, source_ref: "https://example.com/a", claim: "The page states one specific fact" });
 	const a = h.ok("google:g", "assess_sources", { run_id: id });
 	assert.deepEqual(a.discovery_gaps.acquisition, { NOT_CHECKED: ["ev-3"] });
-	assert.ok(a.discovery_gaps.layers_without_sources.some((d: any) => d.domain === "DL3" && /NOT_CONNECTED/.test(d.gap)));
+	assert.ok(a.discovery_gaps.layers_without_sources.some((d: any) => d.domain === "DL04" && d.gap === "NO_SOURCES_RECORDED"));
 });
 
 test("storage fault mid-operation: the error surfaces, nothing is half-written, the next call works", () => {

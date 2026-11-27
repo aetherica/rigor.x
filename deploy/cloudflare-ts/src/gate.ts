@@ -239,12 +239,12 @@ export function runGate(run: RunState, answers: Answer[], at: Date): GateResult 
 		}
 		add("claims_support_requirements", problems);
 		const contradictions = run.ledger.evaluation?.contradictions ?? [];
-		// Dark-web (DL3) and conspiracy/fringe (DL7) sources never carry a requirement alone (directive §05).
+		// Dark-web (DL04) and conspiracy/fringe (DL11) sources never carry a requirement alone (directive §05).
 		const fringe = metAnswers.filter((a) => {
 			const ids = [...allOf(a)].map((id) => evidence.get(id)!).filter((e) => !ENGINE_TYPES.has(e.type) && e.type !== USER_APPROVAL).map((e) => sourceIdentity(e, sourceChecks.get(e.id)));
 			return ids.length > 0 && ids.every((i) => i.domain !== null && UNCORROBORATED_LAYERS.has(i.domain));
 		});
-		if (fringe.length || run.evidence.some((e) => !ENGINE_TYPES.has(e.type) && e.type !== USER_APPROVAL && UNCORROBORATED_LAYERS.has(sourceIdentity(e, sourceChecks.get(e.id)).domain as DomainId))) add("fringe_corroborated", fringe.map((a) => `${a.id} rests only on dark-web or conspiracy/fringe (DL3, DL7) sources: corroborate it from another layer`));
+		if (fringe.length || run.evidence.some((e) => !ENGINE_TYPES.has(e.type) && e.type !== USER_APPROVAL && UNCORROBORATED_LAYERS.has(sourceIdentity(e, sourceChecks.get(e.id)).domain as DomainId))) add("fringe_corroborated", fringe.map((a) => `${a.id} rests only on dark-web or conspiracy/fringe (DL04, DL11) sources: corroborate it from another layer`));
 		add("contradictions_resolved", contradictions.filter((x) => !x.resolved && x.claim_ids.some((id) => linkedToMet.has(id)))
 			.map((x) => `unresolved contradiction between ${x.claim_ids.join(" and ")}`));
 	}

@@ -28,6 +28,7 @@ import { PgKv } from "./pg-kv.ts";
 import { PgOwnerStore, type PgOwnerOptions } from "./pg-owners.ts";
 import { SchemaError, assertSchema } from "./pg-migrations.ts";
 import { createGuardedFetch } from "./guarded-fetch.ts";
+import { createTorFetch } from "./tor-fetch.ts";
 import { pgAccountsDb, sqliteAccountsDb } from "./accounts-db.ts";
 import { storageErrorHint } from "./pg-config.ts";
 import type { SqlDatabase } from "../cloudflare-ts/src/accounts.ts";
@@ -124,7 +125,7 @@ async function openStorage(config: NodeConfig, hooks?: PgOwnerOptions["hooks"]):
 	return { kv: new PgKv(pool), owners, pool, accounts: pgAccountsDb(pool) };
 }
 
-export async function startServer(config: NodeConfig, deps: { fetcher?: typeof fetch; kv?: SqliteKv; hooks?: PgOwnerOptions["hooks"] } = {}): Promise<RunningServer> {
+export async function startServer(config: NodeConfig, deps: { fetcher?: typeof fetch; overlayFetcher?: typeof fetch; kv?: SqliteKv; hooks?: PgOwnerOptions["hooks"] } = {}): Promise<RunningServer> {
 	const opened = await openStorage(config, deps.hooks);
 	const kv: KvStore = deps.kv ?? opened.kv;
 	const { owners, pool, accounts } = opened;
@@ -132,6 +133,7 @@ export async function startServer(config: NodeConfig, deps: { fetcher?: typeof f
 		callOwner: async (_env, key, ownerId, operation, payloadJson) => owners.call(key, ownerId, operation, payloadJson),
 		version: () => config.version,
 		fetcher: deps.fetcher ?? createGuardedFetch(),
+		...(deps.overlayFetcher ?? config.torSocksUrl ? { overlayFetcher: deps.overlayFetcher ?? createTorFetch(config.torSocksUrl!) } : {}),
 	};
 	const app = createApp<NodeEnv>(platform);
 	// ACCOUNTS_DB: the account registry (identities, linking, terms acceptance), as the D1 binding on Cloudflare.

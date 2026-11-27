@@ -20,7 +20,7 @@ This baseline consolidates accessible owner instructions, current repository spe
 | Slash commands | 999 | All 999 are operational engineering scope; no command is falsely marked executable without implementation/verification |
 | Interface/command registry | 102 | Separate layer; historical 91 definitions reported, 11 unrecovered; do not fabricate |
 | Adaptive intensity | 6 | L01 BASIC; L02 STANDARD; L03 DEEP; L04 COMPLEX; L05 CRITICAL; L06 HYPER RIGOROUS |
-| Discovery layers | 9 | SURFACE, DEEP, DARK, SOCIAL MEDIA, ALTERNATE MEDIA, MAINSTREAM MEDIA, CONSPIRACY THEORY, INDEPENDENT JOURNALISM, BLOG (DL1–DL9; owner specification 27 Nov 2026, replacing DIRECT and LOCAL; direct, local/field and archive are source properties) |
+| Discovery layers | 12 | DIRECT, SURFACE, DEEP, DARK, ARCHIVE, LOCAL MEDIA, SOCIAL MEDIA, ALTERNATE MEDIA, MAINSTREAM MEDIA, INDEPENDENT JOURNALISM, CONSPIRACY THEORY, BLOG (DL01–DL12; owner specification 27–28 Nov 2026) |
 | Primary pipeline | 11 stages | CONTEXT → INTENT → KNOWLEDGE → RESEARCH → ROUTING → REASONING → EXECUTION → EVIDENCE → VERIFICATION → DECISION → FEEDBACK |
 
 ## Canonical Functional Groups

@@ -32,7 +32,7 @@ export interface SourceMetadata {
 	lang: string | null;
 }
 
-import { TOR2WEB, crossrefLookup, isOverlayHost, waybackLookup, type CrossrefRecord, type WaybackRecord } from "./sources.ts";
+import { TOR2WEB, crossrefLookup, isOverlayHost, openalexLookup, waybackLookup, type CrossrefRecord, type OpenAlexRecord, type WaybackRecord } from "./sources.ts";
 import { EngineError, type JsonObject } from "./text.ts";
 import { DEFAULT_POLICY, Deadline, ResilienceRegistry, ResourceExhaustedError, resilientFetch, type ResiliencePolicy } from "./resilience.ts";
 
@@ -53,10 +53,16 @@ export interface SourceCheck {
 	injection_signals: string[];
 	checked_at: string;
 	error: string | null;
-	/** D02: Crossref metadata and editorial updates (retractions) when the source is a DOI. */
+	/** DL03: Crossref metadata and editorial updates (retractions) when the source is a DOI. */
 	crossref?: CrossrefRecord;
-	/** D05: closest Wayback snapshot when the source could not be retrieved. */
+	/** DL03: OpenAlex work record (citations, open access, retraction) for a DOI or arXiv ID. */
+	openalex?: OpenAlexRecord;
+	/** DL05: closest Wayback snapshot when the source could not be retrieved. */
 	wayback?: WaybackRecord;
+	/** DL04: the check went through the deployment's Tor egress. */
+	via_tor?: boolean;
+	/** Why the body was not downloaded (non-text content over Tor). */
+	body_skipped?: string;
 }
 
 export const MAX_BYTES = 1_048_576;
@@ -169,7 +175,7 @@ export function blockedHost(rawHost: string): string | null {
 }
 
 /** Validate one absolute URL against the outbound policy; returns the normalized URL or an error. */
-export function checkUrl(raw: string): { url: string } | { error: string } {
+export function checkUrl(raw: string, opts: { overlay?: boolean } = {}): { url: string; overlay?: boolean } | { error: string } {
 	let u: URL;
 	try {
 		u = new URL(raw);
@@ -179,10 +185,22 @@ export function checkUrl(raw: string): { url: string } | { error: string } {
 	if (u.protocol !== "https:" && u.protocol !== "http:") return { error: `only http and https sources can be checked, not ${u.protocol}` };
 	if (u.username || u.password) return { error: "URLs with credentials are not fetched" };
 	if (!ALLOWED_PORTS.has(u.port)) return { error: `port ${u.port} is not fetched (allowed: default, 8080, 8443)` };
-	// Dark-web layer (DL3): overlay networks and Tor2web gateways are never fetched or proxied.
-	const h = u.hostname.toLowerCase().replace(/\.+$/, "");
-	if (isOverlayHost(h) || TOR2WEB.some((g) => h === g || h.endsWith(`.${g}`))) {
-		return { error: "dark-web (overlay network) source refused, never fetched: RIGOR-X records them as host-declared metadata only (source_domain dark)" };
+	// Dark-web layer (DL04): onion services are reached only through the deployment's Tor egress.
+	// A Tor2web gateway URL is checked as the onion itself (never through the gateway).
+	let h = u.hostname.toLowerCase().replace(/\.+$/, "");
+	const gw = TOR2WEB.find((g) => h === g || h.endsWith(`.${g}`));
+	if (gw) {
+		if (h === gw) return { error: "a Tor2web gateway without an onion name was refused" };
+		h = `${h.slice(0, -gw.length - 1)}.onion`;
+		u.hostname = h;
+		u.protocol = "http:";
+		u.port = "";
+	}
+	if (isOverlayHost(h)) {
+		if (!/\.onion$/.test(h)) return { error: "I2P and Lokinet sources were refused: only a Tor egress is wired" };
+		if (!opts.overlay) return { error: "no Tor egress on this deployment: the onion source could not be reached (NOT_CONNECTED; the Node runtime with TOR_SOCKS_URL checks it)" };
+		u.hash = "";
+		return { url: u.toString(), overlay: true };
 	}
 	const why = blockedHost(u.hostname);
 	if (why) return { error: `private or local hosts are not fetched: ${why}` };
@@ -191,12 +209,12 @@ export function checkUrl(raw: string): { url: string } | { error: string } {
 }
 
 /** The URL to fetch for a source reference, or an error message. DOIs resolve through doi.org. */
-export function resolveRef(ref: string): { url: string } | { error: string } {
+export function resolveRef(ref: string, opts: { overlay?: boolean } = {}): { url: string; overlay?: boolean } | { error: string } {
 	const t = ref.trim();
 	const doi = /^(?:doi:\s*|https?:\/\/(?:dx\.)?doi\.org\/)?(10\.\d{4,9}\/\S+)$/i.exec(t);
 	if (doi && !/^https?:\/\/(?!(?:dx\.)?doi\.org)/i.test(t)) return { url: `https://doi.org/${doi[1]}` };
 	if (!/^[a-z][a-z0-9+.-]*:/i.test(t)) return { error: "the source reference is neither an http(s) URL nor a DOI, so it cannot be resolved" };
-	return checkUrl(t);
+	return checkUrl(t, opts);
 }
 
 // ---------------------------------------------------------------- untrusted content
@@ -350,7 +368,12 @@ export interface CheckOptions {
 	/** DNS verification of every hop's host name; defaults to DNS-over-HTTPS through the same fetcher. */
 	resolver?: Resolver;
 	deadline?: Deadline;
+	/** DL04: fetch through the deployment's Tor egress (SOCKS5h). Absent: onion sources are NOT_CONNECTED. */
+	overlay?: typeof fetch;
 }
+
+/** Content types read over Tor; anything else (images, video, archives) is not downloaded. */
+const TOR_TEXT = /\b(text\/html|application\/xhtml\+xml|text\/plain)\b/i;
 
 let defaultRegistry: ResilienceRegistry | null = null;
 /** The isolate's registry (breakers, limiter); the Worker replaces it with one built from its vars. */
@@ -366,7 +389,7 @@ export async function checkSource(ref: string, fetcher: typeof fetch = fetch, no
 		ok: false, requested: ref, resolved_url: null, final_url: null, redirects: [], status: null, content_type: null,
 		bytes: 0, truncated: false, sha256: null, metadata: null, injection_signals: [], checked_at: now().toISOString(), error: null,
 	};
-	const target = resolveRef(ref);
+	const target = resolveRef(ref, { overlay: !!opts.overlay });
 	if ("error" in target) return { ...base, error: target.error };
 	base.resolved_url = target.url;
 	const reg = opts.registry ?? sharedRegistry();
@@ -377,13 +400,16 @@ export async function checkSource(ref: string, fetcher: typeof fetch = fetch, no
 	let response: Response;
 	for (let hop = 0; ; hop++) {
 		const host = new URL(url).hostname;
-		const dns = await checkResolved(host, resolve);
+		const tor = isOverlayHost(host);
+		if (tor) base.via_tor = true;
+		// An onion name is resolved inside Tor (SOCKS5h): no DNS lookup here, so no DNS leak.
+		const dns = tor ? null : await checkResolved(host, resolve);
 		if (dns) {
 			console.log(JSON.stringify({ evt: "rigorx_security", kind: "ssrf_refused", stage: "dns", host_sha: (await sha256Hex(new TextEncoder().encode(host))).slice(0, 16) }));
 			return { ...base, final_url: url, error: `${hop ? "redirect refused" : "source refused"}: ${dns}` };
 		}
 		try {
-			response = await resilientFetch(fetcher, url, {
+			response = await resilientFetch(tor ? opts.overlay! : fetcher, url, {
 				method: "GET", redirect: "manual",
 				headers: { "User-Agent": USER_AGENT, Accept: "text/html,application/xhtml+xml,application/pdf;q=0.9,*/*;q=0.8" },
 			}, { policy: reg.policy, deadline, breaker: reg.breaker(`host:${host}`) });
@@ -404,7 +430,7 @@ export async function checkSource(ref: string, fetcher: typeof fetch = fetch, no
 		} catch {
 			return { ...base, final_url: url, status: response.status, error: "redirect to an invalid URL" };
 		}
-		const checked = checkUrl(next);
+		const checked = checkUrl(next, { overlay: !!opts.overlay });
 		if ("error" in checked) {
 			console.log(JSON.stringify({ evt: "rigorx_security", kind: "ssrf_refused", stage: "redirect" }));
 			return { ...base, final_url: url, status: response.status, error: `redirect refused: ${checked.error}` };
@@ -414,6 +440,12 @@ export async function checkSource(ref: string, fetcher: typeof fetch = fetch, no
 		visited.add(checked.url);
 		base.redirects.push(checked.url);
 		url = checked.url;
+	}
+	if (base.via_tor && !TOR_TEXT.test(response.headers.get("content-type") ?? "")) {
+		await response.body?.cancel().catch(() => undefined);
+		const ok = response.status >= 200 && response.status < 300;
+		const ct = response.headers.get("content-type");
+		return { ...base, ok, final_url: url, status: response.status, content_type: ct ? cleanText(ct, 200) : null, body_skipped: "only text and HTML are downloaded over Tor", error: ok ? null : `HTTP ${response.status}` };
 	}
 	const chunks: Uint8Array[] = [];
 	let total = 0;
@@ -488,7 +520,9 @@ export async function runSourceCheck(run: (operation: string, args: JsonObject) 
 			const doi = identity?.kind === "doi" && typeof identity.canonical === "string" ? identity.canonical.slice(4) : c.metadata?.doi ?? null;
 			const lookup = { registry: reg, deadline };
 			if (doi) c.crossref = await crossrefLookup(doi, fetcher, lookup);
-			if (!c.ok && !identity?.archive && c.resolved_url && !/^https:\/\/doi\.org\//.test(c.resolved_url) && !/refused/.test(c.error ?? "")) c.wayback = await waybackLookup(c.resolved_url, fetcher, lookup);
+			const scholarly = doi ? `doi:${doi.toLowerCase()}` : identity?.kind === "arxiv" && typeof identity.canonical === "string" ? identity.canonical : null;
+			if (scholarly) c.openalex = await openalexLookup(scholarly, fetcher, lookup);
+			if (!c.ok && !identity?.archive && c.resolved_url && !/^https:\/\/doi\.org\//.test(c.resolved_url) && !/refused|no Tor egress/.test(c.error ?? "") && !c.via_tor) c.wayback = await waybackLookup(c.resolved_url, fetcher, lookup);
 			return c;
 		});
 	} catch (e) {

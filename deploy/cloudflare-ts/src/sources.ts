@@ -31,20 +31,17 @@ async function lookupFetch(adapter: string, url: string, fetcher: typeof fetch, 
 		{ policy: o.registry.policy, deadline: o.deadline ?? new Deadline(o.registry.policy.lookupTimeoutMs * 2), breaker: o.registry.breaker(adapter), perAttemptMs: o.registry.policy.lookupTimeoutMs });
 }
 
-// ---------------------------------------------------------------- the nine discovery layers
+// ---------------------------------------------------------------- the twelve discovery layers
 //
-// Owner specification (27 Nov 2026): SURFACE, DEEP, DARK, SOCIAL MEDIA, ALTERNATE MEDIA, MAINSTREAM
-// MEDIA, CONSPIRACY THEORY, INDEPENDENT JOURNALISM, BLOG. These replace the earlier D01-D09 domains,
-// which had merged direct and surface web, had no dark, blog or independent-journalism layer, and
-// used archive, local and restricted as layers. Those three are not discovery layers but properties
-// of a source and are kept as such: archive = the identity's archive record (the layer is that of the
-// original), local/field and restricted/authenticated = the evidence's `access`.
-//
-// A layer is where a source was found, never how far it is trusted. It changes only which checks
-// apply: DARK and CONSPIRACY sources can never carry a requirement alone, a social post is traced to
-// its original, a syndicated article counts once with its wire story.
+// Owner specification (27-28 Nov 2026): DIRECT, SURFACE, DEEP, DARK, ARCHIVE, LOCAL MEDIA, SOCIAL
+// MEDIA, ALTERNATE MEDIA, MAINSTREAM MEDIA, INDEPENDENT JOURNALISM, CONSPIRACY THEORY, BLOG. They
+// replace the old D01-D09 domains (no dark, blog or independent-journalism layer; direct and surface
+// merged). A layer is where a source was found, never how far it is trusted. It changes only which
+// checks apply: DARK and CONSPIRACY sources never carry a requirement alone, a social post is traced
+// to its original, a syndicated article counts once with its wire story, an archived copy is one
+// origin with its original.
 
-export const DOMAIN_IDS = ["DL1", "DL2", "DL3", "DL4", "DL5", "DL6", "DL7", "DL8", "DL9"] as const;
+export const DOMAIN_IDS = ["DL01", "DL02", "DL03", "DL04", "DL05", "DL06", "DL07", "DL08", "DL09", "DL10", "DL11", "DL12"] as const;
 export type DomainId = (typeof DOMAIN_IDS)[number];
 
 export interface DomainSpec {
@@ -58,9 +55,10 @@ export interface DomainSpec {
 	acquisition: string;
 	cross_check: string;
 	boundary: string;
-	/** OPERATIONAL: works end to end on this server. PARTIAL: identity and checks work, an external
-	 * provider is not integrated. CONTRACT_ONLY: the host records evidence in the stated structure;
-	 * RIGOR-X acquires nothing itself. */
+	/** OPERATIONAL: works end to end on this deployment. PARTIAL: identity and checks work, an
+	 * external provider or list is incomplete. CONTRACT_ONLY: the host records evidence in the stated
+	 * structure; RIGOR-X acquires nothing itself. DL04 works end to end only where a Tor egress is
+	 * configured (Node runtime with TOR_SOCKS_URL); each check's acquisition says which happened. */
 	status: "OPERATIONAL" | "PARTIAL" | "CONTRACT_ONLY";
 	/** Sources from this layer alone can never meet a requirement. */
 	needs_outside_corroboration: boolean;
@@ -70,55 +68,73 @@ export interface DomainSpec {
 const PUBLIC_FETCH = "rigorx_check_source: direct HTTP(S) fetch with per-hop redirect checks, SHA-256 of the first 1 MiB, HTML metadata (title, canonical link, DOI, publisher, author, date, language)";
 
 export const DOMAINS: Record<DomainId, DomainSpec> = {
-	DL1: { id: "DL1", key: "surface", name: "Surface web", aliases: ["surface_web", "direct", "web", "open_web"], status: "OPERATIONAL", needs_outside_corroboration: false,
+	DL01: { id: "DL01", key: "direct", name: "Direct web (an ordinary website visited directly)", aliases: ["website", "web", "open_web", "common_web"], status: "OPERATIONAL", needs_outside_corroboration: false,
 		inference: "default for a public web page that matches no other layer",
 		acquisition: PUBLIC_FETCH,
 		cross_check: "canonical URL and rel=canonical (original vs syndicated), redirect chain, content hash, publication date from metadata",
 		boundary: "public hosts only; private, local and reserved addresses refused at every redirect hop",
+		not_operational: [] },
+	DL02: { id: "DL02", key: "surface", name: "Surface web (search engines, aggregators, encyclopedias and wikis)", aliases: ["surface_web", "search", "aggregator", "encyclopedia", "wiki"], status: "OPERATIONAL", needs_outside_corroboration: false,
+		inference: "search-engine and news-aggregator hosts, Wikipedia and other wikis, general encyclopedias",
+		acquisition: PUBLIC_FETCH,
+		cross_check: "a surface page is a pointer: the claim should be traced to the page it summarizes (origin_ref); a Wikipedia article and its cited source are different origins only when both were read",
+		boundary: "public pages only",
 		not_operational: ["search-engine discovery (the host searches; RIGOR-X has no search provider)"] },
-	DL2: { id: "DL2", key: "deep", name: "Deep web (non-indexed: scholarly and data records, archives, authenticated content)", aliases: ["deep_web", "specialist", "restricted", "archive", "database", "academic"], status: "PARTIAL", needs_outside_corroboration: false,
-		inference: "DOI, arXiv, PubMed/PMC and ISBN identities; scholarly, data and standards sites; .edu/.ac hosts; archive records without a recoverable original; authenticated workspaces (Google Drive, SharePoint, Notion …) and internal document references",
-		acquisition: "DOI resolution through doi.org; Crossref metadata and retraction status (Retraction Watch data); arXiv, PubMed and PMC identity normalization; Wayback availability for failed sources. Authenticated content is never fetched: the host records what it read through its own authorized connectors (access: authenticated|restricted)",
-		cross_check: "one work counts once in every format (DOI URL, doi: prefix, publisher URL with citation_doi); a retracted work fails the gate; an archived copy and its original are one origin",
+	DL03: { id: "DL03", key: "deep", name: "Deep web (non-indexed: scholarly and data records, authenticated content)", aliases: ["deep_web", "specialist", "restricted", "database", "academic", "scholarly"], status: "OPERATIONAL", needs_outside_corroboration: false,
+		inference: "DOI, arXiv, PubMed/PMC and ISBN identities; scholarly, data and standards sites; .edu/.ac hosts; authenticated workspaces (Google Drive, SharePoint, Notion …) and internal document references",
+		acquisition: "DOI resolution through doi.org; Crossref metadata and retraction status (Retraction Watch data); OpenAlex work record (citations, open-access status and full-text location, retraction flag) for DOIs and arXiv IDs. Authenticated content is never fetched: the host records what it read through its own authorized connectors (access: authenticated|restricted)",
+		cross_check: "one work counts once in every format (DOI URL, doi: prefix, publisher URL with citation_doi, arXiv DOI); a work retracted in Crossref or OpenAlex fails the gate",
 		boundary: "public metadata APIs only; no paywalled full text, no authentication bypass, no credential use",
-		not_operational: ["OpenAlex/Semantic Scholar citation graph", "dataset version and methodology extraction", "replication search", "full-text reading of papers", "revision diffs between archive snapshots"] },
-	DL3: { id: "DL3", key: "dark", name: "Dark web (overlay networks: Tor .onion, I2P, Lokinet)", aliases: ["dark_web", "darknet", "onion", "tor", "i2p"], status: "CONTRACT_ONLY", needs_outside_corroboration: true,
+		not_operational: ["full-text reading of papers (the open-access location is reported; the host reads it)", "dataset version and methodology extraction", "replication search"] },
+	DL04: { id: "DL04", key: "dark", name: "Dark web (overlay networks: Tor .onion, I2P, Lokinet)", aliases: ["dark_web", "darknet", "onion", "tor", "i2p"], status: "PARTIAL", needs_outside_corroboration: true,
 		inference: "hosts ending in .onion, .i2p or .loki, and Tor2web gateway hosts (reduced to the onion they proxy)",
-		acquisition: "none by RIGOR-X: overlay-network addresses and Tor2web gateways are refused by the fetcher. The host records what it lawfully observed through its own tooling; RIGOR-X keeps the onion identity, the declared access basis and the claim",
-		cross_check: "every onion address is its own origin; a claim from DL3 needs an independent origin outside DL3 and DL7 before it can carry a requirement; mirrors are linked with origin_ref",
-		boundary: "never fetched or proxied; no marketplaces, leaked or stolen data, credentials, exploit kits or abuse material; a recorded DL3 source is metadata about a claim, not content",
-		not_operational: ["acquisition (by design: the Worker cannot and must not reach overlay networks)", "onion-mirror authenticity checks (signed mirror lists)"] },
-	DL4: { id: "DL4", key: "social", name: "Social media / user-generated", aliases: ["social_media", "ugc"], status: "PARTIAL", needs_outside_corroboration: false,
+		acquisition: "rigorx_check_source through the deployment's Tor egress (SOCKS5h; Tor resolves the name, no DNS leak): status, redirect chain, SHA-256, HTML metadata, the same receipt as DL01. Tor2web gateway URLs are fetched as the onion itself. Without a Tor egress (the Cloudflare Worker) the check reports NOT_CONNECTED, never NOT_FOUND",
+		cross_check: "every onion address is its own origin; a claim from DL04 needs an independent origin outside DL04 and DL11 before it can carry a requirement; mirrors are linked with origin_ref",
+		boundary: "text and HTML only: images, video, audio and archives are not downloaded over Tor (the server, not the host, would hold the bytes); metadata and a hash are returned, never the page body",
+		not_operational: ["Tor egress on the Cloudflare Worker (Workers cannot open SOCKS connections): onion checks run on the Node runtime with TOR_SOCKS_URL and report NOT_CONNECTED elsewhere", "I2P and Lokinet egress (only Tor is wired)", "onion-mirror authenticity checks (signed mirror lists)"] },
+	DL05: { id: "DL05", key: "archive", name: "Archives (Wayback Machine, archive.today, Perma.cc and similar)", aliases: ["archives", "web_archive", "historical", "versioned"], status: "PARTIAL", needs_outside_corroboration: false,
+		inference: "archive hosts (web.archive.org, archive.today/ph/is, ghostarchive, perma.cc, webcitation); the layer of the original is kept as original_layer",
+		acquisition: "the archived copy is fetched like DL01; for a failed live source the Wayback availability API reports the closest snapshot",
+		cross_check: "an archived copy and its original are one origin; snapshot timestamp kept apart from the original's date; content hash compares versions",
+		boundary: "an archived page is not automatically authentic: it is the same origin as the original",
+		not_operational: ["revision diffs between snapshots", "archive.today original recovery without a fetch"] },
+	DL06: { id: "DL06", key: "local", name: "Local media (local and regional outlets, community sources, field reports)", aliases: ["local_media", "regional", "community", "hyperlocal", "field"], status: "PARTIAL", needs_outside_corroboration: false,
+		inference: "field:<id> references and a small list of hyperlocal networks; most local outlets must be declared",
+		acquisition: PUBLIC_FETCH + "; field observations are recorded by the host (access: field), never collected by RIGOR-X",
+		cross_check: "independent local outlets or witnesses count separately only when their origins differ; a local outlet re-running a national or wire story is one origin with it",
+		boundary: "public pages only; RIGOR-X never fabricates field observations",
+		not_operational: ["a directory of local outlets by region (local media must be declared)", "translation-fidelity checks"] },
+	DL07: { id: "DL07", key: "social", name: "Social media / user-generated", aliases: ["social_media", "ugc"], status: "PARTIAL", needs_outside_corroboration: false,
 		inference: "post identities (X/Twitter status, YouTube video, Reddit post) and social platform hosts",
 		acquisition: "public URLs only through rigorx_check_source; post identity normalized across hosts (x.com/twitter.com/nitter status, youtu.be/youtube.com, redd.it/reddit.com)",
 		cross_check: "reposts and quotes of one post are one origin (declare derived_from or origin_ref); different accounts on one platform are different origins; popularity is not evidence",
 		boundary: "no scraping of restricted accounts, no login, platform rules and rate limits respected",
-		not_operational: ["platform APIs (need credentials)", "media-authenticity analysis", "coordination detection", "account identity for YouTube videos and Reddit posts (the URL does not name the author)"] },
-	DL5: { id: "DL5", key: "alternative", name: "Alternate media", aliases: ["alternate", "alternative_media", "alternate_media", "alt_media"], status: "PARTIAL", needs_outside_corroboration: false,
-		inference: "declared only: whether an outlet is 'alternative' is an editorial judgment that a URL cannot show, so RIGOR-X does not infer it from a site list",
+		not_operational: ["platform APIs (need credentials)", "media-authenticity analysis", "coordination detection", "account identity for YouTube watch URLs and Reddit threads (the URL does not name the author)"] },
+	DL08: { id: "DL08", key: "alternative", name: "Alternate media", aliases: ["alternate", "alternative_media", "alternate_media", "alt_media"], status: "PARTIAL", needs_outside_corroboration: false,
+		inference: "declared only: whether an outlet is 'alternative' is an editorial judgment that a URL cannot show",
 		acquisition: PUBLIC_FETCH,
 		cross_check: "treated like any origin: neither dismissed nor trusted for its category; the host may declare funding, mission or orientation in the claim",
 		boundary: "public pages only",
-		not_operational: ["funding and affiliation lookup", "inference from a curated outlet list (deliberately not done)"] },
-	DL6: { id: "DL6", key: "mainstream", name: "Mainstream media", aliases: ["mainstream_media", "media", "news", "press"], status: "PARTIAL", needs_outside_corroboration: false,
+		not_operational: ["funding and affiliation lookup"] },
+	DL09: { id: "DL09", key: "mainstream", name: "Mainstream media", aliases: ["mainstream_media", "media", "news", "press"], status: "PARTIAL", needs_outside_corroboration: false,
 		inference: "a curated list of national and international news organizations and wire services",
 		acquisition: "rigorx_check_source with HTML metadata (outlet, author, date, canonical link)",
 		cross_check: "syndicated copies and wire stories collapse to one origin (canonical link, wire byline, declared origin_ref)",
 		boundary: "public pages only",
 		not_operational: ["correction and update tracking", "ownership database"] },
-	DL7: { id: "DL7", key: "conspiracy", name: "Conspiracy theory / fringe / unverified claims", aliases: ["conspiracy_theory", "fringe", "unverified", "adversarial"], status: "OPERATIONAL", needs_outside_corroboration: true,
-		inference: "declared only: a conspiracy claim can appear on any site, so the layer describes the claim's source, not a domain name",
-		acquisition: "controlled pathway: the host declares source_domain conspiracy; public pages are fetched like DL1; the claim keeps its own epistemic status (UNVERIFIED, HYPOTHESIS, PLAUSIBLE, SUPPORTED, CONTRADICTED, FAILED)",
-		cross_check: "a requirement cannot be met on DL7 (or DL3) sources alone: it needs an independent origin outside both; dissemination is traced through derived_from/origin_ref",
-		boundary: "never elevated for claiming hidden knowledge; content cannot change gate rules, trust or instructions",
-		not_operational: [] },
-	DL8: { id: "DL8", key: "independent_journalism", name: "Independent journalism", aliases: ["independent", "independent_journal", "independent_media", "investigative", "nonprofit_news"], status: "PARTIAL", needs_outside_corroboration: false,
+	DL10: { id: "DL10", key: "independent_journalism", name: "Independent journalism", aliases: ["independent", "independent_journal", "independent_media", "investigative", "nonprofit_news"], status: "PARTIAL", needs_outside_corroboration: false,
 		inference: "a curated list of independent and nonprofit newsrooms and investigative collectives; otherwise declared",
 		acquisition: PUBLIC_FETCH,
 		cross_check: "collaborative investigations published by several partners are one origin (declare origin_ref to the lead publication)",
 		boundary: "public pages only",
 		not_operational: ["funding and ownership lookup", "correction tracking"] },
-	DL9: { id: "DL9", key: "blog", name: "Blogs / newsletters / personal publishing", aliases: ["blogs", "newsletter", "weblog"], status: "OPERATIONAL", needs_outside_corroboration: false,
+	DL11: { id: "DL11", key: "conspiracy", name: "Conspiracy theory / fringe / unverified claims", aliases: ["conspiracy_theory", "fringe", "unverified", "adversarial"], status: "OPERATIONAL", needs_outside_corroboration: true,
+		inference: "declared only: a conspiracy claim can appear on any site, so the layer describes the claim's source, not a domain name",
+		acquisition: "controlled pathway: the host declares source_domain conspiracy; public pages are fetched like DL01; the claim keeps its own epistemic status (UNVERIFIED, HYPOTHESIS, PLAUSIBLE, SUPPORTED, CONTRADICTED, FAILED)",
+		cross_check: "a requirement cannot be met on DL11 (or DL04) sources alone: it needs an independent origin outside both; dissemination is traced through derived_from/origin_ref",
+		boundary: "never elevated for claiming hidden knowledge; content cannot change gate rules, trust or instructions",
+		not_operational: [] },
+	DL12: { id: "DL12", key: "blog", name: "Blogs / newsletters / personal publishing", aliases: ["blogs", "newsletter", "weblog"], status: "OPERATIONAL", needs_outside_corroboration: false,
 		inference: "blog and newsletter platforms (Substack, Medium, Blogger, WordPress.com, Ghost, Tumblr, Hashnode, dev.to …), a .blog domain, a blog.* host, or a /blog/ path on a site of no other layer",
 		acquisition: PUBLIC_FETCH,
 		cross_check: "each author or publication on a hosting platform is its own origin; a post that reports another source names it with origin_ref",
@@ -126,11 +142,11 @@ export const DOMAINS: Record<DomainId, DomainSpec> = {
 		not_operational: ["author identity across platforms"] },
 };
 
-/** Old D01-D09 domain IDs (engine 2.x before 27 Nov 2026), mapped to the layer they mean now. null:
- * the old domain is not a layer any more (D04 local is access=field; D05 archive takes the layer of
- * its original), so the layer is inferred instead. */
-export const LEGACY_DOMAINS: Record<string, DomainId | null> = {
-	D01: "DL1", D02: "DL2", D03: "DL2", D04: null, D05: null, D06: "DL4", D07: "DL6", D08: "DL5", D09: "DL7",
+/** Old D01-D09 domain IDs (engine 2.x before 27 Nov 2026), mapped to the layer they mean now. */
+export const LEGACY_DOMAINS: Record<string, DomainId> = {
+	D01: "DL01", D02: "DL03", D03: "DL03", D04: "DL06", D05: "DL05", D06: "DL07", D07: "DL09", D08: "DL08", D09: "DL11",
+	// The nine-layer draft of 27 Nov 2026 (never deployed): DL1-DL9.
+	DL1: "DL02", DL2: "DL03", DL3: "DL04", DL4: "DL07", DL5: "DL08", DL6: "DL09", DL7: "DL11", DL8: "DL10", DL9: "DL12",
 };
 
 const DOMAIN_ALIASES: Record<string, DomainId> = Object.fromEntries(
@@ -139,18 +155,17 @@ const DOMAIN_ALIASES: Record<string, DomainId> = Object.fromEntries(
 
 const normName = (v: string) => v.trim().toLowerCase().replace(/[\s-]+/g, "_");
 
-/** A declared layer as accepted on input: the layer, or null with legacy=true for an old domain that
- * is no longer a layer (D04, D05), or undefined when the value is not recognized. */
-export function parseDomainInput(value: unknown): { layer: DomainId | null; legacy: string | null } | undefined {
+/** A declared layer as accepted on input, with the legacy ID it came from, or undefined. */
+export function parseDomainInput(value: unknown): { layer: DomainId; legacy: string | null } | undefined {
 	if (typeof value !== "string") return undefined;
 	const v = normName(value);
-	const legacy = /^d0[1-9]$/.test(v) ? v.toUpperCase() : v === "local" ? "D04" : null;
-	if (legacy) return { layer: LEGACY_DOMAINS[legacy] ?? null, legacy };
 	const layer = DOMAIN_ALIASES[v];
-	return layer ? { layer, legacy: null } : undefined;
+	if (layer) return { layer, legacy: null };
+	const old = LEGACY_DOMAINS[v.toUpperCase()];
+	return old ? { layer: old, legacy: v.toUpperCase() } : undefined;
 }
 
-/** Normalize a declared layer ("DL4", "social", "conspiracy", legacy "D06" …) or return null. */
+/** Normalize a declared layer ("DL07", "social", "conspiracy", legacy "D06" …) or return null. */
 export function parseDomain(value: unknown): DomainId | null {
 	return parseDomainInput(value)?.layer ?? null;
 }
@@ -165,7 +180,7 @@ export function declaredLayer(details: JsonObject): DomainId | null {
 /** Layers whose sources never carry a requirement alone. */
 export const UNCORROBORATED_LAYERS = new Set<DomainId>(DOMAIN_IDS.filter((id) => DOMAINS[id].needs_outside_corroboration));
 
-/** Claim statuses mapped to the corroboration states of DL3/DL7 claims. */
+/** Claim statuses mapped to the corroboration states of DL04/DL11 claims. */
 export const D09_STATES: Record<string, string> = {
 	UNVERIFIED: "UNVERIFIED", UNKNOWN: "INSUFFICIENT EVIDENCE", HYPOTHESIS: "SPECULATIVE", PLAUSIBLE: "CREDIBLE SIGNAL", PROBABLE: "CREDIBLE SIGNAL",
 	SUPPORTED: "CORROBORATED", VERIFIED: "CORROBORATED", ESTABLISHED: "CORROBORATED", CONTRADICTED: "CONTRADICTED", FAILED: "REFUTED", BLOCKED: "INSUFFICIENT EVIDENCE",
@@ -357,7 +372,7 @@ const MEDIA_SITES = new Set([
 	"newyorker.com", "time.com", "cnbc.com", "foxnews.com", "lefigaro.fr", "elpais.com", "corriere.it", "asahi.com", "yomiuri.co.jp",
 	"abc.net.au", "cbc.ca", "straitstimes.com", "dawn.com", "kompas.com", "xinhuanet.com", "tass.com", "pti.in", "bssnews.net",
 ]);
-/** Independent and nonprofit newsrooms and investigative collectives (DL8). A starting list, not a
+/** Independent and nonprofit newsrooms and investigative collectives (DL10). A starting list, not a
  * ranking: a host may declare any source independent_journalism, or another layer. */
 const INDEPENDENT_SITES = new Set([
 	"propublica.org", "bellingcat.com", "icij.org", "occrp.org", "theintercept.com", "themarkup.org", "mediapart.fr", "netra.news", "insideclimatenews.org",
@@ -366,7 +381,7 @@ const INDEPENDENT_SITES = new Set([
 	"correctiv.org", "forbiddenstories.org", "lighthousereports.com", "airwars.org", "civilnet.am", "kyivindependent.com", "theinitium.com",
 	"hongkongfp.com", "himalmag.com", "theconversation.com", "followthemoney.nl", "zetland.dk",
 ]);
-/** Blog and newsletter platforms (DL9): every author on them is a separate origin. */
+/** Blog and newsletter platforms (DL12): every author on them is a separate origin. */
 const BLOG_PLATFORMS = ["substack.com", "medium.com", "blogspot.com", "wordpress.com", "ghost.io", "tumblr.com", "hashnode.dev", "dev.to", "livejournal.com",
 	"typepad.com", "beehiiv.com", "write.as", "bearblog.dev", "mataroa.blog", "micro.blog", "svbtle.com", "posthaven.com", "buttondown.email", "buttondown.com",
 	"telegra.ph", "blogger.com", "over-blog.com", "hatenablog.com", "note.com", "velog.io"];
@@ -391,29 +406,45 @@ const onPlatform = (site: string, host: string, list: Iterable<string>) => {
 	return false;
 };
 
-/** Inferred layer for an identity (null: not inferable). DL5 and DL7 are only ever declared;
- * field observations (field:<id>) belong to no web layer and stay unclassified unless declared. */
-export function inferDomain(c: CanonicalRef, ref: string): DomainId | null {
+/** Search engines, aggregators, encyclopedias and wikis (DL02 surface). */
+const SURFACE_SITES = ["wikipedia.org", "wikimedia.org", "wikidata.org", "wikinews.org", "wikiquote.org", "wikisource.org", "fandom.com", "britannica.com",
+	"google.com", "bing.com", "duckduckgo.com", "yahoo.com", "yandex.com", "yandex.ru", "baidu.com", "search.brave.com", "ecosia.org", "startpage.com",
+	"msn.com", "flipboard.com", "feedly.com", "newsnow.co.uk", "ground.news", "allsides.com", "smartnews.com", "newsbreak.com", "inshorts.com"];
+/** Hyperlocal news networks (DL06); local outlets in general must be declared. */
+const LOCAL_SITES = ["patch.com"];
+
+/** Inferred layer for an identity. DL08 alternate media and DL11 conspiracy are only ever declared. */
+export function inferDomain(c: CanonicalRef, ref: string): DomainId {
 	const host = c.host ?? "";
 	const site = c.site ?? "";
-	if (isOverlayHost(host)) return "DL3";
-	if (/^(onion|tor|i2p):/i.test(ref.trim())) return "DL3";
-	if (c.kind === "doi" || c.kind === "arxiv" || c.kind === "pmid" || c.kind === "pmcid" || c.kind === "isbn") return "DL2";
+	if (isOverlayHost(host) || /^(onion|tor|i2p):/i.test(ref.trim())) return "DL04";
+	if (c.archive) return "DL05";
+	if (c.kind === "doi" || c.kind === "arxiv" || c.kind === "pmid" || c.kind === "pmcid" || c.kind === "isbn") return "DL03";
 	if (c.kind === "document") {
-		if (/^(file|drive|gdrive|s3|internal|intranet|doc|confluence|sharepoint|notion):/i.test(ref.trim())) return "DL2";
-		return null;
+		if (/^field:/i.test(ref.trim())) return "DL06";
+		if (/^(file|drive|gdrive|s3|internal|intranet|doc|confluence|sharepoint|notion):/i.test(ref.trim())) return "DL03";
+		return "DL01";
 	}
-	// An archived page belongs to the layer of its original; an archive record without one is deep web.
-	if (c.kind === "archive" && !c.archive?.snapshot) return "DL2";
-	if (RESTRICTED_HOSTS.some((h) => host === h || host.endsWith(`.${h}`))) return "DL2";
-	if (c.kind === "post" || SOCIAL_SITES.has(site) || /^mastodon\./.test(host)) return "DL4";
-	if (onPlatform(site, host, BLOG_PLATFORMS) || BLOGSPOT.test(host) || /\.blog$/.test(host)) return "DL9";
-	if (onPlatform(site, host, MEDIA_SITES)) return "DL6";
-	if (onPlatform(site, host, INDEPENDENT_SITES)) return "DL8";
-	if (SPECIALIST_SITES.has(site) || host.endsWith(".nih.gov") || /\.(ac|edu)(\.[a-z]{2})?$/.test(host)) return "DL2";
-	if (/^blogs?\./.test(host)) return "DL9";
-	if ((c.kind === "url" || c.kind === "archive") && /^url:[^/]+\/(blog|blogs|weblog|posts?)\//i.test(c.canonical)) return "DL9";
-	return "DL1";
+	return webLayer(c);
+}
+
+/** The layer of a web identity, ignoring any archive wrapper (also the original_layer of an archived copy). */
+export function webLayer(c: CanonicalRef): DomainId {
+	const host = c.host ?? "";
+	const site = c.site ?? "";
+	if (isOverlayHost(host)) return "DL04";
+	if (c.kind === "doi" || c.kind === "arxiv" || c.kind === "pmid" || c.kind === "pmcid" || c.kind === "isbn") return "DL03";
+	if (RESTRICTED_HOSTS.some((h) => host === h || host.endsWith(`.${h}`))) return "DL03";
+	if (c.kind === "post" || SOCIAL_SITES.has(site) || /^mastodon\./.test(host)) return "DL07";
+	if (onPlatform(site, host, BLOG_PLATFORMS) || BLOGSPOT.test(host) || /\.blog$/.test(host)) return "DL12";
+	if (onPlatform(site, host, MEDIA_SITES)) return "DL09";
+	if (onPlatform(site, host, INDEPENDENT_SITES)) return "DL10";
+	if (onPlatform(site, host, LOCAL_SITES)) return "DL06";
+	if (onPlatform(site, host, SURFACE_SITES)) return "DL02";
+	if (SPECIALIST_SITES.has(site) || host.endsWith(".nih.gov") || /\.(ac|edu)(\.[a-z]{2})?$/.test(host)) return "DL03";
+	if (/^blogs?\./.test(host)) return "DL12";
+	if ((c.kind === "url" || c.kind === "archive") && /^url:[^/]+\/(blog|blogs|weblog|posts?)\//i.test(c.canonical)) return "DL12";
+	return "DL01";
 }
 
 // ---------------------------------------------------------------- identity of one evidence record
@@ -429,8 +460,10 @@ export interface SourceIdentity {
 	/** Key that merges sources as one origin: the site, or the account on a multi-author platform (null: identity only). */
 	origin_site: string | null;
 	domain: DomainId | null;
-	domain_basis: "declared" | "inferred" | "unknown";
+	domain_basis: "declared" | "inferred";
 	archive: CanonicalRef["archive"];
+	/** For an archived copy (DL05): the layer of the original. */
+	original_layer: DomainId | null;
 	derived_from: string[];
 	access: string | null;
 	primary: boolean;
@@ -472,7 +505,7 @@ export function sourceIdentity(e: EvidenceRecord, check?: JsonObject | null): So
 	const domain = declared ?? inferred;
 	return {
 		evidence_id: e.id, ref: e.source_ref, kind: c.kind, canonical: c.canonical, aliases: [...aliases], site: c.site, origin_site: originSite(c, e.source_ref),
-		domain, domain_basis: declared ? "declared" : inferred ? "inferred" : "unknown", archive: c.archive,
+		domain, domain_basis: declared ? "declared" : "inferred", archive: c.archive, original_layer: c.archive?.snapshot ? webLayer(c) : null,
 		derived_from: Array.isArray(e.details.derived_from) ? (e.details.derived_from as Json[]).map(String) : [],
 		access: typeof e.details.access === "string" ? e.details.access : null,
 		primary: e.details.primary === true || c.kind === "doi" || c.kind === "arxiv" || c.kind === "pmid" || c.kind === "pmcid",
@@ -544,10 +577,12 @@ export interface CheckSummary { ok: boolean; status: number | null; error: strin
 export function checkSummary(check: JsonObject | null | undefined): CheckSummary | null {
 	if (!check) return null;
 	const cr = check.crossref as { retracted?: unknown } | null | undefined;
+	const oax = check.openalex as { is_retracted?: unknown } | null | undefined;
+	const retracted = (!!cr && cr.retracted === true) || (!!oax && oax.is_retracted === true);
 	return {
 		ok: check.ok === true, status: typeof check.status === "number" ? check.status : null, error: typeof check.error === "string" ? check.error : null,
-		retracted: !!cr && cr.retracted === true,
-		retraction_status: !cr ? "not_applicable" : cr.retracted === true ? "retracted" : cr.retracted === false ? "not_listed" : "unknown",
+		retracted,
+		retraction_status: !cr && !oax ? "not_applicable" : retracted ? "retracted" : cr?.retracted === false || oax?.is_retracted === false ? "not_listed" : "unknown",
 		acquisition: acquisitionStatus(check),
 		injection_signals: Array.isArray(check.injection_signals) ? (check.injection_signals as Json[]).map(String) : [],
 		wayback: (check.wayback ?? null) as Json,
@@ -567,6 +602,7 @@ export interface Assessment {
 export function acquisitionStatus(check: JsonObject | null | undefined): string {
 	if (!check) return "NOT_CHECKED";
 	if (check.ok === true) return "ACQUIRED";
+	if (/no Tor egress/.test(typeof check.error === "string" ? check.error : "")) return "NOT_CONNECTED";
 	const status = typeof check.status === "number" ? check.status : null;
 	const err = typeof check.error === "string" ? check.error : "";
 	if (/refused|not fetched|not checked/.test(err)) return "REFUSED_BY_POLICY";
@@ -613,7 +649,7 @@ export function assessSources(evidence: EvidenceRecord[], claims: Claim[], contr
 		if (supportGroups.length < 2) missing.push(support.length > 1 ? `a second independent origin (all ${support.length} sources trace to ${supportGroups[0]?.key ?? "one origin"})` : "a second independent origin");
 		if (unchecked.length) missing.push(`a source check (rigorx_check_source) for ${unchecked.join(", ")}`);
 		if (!support.some((id) => byId.get(id)!.primary)) missing.push("primary evidence (a DOI/arXiv/PubMed record, or a source declared primary)");
-		if (fringeOnly) missing.push("corroboration from outside the dark-web and conspiracy layers (DL3, DL7)");
+		if (fringeOnly) missing.push("corroboration from outside the dark-web and conspiracy layers (DL04, DL11)");
 		if (disputed) missing.push("resolution of the contradiction");
 		if (retracted.length) missing.push(`replacement for retracted ${retracted.join(", ")}`);
 		const view: JsonObject = {
@@ -635,13 +671,13 @@ export function assessSources(evidence: EvidenceRecord[], claims: Claim[], contr
 		let verdict: Verdict = "INSUFFICIENT";
 		let reason = "not yet corroborated by an independent origin";
 		if (ck && !ck.ok) { verdict = "REJECTED"; reason = `acquisition failed: ${ck.error ?? "unknown error"}`; }
-		else if (ck?.retracted) { verdict = "REJECTED"; reason = "the work is retracted (Crossref / Retraction Watch)"; }
+		else if (ck?.retracted) { verdict = "REJECTED"; reason = "the work is retracted (Crossref / Retraction Watch / OpenAlex)"; }
 		else if (linkedClaims.some((c) => c.status === "FAILED")) { verdict = "REJECTED"; reason = "a claim resting on it is FAILED"; }
 		else if (linkedClaims.some((c) => c.status === "CONTRADICTED" || disputedClaims.has(c.id))) { verdict = "DISPUTED"; reason = "a claim resting on it is contradicted"; }
 		else if (stage === "CROSS_CHECKED" && linkedClaims.some((c) => ["ESTABLISHED", "VERIFIED", "SUPPORTED"].includes(c.status))) { verdict = "ACCEPTED"; reason = "supports a claim together with an independent origin"; }
 		else if (!linkedClaims.length) reason = "no claim rests on it yet";
 		return {
-			evidence_id: i.evidence_id, ref: i.ref, kind: i.kind, canonical: i.canonical, site: i.site, domain: i.domain, domain_basis: i.domain_basis,
+			evidence_id: i.evidence_id, ref: i.ref, kind: i.kind, canonical: i.canonical, site: i.site, domain: i.domain, domain_basis: i.domain_basis, original_layer: i.original_layer,
 			archive: i.archive as unknown as Json, access: i.access, primary: i.primary, origin_group: groupOf.get(i.evidence_id)!.key,
 			lifecycle: { stage, verdict, reason }, check: ck as unknown as Json,
 		} as JsonObject;
@@ -715,6 +751,57 @@ export async function crossrefLookup(doi: string, fetcher: typeof fetch = fetch,
 		};
 	} catch (e) {
 		return { ...base, error: `Crossref lookup failed: ${e instanceof Error ? e.message : String(e)}` };
+	}
+}
+
+export interface OpenAlexRecord {
+	/** The identifier looked up (doi:… or arxiv:…). */
+	lookup: string;
+	id: string | null;
+	title: string | null;
+	year: number | null;
+	type: string | null;
+	venue: string | null;
+	cited_by_count: number | null;
+	/** true/false as OpenAlex reports it; null when not determined. */
+	is_retracted: boolean | null;
+	is_oa: boolean | null;
+	oa_status: string | null;
+	/** Where an open-access copy can be read (landing page or PDF); null when none is known. */
+	oa_url: string | null;
+	error: string | null;
+}
+
+/** OpenAlex work record for a DOI or arXiv ID: citations, open-access status and location, retraction flag. */
+export async function openalexLookup(canonical: string, fetcher: typeof fetch = fetch, o: LookupOptions = {}): Promise<OpenAlexRecord> {
+	const base: OpenAlexRecord = { lookup: canonical, id: null, title: null, year: null, type: null, venue: null, cited_by_count: null, is_retracted: null, is_oa: null, oa_status: null, oa_url: null, error: null };
+	const doi = canonical.startsWith("doi:") ? canonical.slice(4) : canonical.startsWith("arxiv:") ? `10.48550/arxiv.${canonical.slice(6)}` : null;
+	if (!doi) return { ...base, error: "OpenAlex lookup needs a DOI or an arXiv ID" };
+	try {
+		const res = await lookupFetch("openalex", `https://api.openalex.org/works/doi:${encodeURIComponent(doi)}`, fetcher, o);
+		if (res.status === 404) return { ...base, error: "work not found in OpenAlex" };
+		if (!res.ok) return { ...base, error: `OpenAlex HTTP ${res.status}` };
+		const text = await res.text();
+		if (text.length > 4_000_000) return { ...base, error: "OpenAlex record too large" };
+		const m = JSON.parse(text) as Record<string, any>;
+		const url = (v: unknown) => (typeof v === "string" && /^https?:\/\//.test(v) ? clip(v, 2048) : null);
+		const oa = (m.open_access ?? {}) as Record<string, unknown>;
+		const best = (m.best_oa_location ?? {}) as Record<string, unknown>;
+		return {
+			...base,
+			id: typeof m.id === "string" ? clip(m.id, 200) : null,
+			title: typeof m.display_name === "string" ? clip(m.display_name) : null,
+			year: typeof m.publication_year === "number" ? m.publication_year : null,
+			type: typeof m.type === "string" ? clip(m.type, 60) : null,
+			venue: typeof m.primary_location?.source?.display_name === "string" ? clip(m.primary_location.source.display_name) : null,
+			cited_by_count: typeof m.cited_by_count === "number" ? m.cited_by_count : null,
+			is_retracted: typeof m.is_retracted === "boolean" ? m.is_retracted : null,
+			is_oa: typeof oa.is_oa === "boolean" ? oa.is_oa : null,
+			oa_status: typeof oa.oa_status === "string" ? clip(oa.oa_status, 40) : null,
+			oa_url: url(best.pdf_url) ?? url(best.landing_page_url) ?? url(oa.oa_url),
+		};
+	} catch (e) {
+		return { ...base, error: `OpenAlex lookup failed: ${e instanceof Error ? e.message : String(e)}` };
 	}
 }
 

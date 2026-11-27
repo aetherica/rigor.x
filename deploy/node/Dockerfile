@@ -27,6 +27,8 @@ RUN --mount=type=secret,id=npm_ca,required=false \
     npm ci --omit=dev --ignore-scripts --no-audit --no-fund
 
 FROM ${NODE_IMAGE}
+# Tor for the dark-web layer (DL04): started by docker-entrypoint.sh only when TOR_ENABLED=1.
+RUN apt-get update && apt-get install -y --no-install-recommends tor && rm -rf /var/lib/apt/lists/*
 ENV NODE_ENV=production \
     DATA_DIR=/data \
     HOST=0.0.0.0 \
@@ -38,11 +40,12 @@ COPY deploy/cloudflare-ts/package.json deploy/cloudflare-ts/
 COPY deploy/cloudflare-ts/src deploy/cloudflare-ts/src
 COPY deploy/cloudflare-ts/public deploy/cloudflare-ts/public
 COPY deploy/cloudflare-ts/migrations/accounts deploy/cloudflare-ts/migrations/accounts
-COPY deploy/node/package.json deploy/node/*.ts deploy/node/*.mjs deploy/node/
+COPY deploy/node/package.json deploy/node/*.ts deploy/node/*.mjs deploy/node/docker-entrypoint.sh deploy/node/
 RUN mkdir -p /data && chown node:node /data
 USER node
 EXPOSE 8787
 STOPSIGNAL SIGTERM
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
   CMD ["node", "-e", "fetch('http://127.0.0.1:'+(process.env.PORT||8787)+'/health').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"]
+ENTRYPOINT ["/bin/sh", "deploy/node/docker-entrypoint.sh"]
 CMD ["node", "--import", "./deploy/node/register.mjs", "--experimental-strip-types", "--disable-warning=ExperimentalWarning", "deploy/node/server.ts"]

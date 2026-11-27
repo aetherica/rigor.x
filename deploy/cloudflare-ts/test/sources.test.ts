@@ -5,7 +5,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
 	DOMAINS, DOMAIN_IDS, UNCORROBORATED_LAYERS, acquisitionStatus, assessSources, canonicalRef, crossrefLookup, declaredLayer, independenceGroups, inferDomain, originSite, parseDomain,
-	parseDomainInput, registrableSite, sourceIdentity, waybackLookup, wireService,
+	openalexLookup, parseDomainInput, registrableSite, sourceIdentity, waybackLookup, wireService,
 } from "../src/sources.ts";
 import { checkSource, extractMetadata, injectionSignals, cleanText } from "../src/source.ts";
 import { dispatch, HostEngine } from "../src/engine.ts";
@@ -41,53 +41,61 @@ test("registrable site: subdomains of one publisher are one site; platform subdo
 	assert.notEqual(registrableSite("alice.substack.com"), registrableSite("bob.substack.com"));
 });
 
-test("layers: the nine discovery layers, inferred from identity (never a trust level)", () => {
+test("layers: the twelve discovery layers, inferred from identity (never a trust level)", () => {
 	const d = (ref: string) => inferDomain(canonicalRef(ref), ref);
-	assert.deepEqual(DOMAIN_IDS.map((id) => DOMAINS[id].key), ["surface", "deep", "dark", "social", "alternative", "mainstream", "conspiracy", "independent_journalism", "blog"]);
-	assert.equal(d("https://example.com/about"), "DL1");
-	assert.equal(d("https://www.hrw.org/report"), "DL1"); // think tanks and NGOs are not "alternative media"
-	assert.equal(d("doi:10.1038/nature12373"), "DL2");
-	assert.equal(d("https://github.com/aetherica/x"), "DL2");
-	assert.equal(d("https://docs.google.com/document/d/abc"), "DL2");
-	assert.equal(d("https://archive.ph/AbCd1"), "DL2");
-	assert.equal(d("http://abcdefghijklmnop.onion/forum/1"), "DL3");
-	assert.equal(d("https://abcdefghijklmnop.onion.ws/forum/1"), "DL3");
-	assert.equal(d("http://site.i2p/"), "DL3");
-	assert.equal(d("https://x.com/a/status/1"), "DL4");
-	assert.equal(d("https://web.archive.org/web/2020/https://x.com/a/status/1"), "DL4"); // an archive keeps its original's layer
-	assert.equal(d("https://www.reuters.com/world/x"), "DL6");
-	assert.equal(d("https://abcnews.go.com/US/story"), "DL6"); // was unreachable: go.com is the registrable site
-	assert.equal(d("https://www.propublica.org/article/x"), "DL8");
-	assert.equal(d("https://www.bellingcat.com/news/2026/x"), "DL8");
-	assert.equal(d("https://alice.substack.com/p/post"), "DL9");
-	assert.equal(d("https://medium.com/@bob/post-1"), "DL9");
-	assert.equal(d("https://someone.blogspot.co.uk/2026/01/x.html"), "DL9");
-	assert.equal(d("https://blog.example.com/a"), "DL9");
-	assert.equal(d("https://example.com/blog/a"), "DL9");
-	assert.equal(d("https://www.reuters.com/blog/a"), "DL6"); // a newsroom's blog stays mainstream
-	assert.equal(d("field:observation-17"), null); // field data belongs to no web layer
-	assert.equal(parseDomain("conspiracy"), "DL7");
-	assert.equal(parseDomain("fringe"), "DL7");
-	assert.equal(parseDomain("Independent Journal"), "DL8");
-	assert.equal(parseDomain("alternate media"), "DL5");
-	assert.equal(parseDomain("DL4"), "DL4");
+	assert.deepEqual(DOMAIN_IDS.map((id) => DOMAINS[id].key), ["direct", "surface", "deep", "dark", "archive", "local", "social", "alternative", "mainstream", "independent_journalism", "conspiracy", "blog"]);
+	assert.equal(d("https://example.com/about"), "DL01");
+	assert.equal(d("https://www.hrw.org/report"), "DL01"); // think tanks and NGOs are not "alternative media"
+	assert.equal(d("https://en.wikipedia.org/wiki/Higgs_boson"), "DL02");
+	assert.equal(d("https://news.google.com/articles/x"), "DL02");
+	assert.equal(d("doi:10.1038/nature12373"), "DL03");
+	assert.equal(d("https://github.com/aetherica/x"), "DL03");
+	assert.equal(d("https://docs.google.com/document/d/abc"), "DL03");
+	assert.equal(d("http://abcdefghijklmnop.onion/forum/1"), "DL04");
+	assert.equal(d("https://abcdefghijklmnop.onion.ws/forum/1"), "DL04");
+	assert.equal(d("http://site.i2p/"), "DL04");
+	assert.equal(d("https://archive.ph/AbCd1"), "DL05");
+	assert.equal(d("https://web.archive.org/web/2020/https://x.com/a/status/1"), "DL05");
+	assert.equal(d("field:observation-17"), "DL06");
+	assert.equal(d("https://patch.com/new-york/brooklyn/x"), "DL06");
+	assert.equal(d("https://x.com/a/status/1"), "DL07");
+	assert.equal(d("https://www.reuters.com/world/x"), "DL09");
+	assert.equal(d("https://abcnews.go.com/US/story"), "DL09"); // was unreachable: go.com is the registrable site
+	assert.equal(d("https://www.propublica.org/article/x"), "DL10");
+	assert.equal(d("https://www.bellingcat.com/news/2026/x"), "DL10");
+	assert.equal(d("https://alice.substack.com/p/post"), "DL12");
+	assert.equal(d("https://medium.com/@bob/post-1"), "DL12");
+	assert.equal(d("https://someone.blogspot.co.uk/2026/01/x.html"), "DL12");
+	assert.equal(d("https://blog.example.com/a"), "DL12");
+	assert.equal(d("https://example.com/blog/a"), "DL12");
+	assert.equal(d("https://www.reuters.com/blog/a"), "DL09"); // a newsroom's blog stays mainstream
+	assert.equal(parseDomain("conspiracy"), "DL11");
+	assert.equal(parseDomain("fringe"), "DL11");
+	assert.equal(parseDomain("Independent Journal"), "DL10");
+	assert.equal(parseDomain("alternate media"), "DL08");
+	assert.equal(parseDomain("local media"), "DL06");
+	assert.equal(parseDomain("direct"), "DL01");
+	assert.equal(parseDomain("DL07"), "DL07");
 	assert.equal(parseDomain("trusted"), null);
-	// Legacy D01-D09 input keeps its old meaning.
-	assert.equal(parseDomain("D09"), "DL7");
-	assert.equal(parseDomain("D06"), "DL4");
-	assert.equal(parseDomain("D03"), "DL2");
-	assert.deepEqual(parseDomainInput("D04"), { layer: null, legacy: "D04" });
-	assert.deepEqual(parseDomainInput("D05"), { layer: null, legacy: "D05" });
+	// Legacy D01-D09 input keeps its old meaning, and so does the nine-layer draft.
+	assert.equal(parseDomain("D09"), "DL11");
+	assert.equal(parseDomain("D06"), "DL07");
+	assert.equal(parseDomain("D04"), "DL06");
+	assert.equal(parseDomain("D05"), "DL05");
+	assert.deepEqual(parseDomainInput("D03"), { layer: "DL03", legacy: "D03" });
+	assert.equal(parseDomain("DL3"), "DL04");
 	for (const id of DOMAIN_IDS) assert.ok(["OPERATIONAL", "PARTIAL", "CONTRACT_ONLY"].includes(DOMAINS[id].status), id);
-	assert.equal(DOMAINS.DL3.status, "CONTRACT_ONLY"); // RIGOR-X never acquires dark-web sources itself
-	assert.deepEqual([...UNCORROBORATED_LAYERS], ["DL3", "DL7"]);
+	assert.deepEqual([...UNCORROBORATED_LAYERS], ["DL04", "DL11"]);
+	const arch = sourceIdentity(ev("ev-1", "https://web.archive.org/web/20200101000000/https://www.reuters.com/world/x"));
+	assert.equal(arch.domain, "DL05");
+	assert.equal(arch.original_layer, "DL09");
 });
 
 test("stored records: legacy source_domain keeps its meaning; source_layer wins", () => {
-	assert.equal(declaredLayer({ source_domain: "D09" }), "DL7");
-	assert.equal(declaredLayer({ source_domain: "D05" }), null);
-	assert.equal(declaredLayer({ source_layer: "DL3", source_domain: "D01" }), "DL3");
-	assert.equal(sourceIdentity(ev("ev-1", "https://example.com/a", { source_domain: "D09" })).domain, "DL7");
+	assert.equal(declaredLayer({ source_domain: "D09" }), "DL11");
+	assert.equal(declaredLayer({ source_domain: "D05" }), "DL05");
+	assert.equal(declaredLayer({ source_layer: "DL04", source_domain: "D01" }), "DL04");
+	assert.equal(sourceIdentity(ev("ev-1", "https://example.com/a", { source_domain: "D09" })).domain, "DL11");
 });
 
 test("origins: different accounts on one platform are different origins; one account is one", () => {
@@ -109,22 +117,59 @@ test("origins: different accounts on one platform are different origins; one acc
 	assert.ok(groups.some((g) => g.members.length === 2 && g.reasons.includes("same account x.com/alice")));
 });
 
-test("dark layer: onion sources are never fetched and never carry a requirement alone", async () => {
-	for (const u of ["http://abcdefghijklmnop.onion/x", "https://abcdefghijklmnop.onion.ws/x", "https://tor2web.org/x", "http://site.i2p/"]) {
+test("dark layer: without a Tor egress onion sources are NOT_CONNECTED; with one they are fetched through Tor only", async () => {
+	for (const u of ["http://abcdefghijklmnop.onion/x", "https://abcdefghijklmnop.onion.ws/x"]) {
 		let fetched = false;
 		const r = await checkSource(u, (async () => { fetched = true; return new Response("x"); }) as typeof fetch, undefined, { resolver: publicDns });
 		assert.equal(fetched, false, u);
-		assert.match(r.error!, /dark-web .* refused, never fetched/);
-		assert.equal(acquisitionStatus(r as never), "REFUSED_BY_POLICY");
+		assert.equal(acquisitionStatus(r as never), "NOT_CONNECTED");
 	}
-	assert.equal(canonicalRef("https://abcdefghijklmnop.onion.ws/x").canonical, canonicalRef("http://abcdefghijklmnop.onion/x").canonical);
+	const i2p = await checkSource("http://site.i2p/", (async () => new Response("x")) as typeof fetch, undefined, { resolver: publicDns, overlay: (async () => new Response("x")) as typeof fetch });
+	assert.match(i2p.error!, /only a Tor egress/);
+	// With a Tor egress: the clearnet fetcher and DNS are never used for the onion; a gateway URL becomes the onion.
+	const torSeen: string[] = [];
+	const overlay = (async (input: RequestInfo | URL) => { torSeen.push(String(input)); return new Response("<html><head><title>Onion page</title></head></html>", { headers: { "content-type": "text/html" } }); }) as typeof fetch;
+	const clear = (async () => { throw new Error("clearnet fetcher must not be used"); }) as typeof fetch;
+	const noDns = async () => { throw new Error("no DNS lookup for onion names"); };
+	const r = await checkSource("https://abcdefghijklmnop.onion.ws/page", clear, undefined, { resolver: noDns as never, overlay });
+	assert.equal(r.ok, true);
+	assert.equal(r.via_tor, true);
+	assert.deepEqual(torSeen, ["http://abcdefghijklmnop.onion/page"]);
+	assert.equal(r.metadata?.title, "Onion page");
+	assert.ok(r.sha256);
+	// Non-text content is not downloaded over Tor.
+	const img = (async () => new Response(new Uint8Array(5000), { headers: { "content-type": "image/jpeg" } })) as typeof fetch;
+	const ri = await checkSource("http://abcdefghijklmnop.onion/a.jpg", clear, undefined, { resolver: noDns as never, overlay: img });
+	assert.equal(ri.body_skipped, "only text and HTML are downloaded over Tor");
+	assert.equal(ri.sha256, null);
+	assert.equal(ri.bytes, 0);
+	// DL04 and DL11 together still need an origin outside both.
 	const claim = (ids: string[]) => [{ id: "C1", text: { sha256: "a", chars: 30 }, status: "SUPPORTED" as const, evidence_ids: ids, requirement_ids: [], numeric: false, value: null }];
 	const dark = [ev("ev-1", "http://abcdefghijklmnop.onion/leak"), ev("ev-2", "https://example.com/claim", { source_domain: "conspiracy" })];
-	const a = assessSources(dark, claim(["ev-1", "ev-2"]), []);
-	assert.equal(a.claims[0]!.cross_check, "UNCORROBORATED_FRINGE"); // two origins, but both in DL3/DL7
-	const b = assessSources([...dark, ev("ev-3", "https://www.reuters.com/world/x")], claim(["ev-1", "ev-2", "ev-3"]), []);
-	assert.equal(b.claims[0]!.cross_check, "CORROBORATED");
+	assert.equal(assessSources(dark, claim(["ev-1", "ev-2"]), []).claims[0]!.cross_check, "UNCORROBORATED_FRINGE");
+	assert.equal(assessSources([...dark, ev("ev-3", "https://www.reuters.com/world/x")], claim(["ev-1", "ev-2", "ev-3"]), []).claims[0]!.cross_check, "CORROBORATED");
 });
+
+test("deep layer: OpenAlex work record for a DOI or arXiv ID; an OpenAlex retraction fails the source", async () => {
+	const seen: string[] = [];
+	const f = (async (input: RequestInfo | URL) => {
+		seen.push(String(input));
+		return Response.json({ id: "https://openalex.org/W1", display_name: "A paper", publication_year: 2021, type: "article", cited_by_count: 42, is_retracted: true,
+			open_access: { is_oa: true, oa_status: "green", oa_url: "https://arxiv.org/abs/2101.00001" }, best_oa_location: { pdf_url: "https://arxiv.org/pdf/2101.00001", landing_page_url: null },
+			primary_location: { source: { display_name: "Journal X" } } });
+	}) as typeof fetch;
+	const r = await openalexLookup("arxiv:2101.00001", f);
+	assert.deepEqual(seen, ["https://api.openalex.org/works/doi:10.48550%2Farxiv.2101.00001"]);
+	assert.equal(r.cited_by_count, 42);
+	assert.equal(r.oa_url, "https://arxiv.org/pdf/2101.00001");
+	assert.equal(r.venue, "Journal X");
+	assert.equal(r.is_retracted, true);
+	const a = assessSources([ev("ev-1", "doi:10.1/x"), { ...ev("ev-2", "doi:10.1/x"), type: "SOURCE_CHECK", details: { checks_evidence: "ev-1", ok: true, openalex: r } as never }],
+		[{ id: "C1", text: { sha256: "a", chars: 30 }, status: "SUPPORTED" as const, evidence_ids: ["ev-1"], requirement_ids: [], numeric: false, value: null }], []);
+	assert.equal(a.claims[0]!.cross_check, "UNDERMINED");
+	assert.equal((await openalexLookup("url:example.com/a", f)).error, "OpenAlex lookup needs a DOI or an arXiv ID");
+});
+
 
 
 test("independence: ten copies of one wire story are one origin; two different works are two", () => {
@@ -179,20 +224,21 @@ test("claim cross-check (directive §6.4): six reports of one post are not six s
 	assert.equal(c1.cross_check, "DISPUTED"); // the local witness contradicts it and the contradiction is open
 	assert.deepEqual(c1.origins, ["x:status:99"]);
 	assert.ok((c1.missing as string[]).some((m) => m.includes("second independent origin (all 7 sources trace to x:status:99)")));
-	assert.deepEqual((c1.domains as string[]).sort(), ["DL1", "DL4"]);
+	assert.deepEqual((c1.domains as string[]).sort(), ["DL01", "DL05", "DL07"]);
 	const archive = a.sources.find((s) => s.evidence_id === "ev-7")!;
-	assert.equal(archive.domain, "DL4"); // the archived post keeps the layer of its original
+	assert.equal(archive.domain, "DL05");
+	assert.equal(archive.original_layer, "DL07"); // the archived post keeps the layer of its original
 	assert.ok(archive.archive);
 	assert.equal(archive.origin_group, "x:status:99");
 	assert.equal((archive.lifecycle as any).stage, "DISCOVERED");
 });
 
-test("DL7: conspiracy claims keep their status and need corroboration from outside DL3/DL7", () => {
+test("DL11: conspiracy claims keep their status and need corroboration from outside DL04/DL11", () => {
 	const a = assessSources([ev("ev-1", "https://blog.example.com/hidden-truth", { source_domain: "fringe" })],
 		[{ id: "C1", text: { sha256: "a", chars: 30 }, status: "UNVERIFIED" as const, evidence_ids: ["ev-1"], requirement_ids: [], numeric: false, value: null }], []);
 	assert.equal(a.claims[0]!.cross_check, "UNCORROBORATED_FRINGE");
 	assert.equal(a.claims[0]!.d09_state, "UNVERIFIED");
-	assert.ok((a.claims[0]!.missing as string[]).includes("corroboration from outside the dark-web and conspiracy layers (DL3, DL7)"));
+	assert.ok((a.claims[0]!.missing as string[]).includes("corroboration from outside the dark-web and conspiracy layers (DL04, DL11)"));
 });
 
 test("gate: a requirement resting only on DL7 sources, or on a retracted work, is not met", async () => {
@@ -232,7 +278,7 @@ test("gate: a requirement resting only on DL7 sources, or on a retracted work, i
 	assert.equal(v.passed, false);
 	const check = (n: string) => v.checks.find((c: any) => c.check === n);
 	assert.deepEqual(check("cited_sources_not_retracted").detail, [`R1 cites ${paper}, a retracted work`]);
-	assert.deepEqual(check("fringe_corroborated").detail, ["R2 rests only on dark-web or conspiracy/fringe (DL3, DL7) sources: corroborate it from another layer"]);
+	assert.deepEqual(check("fringe_corroborated").detail, ["R2 rests only on dark-web or conspiracy/fringe (DL04, DL11) sources: corroborate it from another layer"]);
 	const assessed = ok("assess_sources", { run_id: id });
 	assert.equal(assessed.sources.find((x: any) => x.evidence_id === paper).lifecycle.verdict, "REJECTED");
 	assert.equal(assessed.claims.find((x: any) => x.claim_id === "C1").cross_check, "UNDERMINED");
@@ -291,9 +337,9 @@ test("wire services: an agency name that is also a personal name is not a wire b
 
 test("layer classification matches whole host labels (CodeQL: a look-alike host is not substack.com)", () => {
 	const d = (ref: string) => inferDomain(canonicalRef(ref), ref);
-	assert.equal(d("https://alice.substack.com/p/post"), "DL9");
-	assert.equal(d("https://evilsubstack.com/p/post"), "DL1");
-	assert.equal(d("https://substack.com.evil.example/p"), "DL1");
-	assert.equal(d("https://notreuters.com/a"), "DL1");
-	assert.equal(d("https://example.onion.evil.com/a"), "DL1");
+	assert.equal(d("https://alice.substack.com/p/post"), "DL12");
+	assert.equal(d("https://evilsubstack.com/p/post"), "DL01");
+	assert.equal(d("https://substack.com.evil.example/p"), "DL01");
+	assert.equal(d("https://notreuters.com/a"), "DL01");
+	assert.equal(d("https://example.onion.evil.com/a"), "DL01");
 });
