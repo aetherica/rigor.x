@@ -14,8 +14,6 @@ type ElementRef = { "element-6066-11e4-a52e-4f735466cecf": string };
 const ELEMENT = "element-6066-11e4-a52e-4f735466cecf";
 const SAFE_DIR = join(tmpdir(), "aetherica-browser");
 const MAX_REDIRECTS = 10;
-const pageCounters = new Map<string, number>();
-const lastRequest = new Map<string, number>();
 
 async function layerFor(url: string): Promise<DiscoveryLayer> { const shared = await import(SOURCE_CLASSIFIER_PATH); return shared.webLayer(shared.canonicalRef(url)) as DiscoveryLayer; }
 function prefixKey(url: URL): string { const first = url.pathname.split("/").filter(Boolean)[0] ?? ""; return url.origin + "/" + first; }
@@ -51,6 +49,8 @@ export class GeckoDriverEngine implements BrowserEngine {
  private requestedUrl = "";
  private lastUsed = Date.now();
  private allowLocalhost: boolean;
+ private pageCounters = new Map<string, number>();
+ private lastRequest = new Map<string, number>();
  constructor(options: { endpoint?: string; allowLocalhost?: boolean } = {}) {
   this.endpoint = (options.endpoint ?? process.env.AETHERICA_GECKODRIVER_URL ?? "http://127.0.0.1:4444").replace(/\/$/,"");
   this.allowLocalhost = options.allowLocalhost ?? process.env.AETHERICA_ALLOW_LOCALHOST === "1";
@@ -65,7 +65,7 @@ export class GeckoDriverEngine implements BrowserEngine {
  }
  private async start(): Promise<void> {
   if (this.sessionId) return;
-  const response = await fetch(this.endpoint+"/session",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({capabilities:{alwaysMatch:{"moz:firefoxOptions":{args:["-headless"]}}}})});
+  const response = await fetch(this.endpoint+"/session",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({capabilities:{alwaysMatch:{"moz:firefoxOptions":{args:["-headless"],prefs:{"browser.download.dir":join(SAFE_DIR,"downloads"),"browser.download.folderList":2,"browser.download.useDownloadDir":true,"browser.helperApps.neverAsk.saveToDisk":"application/pdf,text/csv,application/json,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet","pdfjs.disabled":true}}}})});
   const json=await response.json() as WdResponse<unknown>;
   if(!response.ok)throw new Error((json as any).message??"WebDriver session creation failed");
   this.sessionId=json.sessionId??(json.value as any)?.sessionId;
@@ -95,19 +95,23 @@ export class GeckoDriverEngine implements BrowserEngine {
   const target=sharedCheck.url.toString(),parsed=new URL(target),key=prefixKey(parsed),count=pageCounters.get(key)??0;
   if(parsed.hostname.endsWith(".onion"))return{status:"BLOCKED",message:"Tor egress is not configured for this GeckoDriver adapter; onion URLs are not attempted to avoid DNS leaks."};
   if(count>=MAX_PAGES_PER_PREFIX)return{status:"BLOCKED",message:"Page limit reached for this site/path prefix."};
-  const previous=lastRequest.get(parsed.origin)??0,delay=MIN_SITE_DELAY_MS-(Date.now()-previous);if(delay>0)await new Promise(r=>setTimeout(r,delay));
+  const previous=this.lastRequest.get(parsed.origin)??0,delay=MIN_SITE_DELAY_MS-(Date.now()-previous);if(delay>0)await new Promise(r=>setTimeout(r,delay));
   let robotsRules:RobotsRule[]=[];
   try{const rr=await safeFetch(parsed.origin+"/robots.txt",{headers:{"User-Agent":"AethericaBrowser (+https://github.com/aetherica/x)"}},this.allowLocalhost);if(robotsFetchStatusAllowed(rr.status)&&rr.ok)robotsRules=parseRobots(await rr.text());else if(!robotsFetchStatusAllowed(rr.status))return{status:"BLOCKED",message:"robots.txt server error; fail closed."};}
   catch(e){return{status:"BLOCKED",message:"Could not safely check robots.txt: "+(e instanceof Error?e.message:"error")};}
   if(parsed.pathname!=="/robots.txt"&&!decideRobots(parsed.pathname+parsed.search,robotsRules).allowed)return{status:"BLOCKED",message:"robots.txt disallows this path."};
   await this.start();this.requestedUrl=target;this.lastUsed=Date.now();
   await this.command("/session/"+this.sessionId+"/url","POST",{url:target});
-  lastRequest.set(parsed.origin,Date.now());pageCounters.set(key,count+1);
+  this.lastRequest.set(parsed.origin,Date.now());this.pageCounters.set(key,count+1);
   const landed=await this.enforceCurrentUrl();if(landed)return landed;
   this.currentUrl=await this.command<string>("/session/"+this.sessionId+"/url");
-  const text=await this.command<string>("/session/"+this.sessionId+"/execute/sync","POST",{script:"return document.body ? document.body.innerText : '';",args:[]});
+  const text=await this.command<string>("/session/"+this.sessionId+"/execute/sync","POST",{script:"return document.body ? document.body.innerText : ''; ",args:[]});
+  const title=await this.command<string>("/session/"+this.sessionId+"/title");
+  const html=await this.command<string>("/session/"+this.sessionId+"/execute/sync","POST",{script:"return document.documentElement ? document.documentElement.outerHTML : ''; ",args:[]});
+  const shared=await import(SOURCE_SAFETY_PATH);const injection=shared.injectionSignals(text,title);
+  const evidence:EvidencePacket={requested_url:target,final_url:this.currentUrl,redirects:[],fetched_at:new Date().toISOString(),status:null,content_type:null,sha256:await sha256(html),title,layer:await layerFor(this.currentUrl),via_tor:false,engine:this.name,injection_signals:injection,metadata_note:"WebDriver exposes the rendered DOM and final URL, not the HTTP response status, content type, or redirect chain. These are null/empty rather than inferred; redirect history is unavailable."};
   const challenge=challengeResult(text);
-  return{status:challenge?.status??"OK",message:challenge?.message,data:{url:this.currentUrl,title:await this.command<string>("/session/"+this.sessionId+"/title")}};
+  return{status:challenge?.status??"OK",message:challenge?.message,data:{url:this.currentUrl,title},evidence};
  }
  async read(options:ReadOptions={}):Promise<BrowserResult<{text:string;title:string;url:string;injection_signals:string[]}>>{
   await this.expireIfIdle();await this.start();const selector=options.selector??"body",max=Math.max(1,Math.min(options.max_chars??20000,100000));
@@ -115,7 +119,7 @@ export class GeckoDriverEngine implements BrowserEngine {
   const title=await this.command<string>("/session/"+this.sessionId+"/title"),url=await this.command<string>("/session/"+this.sessionId+"/url");
   const html=await this.script<string>("return document.documentElement.outerHTML;");
   const shared=await import(SOURCE_SAFETY_PATH);const injection=shared.injectionSignals(text,title);
-  const packet:EvidencePacket={requested_url:this.requestedUrl||url,final_url:url,redirects:[],fetched_at:new Date().toISOString(),status:null,content_type:null,sha256:await sha256(html),title,layer:await layerFor(url),via_tor:false,engine:this.name,injection_signals:injection};
+  const packet:EvidencePacket={requested_url:this.requestedUrl||url,final_url:url,redirects:[],fetched_at:new Date().toISOString(),status:null,content_type:null,sha256:await sha256(html),title,layer:await layerFor(url),via_tor:false,engine:this.name,injection_signals:injection,metadata_note:"WebDriver exposes the rendered DOM and final URL, not the HTTP response status, content type, or redirect chain. These are null/empty rather than inferred; redirect history is unavailable."};
   const challenge=challengeResult(text);return{status:challenge?.status??"OK",message:challenge?.message,data:{text:text.slice(0,max),title,url,injection_signals:injection},evidence:packet};
  }
  async click(options:ClickOptions):Promise<BrowserResult>{await this.expireIfIdle();await this.start();const meta=await this.script<{tag:string;type:string;role:string}>("const e=document.querySelector(arguments[0]);return e?{tag:e.tagName,type:e.type||'',role:e.getAttribute('role')||''}:{};",[options.selector]);const guard=guardClick(meta);if(guard.status!=="OK")return guard;const el=await this.find(options.selector);await this.command("/session/"+this.sessionId+"/element/"+el[ELEMENT]+"/click","POST",{});const landed=await this.enforceCurrentUrl();if(landed)return landed;return{status:"OK"};}
