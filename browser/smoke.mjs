@@ -6,6 +6,8 @@ import { createInterface } from "node:readline";
 import { fileURLToPath } from "node:url";
 
 const target = process.argv[2] ?? "https://example.com";
+const challengeUrl = process.argv.find(a => a.startsWith("--challenge-url="))?.split("=").slice(1).join("=");
+const redirectUrl = process.argv.find(a => a.startsWith("--redirect-url="))?.split("=").slice(1).join("=");
 const server = spawn(process.execPath, ["--no-warnings", "--experimental-strip-types", fileURLToPath(new URL("./server.ts", import.meta.url))], { stdio: ["pipe", "pipe", "inherit"], env: process.env });
 const pending = new Map();
 createInterface({ input: server.stdout }).on("line", (line) => {
@@ -38,6 +40,7 @@ try {
 
   const opened = await call("browser_open", { url: target });
   check("open " + target, opened.status === "OK", opened.status + " " + (opened.message ?? ""));
+  check("open includes evidence", !!opened.evidence?.sha256 && !!opened.evidence?.metadata_note, opened.evidence?.metadata_note ?? "missing");
 
   const read = await call("browser_read", {});
   const ev = read.evidence ?? read.data?.evidence ?? read;
@@ -45,6 +48,20 @@ try {
 
   const enter = await call("browser_type", { selector: "input", text: "hello\n" });
   check("typing Enter is refused", enter.status === "BLOCKED", enter.status);
+
+  const click = await call("browser_click", { selector: "a" });
+  check("click non-submit link", click.status === "OK" || click.status === "BLOCKED", click.status);
+
+  const shot = await call("browser_screenshot", { full_page: false });
+  check("screenshot", shot.status === "OK" && !!shot.data?.path, shot.status + " " + (shot.data?.path ?? ""));
+
+  const refusedSubmit = await call("browser_submit", { selector: "form", confirm: false });
+  check("submit confirm=false refuses", refusedSubmit.status === "BLOCKED", refusedSubmit.status);
+  const confirmedSubmit = await call("browser_submit", { selector: "form", confirm: true });
+  check("submit confirm=true reaches form validation", confirmedSubmit.status === "ERROR" || confirmedSubmit.status === "OK", confirmedSubmit.status + " (example.com has no form; no submission expected)");
+
+  if (challengeUrl) { const ch = await call("browser_open", { url: challengeUrl }); check("challenge URL yields NEEDS_HUMAN", ch.status === "NEEDS_HUMAN", ch.status); }
+  if (redirectUrl) { const rd = await call("browser_open", { url: redirectUrl }); check("redirect fixture blocked", rd.status === "BLOCKED", rd.status + " " + (rd.message ?? "")); }
 
   const priv = await call("browser_open", { url: "http://192.168.1.1/" });
   check("private address is refused", priv.status === "BLOCKED", priv.status);
