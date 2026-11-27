@@ -50,7 +50,7 @@ try {
   check("typing Enter is refused", enter.status === "BLOCKED", enter.status);
 
   const click = await call("browser_click", { selector: "a" });
-  check("click non-submit link", click.status === "OK" || click.status === "BLOCKED", click.status);
+  check("click non-submit link", click.status === "OK", click.status + " " + (click.message ?? ""));
 
   const shot = await call("browser_screenshot", { full_page: false });
   check("screenshot", shot.status === "OK" && !!shot.data?.path, shot.status + " " + (shot.data?.path ?? ""));
@@ -58,7 +58,7 @@ try {
   const refusedSubmit = await call("browser_submit", { selector: "form", confirm: false });
   check("submit confirm=false refuses", refusedSubmit.status === "BLOCKED", refusedSubmit.status);
   const confirmedSubmit = await call("browser_submit", { selector: "form", confirm: true });
-  check("submit confirm=true reaches form validation", confirmedSubmit.status === "ERROR" || confirmedSubmit.status === "OK", confirmedSubmit.status + " (example.com has no form; no submission expected)");
+  check("confirm=true reaches form validation", confirmedSubmit.status === "ERROR", confirmedSubmit.status + " (example.com has no form; no submission expected)");
 
   if (challengeUrl) { const ch = await call("browser_open", { url: challengeUrl }); check("challenge URL yields NEEDS_HUMAN", ch.status === "NEEDS_HUMAN", ch.status); }
   if (redirectUrl) { const rd = await call("browser_open", { url: redirectUrl }); check("redirect fixture blocked", rd.status === "BLOCKED", rd.status + " " + (rd.message ?? "")); }
