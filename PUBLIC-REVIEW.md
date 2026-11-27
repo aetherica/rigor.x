@@ -36,7 +36,7 @@ Please distinguish reproducible defects from design preferences, hypotheses, and
 
 ## Feedback and security
 
-Use repository issue forms for ordinary bugs and documentation issues. Pull requests are proposals and are governed by [CONTRIBUTING.md](CONTRIBUTING.md) and Apache-2.0. Do not publish credentials, personal data, private research, or exploit details. For suspected vulnerabilities, use [private vulnerability reporting](https://github.com/aetherica/rigor.x/security/advisories/new) if enabled; otherwise contact the owner through a verified private channel. Follow [SECURITY.md](SECURITY.md).
+Use repository issue forms for ordinary bugs and documentation issues. Pull requests are proposals and are governed by [CONTRIBUTING.md](CONTRIBUTING.md) and Apache-2.0. Do not publish credentials, personal data, private research, or exploit details. For suspected vulnerabilities, use [private vulnerability reporting](https://github.com/aetherica/x/security/advisories/new) if enabled; otherwise contact the owner through a verified private channel. Follow [SECURITY.md](SECURITY.md).
 
 ## Licensing and GitHub platform terms
 

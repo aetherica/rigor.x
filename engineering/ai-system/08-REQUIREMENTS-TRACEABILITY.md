@@ -37,7 +37,7 @@
 | RX-CON-003 | Metadata JSON-safe and finite | contract validator | object + NaN tests | VERIFIED |
 
 ## Acceptance notes
-- CI for WS15: [Run #45513882250](https://github.com/aetherica/rigor.x/actions/runs/45513882250), 35 tests passed, Ruff PASS.
+- CI for WS15: [Run #45513882250](https://github.com/aetherica/x/actions/runs/45513882250), 35 tests passed, Ruff PASS.
 - Registry entries remain proposed/recovered and pending owner ratification; structural validation does not ratify content.
 - The 102 interface/operational-command target is validated as a partial count only; 11 unresolved slots are not fabricated.
 - Typed contracts validate artifact shape and referential strings, not existence of referenced artifacts or connected capabilities.

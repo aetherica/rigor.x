@@ -7,4 +7,4 @@ callbacks `https://x.aetherica.workers.dev/oauth/<google|github|openai>/callback
 here; accounts, work and memory stay in the service Worker.
 
 Deploy: Cloudflare dashboard → Workers & Pages → `x` → Settings → Build → Connect to
-`aetherica/rigor.x`, branch `main`, root directory `deploy/x-front`, deploy command `npx wrangler deploy`.
+`aetherica/x`, branch `main`, root directory `deploy/x-front`, deploy command `npx wrangler deploy`.

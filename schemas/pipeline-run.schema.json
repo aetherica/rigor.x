@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/aetherica/rigor.x/blob/main/schemas/pipeline-run.schema.json",
+  "$id": "https://github.com/aetherica/x/blob/main/schemas/pipeline-run.schema.json",
   "title": "RIGOR-X Pipeline Run Snapshot",
   "description": "Versioned, serializable state snapshot for the 11-stage RIGOR-X pipeline.",
   "type": "object",

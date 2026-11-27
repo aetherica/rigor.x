@@ -44,7 +44,7 @@ test("domains: inferred from identity (never a trust level); D04 and D09 only de
 	const d = (ref: string) => inferDomain(canonicalRef(ref), ref);
 	assert.equal(d("https://example.com/about"), "D01");
 	assert.equal(d("doi:10.1038/nature12373"), "D02");
-	assert.equal(d("https://github.com/aetherica/rigor.x"), "D02");
+	assert.equal(d("https://github.com/aetherica/x"), "D02");
 	assert.equal(d("https://docs.google.com/document/d/abc"), "D03");
 	assert.equal(d("field:observation-17"), "D04");
 	assert.equal(d("https://web.archive.org/web/2020/https://example.com/"), "D05");

@@ -6,8 +6,8 @@
     "name": "Aetherica",
     "url": "https://github.com/aetherica"
   },
-  "homepage": "https://github.com/aetherica/rigor.x",
-  "repository": "https://github.com/aetherica/rigor.x",
+  "homepage": "https://github.com/aetherica/x",
+  "repository": "https://github.com/aetherica/x",
   "license": "Apache-2.0",
   "keywords": [
     "agent-orchestration",
@@ -33,8 +33,8 @@
       "Perform unit-aware calculations",
       "Manage per-user topic memory"
     ],
-    "websiteURL": "https://github.com/aetherica/rigor.x",
-    "supportURL": "https://github.com/aetherica/rigor.x/issues",
+    "websiteURL": "https://github.com/aetherica/x",
+    "supportURL": "https://github.com/aetherica/x/issues",
     "privacyPolicyURL": "https://x.aetherica.workers.dev/privacy",
     "termsOfServiceURL": "https://x.aetherica.workers.dev/terms",
     "defaultPrompt": [

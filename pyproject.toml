@@ -20,10 +20,10 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/aetherica/rigor.x"
-Repository = "https://github.com/aetherica/rigor.x"
-Issues = "https://github.com/aetherica/rigor.x/issues"
-Security = "https://github.com/aetherica/rigor.x/security"
+Homepage = "https://github.com/aetherica/x"
+Repository = "https://github.com/aetherica/x"
+Issues = "https://github.com/aetherica/x/issues"
+Security = "https://github.com/aetherica/x/security"
 
 [project.optional-dependencies]
 test = ["jsonschema>=4.25,<5"]

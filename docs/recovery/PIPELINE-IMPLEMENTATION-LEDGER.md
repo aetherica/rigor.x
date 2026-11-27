@@ -58,8 +58,8 @@ The controller plus SQLite adapter now provide deterministic stage control and l
 | File read-back from `main` | CONFIRMED |
 | 11-stage ordering represented in code and tests | INSPECTED |
 | Unit/integration test execution | 28 tests PASS in GitHub Actions on CPython 3.15.2 |
-| GitHub Actions run receipt | VERIFIED — [run #45512671713](https://github.com/aetherica/rigor.x/actions/runs/45512671713) |
-| CI pass/fail | PASS — [run #45512671713](https://github.com/aetherica/rigor.x/actions/runs/45512671713), 28 tests + Ruff; tested commit `bd90871b54e2371eb4d704e5313a7a4d36569249` |
+| GitHub Actions run receipt | VERIFIED — [run #45512671713](https://github.com/aetherica/x/actions/runs/45512671713) |
+| CI pass/fail | PASS — [run #45512671713](https://github.com/aetherica/x/actions/runs/45512671713), 28 tests + Ruff; tested commit `bd90871b54e2371eb4d704e5313a7a4d36569249` |
 | Persistence/restart recovery | IMPLEMENTED — SQLite save/restore tested across reopen |
 | Live host/tool/provider routing | NOT IMPLEMENTED |
 | Durable evidence/provenance storage | PARTIAL — stage events persisted; domain evidence store not implemented |

@@ -26,8 +26,8 @@ import { Deadline, resilientFetch, type ResilienceRegistry } from "./resilience.
 /** How a lookup is run: through the isolate's breakers and the caller's deadline (or a fresh one). */
 export interface LookupOptions { registry?: ResilienceRegistry; deadline?: Deadline }
 async function lookupFetch(adapter: string, url: string, fetcher: typeof fetch, o: LookupOptions): Promise<Response> {
-	if (!o.registry) return fetcher(url, { redirect: "manual", signal: AbortSignal.timeout(o.deadline?.remaining() || 8_000), headers: { Accept: "application/json", "User-Agent": "RIGOR-X source check (+https://github.com/aetherica/rigor.x)" } });
-	return resilientFetch(fetcher, url, { redirect: "manual", headers: { Accept: "application/json", "User-Agent": "RIGOR-X source check (+https://github.com/aetherica/rigor.x)" } },
+	if (!o.registry) return fetcher(url, { redirect: "manual", signal: AbortSignal.timeout(o.deadline?.remaining() || 8_000), headers: { Accept: "application/json", "User-Agent": "RIGOR-X source check (+https://github.com/aetherica/x)" } });
+	return resilientFetch(fetcher, url, { redirect: "manual", headers: { Accept: "application/json", "User-Agent": "RIGOR-X source check (+https://github.com/aetherica/x)" } },
 		{ policy: o.registry.policy, deadline: o.deadline ?? new Deadline(o.registry.policy.lookupTimeoutMs * 2), breaker: o.registry.breaker(adapter), perAttemptMs: o.registry.policy.lookupTimeoutMs });
 }
 

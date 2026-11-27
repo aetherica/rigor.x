@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/aetherica/rigor.x/blob/main/schemas/pipeline-store-record.schema.json",
+  "$id": "https://github.com/aetherica/x/blob/main/schemas/pipeline-store-record.schema.json",
   "title": "RIGOR-X Durable Pipeline Store Record",
   "type": "object",
   "additionalProperties": false,

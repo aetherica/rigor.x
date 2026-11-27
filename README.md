@@ -1,6 +1,6 @@
 # Aetherica × RIGOR-X
 
-**Repository:** `aetherica/rigor.x` · **Canonical branch:** `main` · **Engineering package:** `0.4.0.dev0` (development pre-release; not stable)
+**Repository:** `aetherica/x` (renamed from `aetherica/rigor.x` on 2026-11-27) · **Canonical branch:** `main` · **Engineering package:** `0.4.0.dev0` (development pre-release; not stable)
 
 RIGOR-X is a deterministic control-plane and live model/tool orchestration framework. It provides pipeline state, typed contracts, registry validation, durable storage and a bounded tool-call runtime. It is **not** a hosted model, provider service, or automatically connected ChatGPT plugin runtime.
 

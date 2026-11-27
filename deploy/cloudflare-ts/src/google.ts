@@ -203,7 +203,7 @@ export function signInChoicePage(title: string, intro: string, basePath: string,
 ${LEGAL}`);
 }
 
-const REPO_URL = "https://github.com/aetherica/rigor.x";
+const REPO_URL = "https://github.com/aetherica/x";
 
 /** Public pages linked from the sign-in page and the Google OAuth consent screen (Branding). Factual text. */
 export const PRIVACY_PAGE = page(`${BRAND} privacy policy`, `${MARK}

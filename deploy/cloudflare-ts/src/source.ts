@@ -64,7 +64,7 @@ export const MAX_BYTES = 1_048_576;
 export const MAX_REDIRECTS = 10;
 const ALLOWED_PORTS = new Set(["", "80", "443", "8080", "8443"]);
 const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
-const USER_AGENT = "RIGOR-X source check (+https://github.com/aetherica/rigor.x)";
+const USER_AGENT = "RIGOR-X source check (+https://github.com/aetherica/x)";
 
 // ---------------------------------------------------------------- address policy
 

@@ -28,7 +28,7 @@ export const ICON_SIZES = [48, 96, 192, 448] as const;
 export function serverInfo(origin?: string): JsonObject {
 	const info: JsonObject = { ...SERVER_INFO, description: "Control-plane engine for rigorous multi-step work: staged runs, pre-registered requirements, evidence ledger, verification gate, source intelligence, topic memory." };
 	if (origin && /^https?:\/\//.test(origin)) {
-		info.websiteUrl = "https://github.com/aetherica/rigor.x";
+		info.websiteUrl = "https://github.com/aetherica/x";
 		info.icons = ICON_SIZES.map((n) => ({ src: `${origin}/icon-${n}.png`, mimeType: "image/png", sizes: [`${n}x${n}`] }));
 	}
 	return info;
