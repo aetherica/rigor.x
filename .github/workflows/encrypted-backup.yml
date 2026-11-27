@@ -24,7 +24,7 @@ jobs:
           test -n "$CF_API_TOKEN" && test -n "$CF_ACCOUNT_ID" || { echo "Cloudflare credentials missing"; exit 78; }
           mkdir -p backup
           npx --yes wrangler@4.114.0 d1 export aetherica-accounts --remote --output backup/accounts.sql
-          if [ -n "$STAGING_DATABASE_URL" ]; then pg_dump --no-owner --no-privileges "$STAGING_DATABASE_URL" > backup/staging.sql; fi
+          if [ -n "$STAGING_DATABASE_URL" ]; then pg_dump --no-owner --no-privileges --schema=rigorx_private "$STAGING_DATABASE_URL" > backup/staging.sql; fi
           tar -czf backup/payload.tar.gz backup/*.sql
           age -r "$AGE_RECIPIENT" -o backup/payload.tar.gz.age backup/payload.tar.gz
           sha256sum backup/payload.tar.gz.age > backup/SHA256SUMS
