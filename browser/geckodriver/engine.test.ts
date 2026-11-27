@@ -4,7 +4,8 @@ import { GeckoDriverEngine } from "./engine.ts";
 const ELEMENT="element-6066-11e4-a52e-4f735466cecf";
 test("open/read evidence using fake WebDriver and mocked robots",async(t)=>{
  let current="https://example.com/",session="fake-session";
- const {createServer}=await import("node:http");\n const server=createServer(async(req,res)=>{
+ const {createServer}=await import("node:http");
+ const server=createServer(async(req,res)=>{
   const chunks=[];for await(const c of req)chunks.push(c);const body=chunks.length?JSON.parse(Buffer.concat(chunks).toString()):{},path=req.url??"/";
   const send=(value,sessionId)=>{res.setHeader("content-type","application/json");res.end(JSON.stringify({value,...(sessionId?{sessionId}:{})}))};
   if(path==="/session"&&req.method==="POST"){send({capabilities:{}},session);return}
