@@ -63,7 +63,7 @@ jobs:
           BASE: https://x.aetherica.workers.dev
         run: |
           set -euo pipefail
-          for path in /health /version /.well-known/oauth-authorization-server /.well-known/oauth-protected-resource; do
+          for path in /health /version /.well-known/oauth-authorization-server /.well-known/oauth-protected-resource/mcp; do
             code="$(curl -sS --max-time 30 -o /tmp/response -w '%{http_code}' "$BASE$path")"
             echo "$path => $code"; test "$code" -ge 200 && test "$code" -lt 400
           done
