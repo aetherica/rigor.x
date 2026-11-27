@@ -1,6 +1,6 @@
 export type BrowserStatus = "OK" | "NEEDS_HUMAN" | "BLOCKED" | "ERROR";
 export type DiscoveryLayer = "DL01" | "DL02" | "DL03" | "DL04" | "DL05" | "DL06" | "DL07" | "DL08" | "DL09" | "DL10" | "DL11" | "DL12";
-export interface EvidencePacket { requested_url: string; final_url: string; redirects: string[]; fetched_at: string; status: number | null; content_type: string | null; sha256: string | null; title: string | null; layer: DiscoveryLayer; via_tor: boolean; engine: string }
+export interface EvidencePacket { requested_url: string; final_url: string; redirects: string[]; fetched_at: string; status: number | null; content_type: string | null; sha256: string | null; title: string | null; layer: DiscoveryLayer; via_tor: boolean; engine: string; injection_signals?: string[] }
 export interface BrowserResult<T = unknown> { status: BrowserStatus; data?: T; message?: string; evidence?: EvidencePacket }
 export interface OpenOptions { url: string; wait_until?: "domcontentloaded" | "load"; timeout_ms?: number }
 export interface ReadOptions { selector?: string; max_chars?: number }
