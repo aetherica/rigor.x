@@ -4,6 +4,7 @@
 !deploy/cloudflare-ts/package-lock.json
 !deploy/cloudflare-ts/src/**
 !deploy/cloudflare-ts/public/**
+!deploy/cloudflare-ts/migrations/accounts/**
 !deploy/node/package.json
 !deploy/node/package-lock.json
 !deploy/node/*.ts

@@ -28,6 +28,9 @@ import { PgKv } from "./pg-kv.ts";
 import { PgOwnerStore, type PgOwnerOptions } from "./pg-owners.ts";
 import { SchemaError, assertSchema } from "./pg-migrations.ts";
 import { createGuardedFetch } from "./guarded-fetch.ts";
+import { pgAccountsDb, sqliteAccountsDb } from "./accounts-db.ts";
+import { storageErrorHint } from "./pg-config.ts";
+import type { SqlDatabase } from "../cloudflare-ts/src/accounts.ts";
 
 const PUBLIC_DIR = fileURLToPath(new URL("../cloudflare-ts/public/", import.meta.url));
 /** The paths the Worker's asset layer serves before the application (wrangler.jsonc run_worker_first). */
@@ -95,9 +98,16 @@ async function writeResponse(res: ServerResponse, response: Response): Promise<v
 }
 
 /** Opens the configured storage. PostgreSQL: checks the schema first and refuses to start on a mismatch. */
-async function openStorage(config: NodeConfig, hooks?: PgOwnerOptions["hooks"]): Promise<{ kv: KvStore; owners: OwnerStore; pool: pg.Pool | null }> {
+async function openStorage(config: NodeConfig, hooks?: PgOwnerOptions["hooks"]): Promise<{ kv: KvStore; owners: OwnerStore; pool: pg.Pool | null; accounts: SqlDatabase & { close?(): void } }> {
 	const s = config.storage;
-	if (s.kind === "sqlite") return { kv: new SqliteKv(join(config.dataDir, "oauth-kv.sqlite")), owners: new OwnerStorage(config.dataDir, config.appVars), pool: null };
+	if (s.kind === "sqlite") {
+		return {
+			kv: new SqliteKv(join(config.dataDir, "oauth-kv.sqlite")),
+			owners: new OwnerStorage(config.dataDir, config.appVars),
+			pool: null,
+			accounts: sqliteAccountsDb(join(config.dataDir, "accounts.sqlite")),
+		};
+	}
 	const pool = new pg.Pool(s.db.pool);
 	pool.on("error", (e) => log("rigorx_error", { where: "pg_pool", error: e.message })); // idle-client errors must not crash the process
 	pool.on("connect", (client) => { client.query("SET statement_timeout = 15000").catch(() => {}); });
@@ -111,20 +121,21 @@ async function openStorage(config: NodeConfig, hooks?: PgOwnerOptions["hooks"]):
 		dataDir: config.dataDir, limits: config.appVars, secret: s.ownerKeySecret, previousSecret: s.previousOwnerKeySecret,
 		maxSnapshotBytes: s.maxSnapshotBytes, maxAttempts: s.maxAttempts, ...(hooks ? { hooks } : {}),
 	});
-	return { kv: new PgKv(pool), owners, pool };
+	return { kv: new PgKv(pool), owners, pool, accounts: pgAccountsDb(pool) };
 }
 
 export async function startServer(config: NodeConfig, deps: { fetcher?: typeof fetch; kv?: SqliteKv; hooks?: PgOwnerOptions["hooks"] } = {}): Promise<RunningServer> {
 	const opened = await openStorage(config, deps.hooks);
 	const kv: KvStore = deps.kv ?? opened.kv;
-	const { owners, pool } = opened;
+	const { owners, pool, accounts } = opened;
 	const platform: Platform<NodeEnv> = {
 		callOwner: async (_env, key, ownerId, operation, payloadJson) => owners.call(key, ownerId, operation, payloadJson),
 		version: () => config.version,
 		fetcher: deps.fetcher ?? createGuardedFetch(),
 	};
 	const app = createApp<NodeEnv>(platform);
-	const env = { ...config.appVars, OAUTH_KV: kv } as unknown as NodeEnv;
+	// ACCOUNTS_DB: the account registry (identities, linking, terms acceptance), as the D1 binding on Cloudflare.
+	const env = { ...config.appVars, OAUTH_KV: kv, ACCOUNTS_DB: accounts } as unknown as NodeEnv;
 
 	let inFlight = 0;
 	let draining = false;
@@ -203,6 +214,7 @@ export async function startServer(config: NodeConfig, deps: { fetcher?: typeof f
 		await closed;
 		clearInterval(purge);
 		owners.close();
+		accounts.close?.();
 		kv.close();
 		if (pool) await pool.end(); // after in-flight work: no query is cut off
 		log("rigorx_shutdown", { phase: "complete", forced_connections: forced });
@@ -224,6 +236,8 @@ async function main(): Promise<void> {
 	let config: NodeConfig;
 	try {
 		config = loadConfig();
+		// Before anything connects: a warning about the configuration must be visible even if startup then fails.
+		for (const warning of config.warnings) console.error(JSON.stringify({ evt: "rigorx_config_warning", warning }));
 	} catch (e) {
 		if (e instanceof ConfigError) {
 			console.error(JSON.stringify({ evt: "rigorx_config_error", error: e.message }));
@@ -240,7 +254,8 @@ async function main(): Promise<void> {
 			process.exit(78); // fail closed on an uninitialized or incompatible database schema
 		}
 		const code = (e as { code?: string }).code;
-		console.error(JSON.stringify({ evt: "rigorx_error", where: "storage", error: e instanceof Error ? e.message : String(e), ...(code ? { code } : {}) }));
+		const hint = storageErrorHint(e);
+		console.error(JSON.stringify({ evt: "rigorx_error", where: "storage", error: e instanceof Error ? e.message : String(e), ...(code ? { code } : {}), ...(hint ? { hint } : {}) }));
 		process.exit(1);
 	}
 	let signals = 0;
