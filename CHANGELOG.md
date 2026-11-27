@@ -15,6 +15,12 @@ This project is in pre-release development. Entries summarize notable changes; t
 - Apache License 2.0 adoption for the RIGOR-X core repository, with NOTICE, trademark policy, open-source contribution terms, and optional service monetization boundaries.
 
 ### Changed
+- Discovery layers (Source Intelligence Gate) re-implemented to the owner's nine: DL1 surface, DL2 deep, DL3 dark, DL4 social media, DL5 alternate media, DL6 mainstream media, DL7 conspiracy theory, DL8 independent journalism, DL9 blog. The old D01–D09 domains had no dark, blog or independent-journalism layer and used archive, local and restricted as layers; those are now source properties. Old IDs are still accepted and stored records keep their meaning. Dark-web hosts (.onion, .i2p, .loki, Tor2web gateways) are refused by the fetcher, and DL3 sources, like DL7, cannot meet a requirement alone.
+- Independence groups: on multi-author platforms (X, GitHub, YouTube, LinkedIn, Medium …) the origin is the account, not the whole platform, so two different people are no longer counted as one source.
+
+### Fixed
+- `abcnews.go.com` was never classified as mainstream media (its registrable site is go.com).
+- Think tanks and NGOs were classified as "alternative media"; they are now surface web unless declared.
 - Release maturity and capability claims distinguish implemented, tested, verified, partial, planned and host-integration-dependent functionality.
 - CI workflows pin checkout/setup actions by immutable commit SHA and use read-only repository permissions.
 - Root README, contributor guidance, and repository licensing policy consistently identify RIGOR-X as Apache-2.0 open-source software; paid services are optional and do not restrict open-source rights.

@@ -19,7 +19,7 @@ import {
 	executeContract, methodsContract, operationDigest, optimizeContract, planContract, queryContract, stressContract, type ContractContext,
 } from "./ledger.ts";
 import { ACTION, COMPUTE, ENGINE_TYPES, GATE_VERSION, SOURCE_CHECK, USER_APPROVAL, parseAnswers, runGate, unresolvedActions } from "./gate.ts";
-import { DOMAINS, DOMAIN_IDS, assessSources, canonicalRef, parseDomain } from "./sources.ts";
+import { DOMAINS, DOMAIN_IDS, assessSources, canonicalRef, parseDomainInput } from "./sources.ts";
 import { SUPPORTING_STATUSES } from "./protocol.ts";
 import { ComputeError, compute, type ComputeInput } from "./compute.ts";
 import type { SourceCheck } from "./source.ts";
@@ -243,9 +243,12 @@ export class HostEngine {
 		const known = new Set(l.run.evidence.map((e) => e.id));
 		const has = (k: string) => args[k] !== undefined && args[k] !== null;
 		if (has("source_domain")) {
-			const d = parseDomain(args.source_domain);
-			if (!d) throw invalid(`source_domain must be one of ${DOMAIN_IDS.join(", ")} or ${DOMAIN_IDS.map((id) => DOMAINS[id].key).join(", ")}`);
-			details.source_domain = d;
+			const d = parseDomainInput(args.source_domain);
+			if (!d) throw invalid(`source_domain must be a discovery layer: ${DOMAIN_IDS.map((id) => `${id} ${DOMAINS[id].key}`).join(", ")}`);
+			if (d.layer) details.source_layer = d.layer;
+			if (d.legacy) details.source_domain_legacy = d.legacy;
+			// Old D04 (local) is a property of the evidence, not a layer: it means field access.
+			if (d.legacy === "D04" && !has("access")) details.access = "field";
 		}
 		if (has("derived_from")) {
 			const raw = jsonish(args.derived_from);

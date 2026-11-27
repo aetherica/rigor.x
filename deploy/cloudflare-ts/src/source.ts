@@ -32,7 +32,7 @@ export interface SourceMetadata {
 	lang: string | null;
 }
 
-import { crossrefLookup, waybackLookup, type CrossrefRecord, type WaybackRecord } from "./sources.ts";
+import { TOR2WEB, crossrefLookup, isOverlayHost, waybackLookup, type CrossrefRecord, type WaybackRecord } from "./sources.ts";
 import { EngineError, type JsonObject } from "./text.ts";
 import { DEFAULT_POLICY, Deadline, ResilienceRegistry, ResourceExhaustedError, resilientFetch, type ResiliencePolicy } from "./resilience.ts";
 
@@ -179,6 +179,11 @@ export function checkUrl(raw: string): { url: string } | { error: string } {
 	if (u.protocol !== "https:" && u.protocol !== "http:") return { error: `only http and https sources can be checked, not ${u.protocol}` };
 	if (u.username || u.password) return { error: "URLs with credentials are not fetched" };
 	if (!ALLOWED_PORTS.has(u.port)) return { error: `port ${u.port} is not fetched (allowed: default, 8080, 8443)` };
+	// Dark-web layer (DL3): overlay networks and Tor2web gateways are never fetched or proxied.
+	const h = u.hostname.toLowerCase().replace(/\.+$/, "");
+	if (isOverlayHost(h) || TOR2WEB.some((g) => h === g || h.endsWith(`.${g}`))) {
+		return { error: "dark-web (overlay network) source refused, never fetched: RIGOR-X records them as host-declared metadata only (source_domain dark)" };
+	}
 	const why = blockedHost(u.hostname);
 	if (why) return { error: `private or local hosts are not fetched: ${why}` };
 	u.hash = "";

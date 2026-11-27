@@ -8,7 +8,7 @@ import type { EvidenceRecord, RunState } from "./run.ts";
 import { UNKNOWN_VALUES, approvalProblems, dependencyProblems, type Claim, type Requirement } from "./ledger.ts";
 import { evidenceIds, ident, invalid, list, object, type Json, type JsonObject } from "./text.ts";
 import { ComputeError, dimString, parseUnit } from "./compute.ts";
-import { checkSummary, independenceGroups, latestChecks, sourceIdentity } from "./sources.ts";
+import { UNCORROBORATED_LAYERS, checkSummary, independenceGroups, latestChecks, sourceIdentity, type DomainId } from "./sources.ts";
 
 /** 2.1.0 (2026-11-26 audit): claims linked by evidence, value-bound compute receipts, single-use approvals,
  * dependency integrity, canonical source independence, retraction and fringe-corroboration checks. */
@@ -239,12 +239,12 @@ export function runGate(run: RunState, answers: Answer[], at: Date): GateResult 
 		}
 		add("claims_support_requirements", problems);
 		const contradictions = run.ledger.evaluation?.contradictions ?? [];
-		// Fringe or unverified sources (declared D09) never carry a requirement alone (directive §05, D09).
+		// Dark-web (DL3) and conspiracy/fringe (DL7) sources never carry a requirement alone (directive §05).
 		const fringe = metAnswers.filter((a) => {
 			const ids = [...allOf(a)].map((id) => evidence.get(id)!).filter((e) => !ENGINE_TYPES.has(e.type) && e.type !== USER_APPROVAL).map((e) => sourceIdentity(e, sourceChecks.get(e.id)));
-			return ids.length > 0 && ids.some((i) => i.domain === "D09") && ids.every((i) => i.domain === "D09");
+			return ids.length > 0 && ids.every((i) => i.domain !== null && UNCORROBORATED_LAYERS.has(i.domain));
 		});
-		if (fringe.length || run.evidence.some((e) => e.details.source_domain === "D09")) add("fringe_corroborated", fringe.map((a) => `${a.id} rests only on fringe or unverified (D09) sources: corroborate it from another domain`));
+		if (fringe.length || run.evidence.some((e) => !ENGINE_TYPES.has(e.type) && e.type !== USER_APPROVAL && UNCORROBORATED_LAYERS.has(sourceIdentity(e, sourceChecks.get(e.id)).domain as DomainId))) add("fringe_corroborated", fringe.map((a) => `${a.id} rests only on dark-web or conspiracy/fringe (DL3, DL7) sources: corroborate it from another layer`));
 		add("contradictions_resolved", contradictions.filter((x) => !x.resolved && x.claim_ids.some((id) => linkedToMet.has(id)))
 			.map((x) => `unresolved contradiction between ${x.claim_ids.join(" and ")}`));
 	}
