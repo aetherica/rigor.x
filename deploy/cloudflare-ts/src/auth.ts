@@ -23,7 +23,6 @@ import {
 	type OAuthHelpers,
 } from "@cloudflare/workers-oauth-provider";
 import {
-	HOME_PAGE,
 	PRIVACY_PAGE,
 	TERMS_PAGE,
 	consentPage,
@@ -50,6 +49,7 @@ import {
 	type ProviderId,
 } from "./providers.ts";
 import { AccountError, AccountRegistry, type SqlDatabase } from "./accounts.ts";
+import { landingPage } from "./landing.ts";
 
 export interface AuthEnv extends ProviderEnv {
 	OAUTH_KV: KVNamespace;
@@ -454,7 +454,7 @@ function defaultHandler(origin: string, call: OwnerCall | null, extra: ExtraRout
 				if (pathname === "/account" && call && request.method === "POST") return await accountPost(request, env, origin, call);
 				const handled = extra ? await extra(request, env) : null;
 				if (handled) return handled;
-				if (pathname === "/" && request.method === "GET") return html(HOME_PAGE);
+				if (pathname === "/" && request.method === "GET") return html(landingPage(origin));
 				if (pathname === "/privacy" && request.method === "GET") return html(PRIVACY_PAGE);
 				if (pathname === "/terms" && request.method === "GET") return html(TERMS_PAGE);
 				if (pathname === "/signup" && request.method === "POST") return await signupPost(request, env);

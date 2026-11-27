@@ -37,8 +37,8 @@
         ],
         "websiteURL": "https://github.com/aetherica/rigor.x",
         "supportURL": "https://github.com/aetherica/rigor.x/issues",
-        "privacyPolicyURL": "https://rigorx-mcp.aetherica.workers.dev/privacy",
-        "termsOfServiceURL": "https://rigorx-mcp.aetherica.workers.dev/terms",
+        "privacyPolicyURL": "https://x.aetherica.workers.dev/privacy",
+        "termsOfServiceURL": "https://x.aetherica.workers.dev/terms",
         "defaultPrompt": [
           "Use RIGOR-X to plan and track this task through verification.",
           "Research this question with RIGOR-X evidence records and source checks.",

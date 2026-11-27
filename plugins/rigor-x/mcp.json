@@ -3,7 +3,7 @@
   "mcpServers": {
     "rigorx": {
       "type": "streamable-http",
-      "url": "https://rigorx-mcp.aetherica.workers.dev/mcp",
+      "url": "https://x.aetherica.workers.dev/mcp",
       "extensions": {
         "com.openai": {
           "auth": {

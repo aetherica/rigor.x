@@ -14,7 +14,7 @@ A portable hybrid Plugin package for the RIGOR-X control-plane engine.
 
 The Plugin connects to:
 
-`https://rigorx-mcp.aetherica.workers.dev/mcp`
+`https://x.aetherica.workers.dev/mcp`
 
 The endpoint uses OAuth. Users sign in with Google; every MCP request requires an OAuth access token. No API key or shared bearer token is embedded in this package.
 
@@ -27,10 +27,10 @@ RIGOR-X provides structured workflow control, evidence and action ledgers, deter
 RIGOR-X verification checks stage order, requirement coverage, evidence references, receipts, and other deterministic conditions. It does not establish that submitted claims are true or that a source supports a claim.
 
 The service stores task and stage text as hashes and lengths. It also stores source references, selected reasons and identifiers, calculation inputs/results, action receipts, and topic-memory text/keywords as described at the deployed privacy page:
-https://rigorx-mcp.aetherica.workers.dev/privacy
+https://x.aetherica.workers.dev/privacy
 
 Terms:
-https://rigorx-mcp.aetherica.workers.dev/terms
+https://x.aetherica.workers.dev/terms
 
 ## Validation status
 

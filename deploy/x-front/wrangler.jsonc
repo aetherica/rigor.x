@@ -1,0 +1,12 @@
+{
+	// The public front door. Deployed by Workers Builds for the Worker "x" (root directory deploy/x-front).
+	"name": "x",
+	"main": "src/index.js",
+	"compatibility_date": "2026-09-07",
+	"workers_dev": true,
+	"preview_urls": false,
+	"services": [
+		{ "binding": "APP", "service": "rigorx-mcp" }
+	],
+	"observability": { "enabled": true, "head_sampling_rate": 0.1 }
+}
