@@ -32,6 +32,10 @@ This project is in pre-release development. Entries summarize notable changes; t
 - Topic memory: atomic operations (storage transactions), merge preflight, move-collision check, whole-word short-token recall, scoped supersession, run_validated bound to a validated claim by SHA-256.
 - Router risk floor for explicit low levels and a multilingual risk lexicon; compute exponents validated (no runtime exceptions); MCP request limits (1 MiB, depth 32, string/integer IDs).
 
+### PostgreSQL storage for the Node runtime (2026-11-27)
+- `STORAGE=postgres` (for example Supabase): each owner's engine database stored as one snapshot row, written with compare-and-swap under a per-owner advisory lock; bounded retries on version conflicts; deletion tombstones (generation) so a stale operation cannot recreate a deleted account; account deletion, tombstone and OAuth grant/token removal in one transaction; HMAC-keyed owner rows with secret rotation; SHA-256, integrity and schema checks before a snapshot is used; snapshot size limit. OAuth KV in PostgreSQL with Workers KV TTL semantics (one conformance suite for both KV stores). Private schema with RLS and no API-role privileges; explicit, locked migration command; fail-closed startup on a missing or incompatible schema. Session pooler only (port 6543 refused), mandatory TLS with certificate and hostname verification. Cloudflare production code unchanged.
+- Node runtime test: the landing page at `/` (the pipeline was red on main since 4fe5204).
+
 ### Portable Node runtime (2026-11-26)
 - `deploy/node`: the same application (MCP, OAuth, approvals, quotas, engine) on `node:http` for staging or backup hosting: one SQLite file per owner (the Durable Object boundary), a SQLite KV with Workers KV TTL semantics for OAuth, a connection-time SSRF address check, startup validation, graceful shutdown, Dockerfile and `.env.example`. `src/app.ts` holds the platform-neutral application; `src/index.ts` binds it to Cloudflare (production unchanged). CI runs the Worker's auth probe and the official MCP SDK client against the Node runtime with real OAuth tokens and builds the container.
 

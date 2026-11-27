@@ -13,9 +13,10 @@ deployment has its own accounts, runs and sign-ins.
 
 | Cloudflare (production)                 | Node runtime                                  | File               |
 |-----------------------------------------|-----------------------------------------------|--------------------|
-| One Durable Object per owner            | One SQLite file per owner (`DATA_DIR/owners/<sha256>.sqlite`) | `owners.ts` |
+| One Durable Object per owner            | `STORAGE=sqlite`: one SQLite file per owner (`DATA_DIR/owners/<sha256>.sqlite`); `STORAGE=postgres`: one snapshot row per owner in PostgreSQL | `owners.ts`, `pg-owners.ts` |
 | `ctx.storage.transactionSync`           | SQLite savepoint per operation (rolled back on error) | `sqlite.ts`  |
-| KV namespace `OAUTH_KV`                 | SQLite KV with TTL (`DATA_DIR/oauth-kv.sqlite`) | `kv.ts`          |
+| KV namespace `OAUTH_KV`                 | SQLite KV (`DATA_DIR/oauth-kv.sqlite`) or PostgreSQL KV, both with Workers KV TTL semantics | `kv.ts`, `pg-kv.ts` |
+| Accounts registry (D1, `accounts.ts`)   | **Not available yet**: without it, terms are asked at every sign-in and identities are not linked into one account | — |
 | Static assets (`public/`)               | Icons and favicon served by the HTTP layer    | `server.ts`        |
 | `global_fetch_strictly_public`          | Address check at connection time (all resolved addresses must be public) | `guarded-fetch.ts` |
 | Version metadata                        | `RIGORX_VERSION_TAG`, `RENDER_GIT_COMMIT` or `RAILWAY_GIT_COMMIT_SHA` | `config.ts` |
@@ -26,8 +27,8 @@ The application itself (`deploy/cloudflare-ts/src/app.ts`) takes a small `Platfo
 
 ## Run
 
-Requirements: Node 22.18+ (24 recommended), the Worker's dependencies installed
-(`cd deploy/cloudflare-ts && npm ci --omit=dev`).
+Requirements: Node 22.18+ (24 recommended), the Worker's dependencies and this directory's
+(`cd deploy/cloudflare-ts && npm ci --omit=dev`, `cd deploy/node && npm ci --omit=dev`).
 
 ```sh
 cp deploy/node/.env.example deploy/node/.env   # then fill in; never commit .env
@@ -77,12 +78,11 @@ tests in `test/`:
 
 ## Limitations
 
-- **Ephemeral hosting** (for example Render's free web services, which have no persistent disk,
-  sleep after 15 minutes idle and lose files on restart): every restart deletes all accounts'
-  runs, topic memory, registered OAuth clients and tokens. Users must sign in again and earlier
-  runs are gone. Use such hosts for disposable staging only.
-- **One process**: storage is per-process SQLite. Do not run several replicas on the same data
-  (no cross-process locking of an owner's engine); scale vertically or use Cloudflare.
+- **Ephemeral hosting with `STORAGE=sqlite`** (for example Render's free web services, which have
+  no persistent disk, sleep after 15 minutes idle and lose files on restart): every restart deletes
+  all accounts' runs, topic memory, registered OAuth clients and tokens. Use `STORAGE=postgres` there.
+- **One process with `STORAGE=sqlite`**: do not run several replicas on the same SQLite files.
+  `STORAGE=postgres` is safe with several processes (compare-and-swap on every write).
 - **Client ID Metadata Documents** are disabled by the OAuth library outside Cloudflare (it enables
   them only when the runtime guarantees public-only fetches). Clients that support dynamic client
   registration (Claude, ChatGPT, the MCP SDK) are unaffected.
@@ -90,14 +90,100 @@ tests in `test/`:
   eventually consistent).
 - **Cold starts** on sleeping hosts add seconds to the first request; MCP clients may time out once.
 
+## PostgreSQL storage (`STORAGE=postgres`, for example Supabase)
+
+Persistent storage for hosts without a disk. The engine stays synchronous and identical to the
+Durable Object code; each owner's whole SQLite database is stored as one row (a snapshot).
+
+**How one operation works** (`pg-owners.ts`):
+
+1. Read the owner's row version and generation. Download the snapshot only if the local cache
+   (`DATA_DIR/pg-cache`) is not exactly that version. Every download is checked: SHA-256, SQLite
+   header, `PRAGMA quick_check`, and an engine schema no newer than this release.
+2. Run the operation on the local copy as one SQLite transaction (exactly as in a Durable Object).
+3. If it changed anything, write the new snapshot in one PostgreSQL transaction under a per-owner
+   advisory lock, compare-and-swap on (version, generation). The result is returned only after
+   COMMIT; on any failure the local copy is discarded and nothing is reported as saved.
+4. **Version conflict** (another process wrote first): reload and re-run, at most
+   `STORAGE_MAX_ATTEMPTS` times (default 4, maximum 5), then `STORAGE_CONFLICT`. **Generation
+   conflict** (the account was deleted meanwhile): `OWNER_DELETED_DURING_OPERATION`, no retry.
+
+**Replay safety.** An operation does nothing outside the database (no network, no external writes),
+so re-running it after a conflict has no side effect. An uncommitted attempt is never returned, so
+its IDs and timestamps are never observed. Retries across requests use the engine's idempotency
+keys, which are stored in the same snapshot and committed atomically with the effect.
+
+**Account deletion** removes the owner row, records a tombstone with the next generation and
+deletes the account's OAuth grants and tokens (`grant:<user>:*`, `token:<user>:*`) in **one**
+PostgreSQL transaction. An operation that started before the deletion cannot write afterwards (its
+generation no longer matches), so deleted data is never resurrected. A later sign-in starts a new,
+empty account. This is the only operation that touches owner data and OAuth rows together; all
+other OAuth writes (clients, grants, tokens, sign-in and approval sessions) are single-row KV
+writes, and approval decisions themselves are engine operations inside the owner snapshot. Unlike
+the Cloudflare Worker, deletion here also revokes the account's OAuth grants.
+
+**Owner keys** are `HMAC-SHA256(OWNER_KEY_SECRET, owner ID)`, so rows cannot be linked to an
+account ID without the secret. The snapshot *content* is the engine's own database and contains the
+owner ID (the provider's account number, never a name or e-mail), as Durable Object storage does.
+Rotation: set the new secret in `OWNER_KEY_SECRET` and the old one in `OWNER_KEY_SECRET_PREVIOUS`;
+each account's row is found under the old key and moved on its next write. Remove the previous
+secret only when no rows under it remain. Losing the secret makes all rows unreachable.
+
+**Snapshot size** is limited by `OWNER_SNAPSHOT_MAX_BYTES` (default 8 MiB). A write that would
+exceed it is refused (`STORAGE_LIMIT`) and nothing is saved. Each write uploads the whole
+snapshot, so this design suits staging and small accounts, not large ones.
+
+**Schema and privileges** (`pg-migrations.ts`):
+
+- Tables live in the private schema `rigorx_private`: `owners`, `owner_tombstones`, `kv` and
+  `schema_migrations`.
+- This schema is not exposed by Supabase's Data API. All privileges are revoked from `PUBLIC`,
+  `anon`, `authenticated` and `service_role`, and row-level security is enabled with no policies.
+- Only the role the server connects as can read or write.
+- Migrations run only by the explicit command, under an advisory lock. The server checks versions
+  and checksums at startup and refuses to start (exit 78) on a missing, changed or newer schema:
+
+```sh
+node --import ./deploy/node/register.mjs --experimental-strip-types deploy/node/migrate.ts
+# or with the image:
+docker run --rm --env-file deploy/node/.env aetherica-node node --import ./deploy/node/register.mjs --experimental-strip-types deploy/node/migrate.ts
+```
+
+**Connection** (`pg-config.ts`):
+
+- **Pooler mode:** use Supabase's **session pooler** (`aws-…-<region>.pooler.supabase.com:5432`,
+  user `postgres.<project-ref>`). The **transaction pooler (port 6543) is refused**: each write
+  needs one session for a multi-statement transaction with an advisory transaction lock.
+- **Direct host:** the direct host `db.<ref>.supabase.co` is IPv6-only on the free plan. A warning
+  is printed; use it only from hosts with IPv6.
+- **TLS:** mandatory, with certificate and hostname verification. Set `DATABASE_CA_CERT` to
+  Supabase's CA certificate (Dashboard → Database Settings → SSL Configuration), as PEM text.
+- **Plain connections:** `DATABASE_SSL=disable` is accepted only for a localhost database outside
+  production.
+- **Pool:** `DATABASE_POOL_MAX` (default 5, maximum 20). There is a 15 s statement timeout, and the
+  pool closes on shutdown after in-flight requests finish.
+- **Secrets:** `DATABASE_URL` and the secrets are never logged or passed to the application. The
+  startup log shows only host, port, TLS mode and pool size.
+
+**Supabase free plan notes:**
+
+- A project with no activity for 7 days is paused. Database calls then fail until it is resumed in
+  the dashboard.
+- There are no downloadable backups or point-in-time recovery: treat this as staging data.
+- Deleted rows remain in PostgreSQL's storage until vacuumed.
+
 ## Tests
 
 ```sh
 # unit and integration (KV TTL, owner isolation, OAuth with real tokens, MCP, SSRF, shutdown)
 node --import ./deploy/node/register.mjs --experimental-strip-types --test deploy/node/test/*.test.ts
+# with PostgreSQL storage tests: a disposable local PostgreSQL 17 (each test file creates and drops its own database)
+PG_TEST_URL=postgres://postgres:<password>@127.0.0.1:5432/postgres node --import ./deploy/node/register.mjs --experimental-strip-types --test deploy/node/test/*.test.ts
 # the Worker's auth probe, against the Node runtime
 (cd deploy/cloudflare-ts && node test/integration/auth-probe.mjs --node)
 ```
 
-CI (`.github/workflows/rigorx-pipeline.yml`) also runs the official MCP SDK client against the Node
-runtime with a real OAuth token in all three protocol modes, and builds and starts the container.
+CI (`.github/workflows/rigorx-pipeline.yml`) runs all of these against a disposable PostgreSQL 17
+service (the PostgreSQL tests cannot be skipped in CI), the official MCP SDK client against the
+Node runtime with a real OAuth token in all three protocol modes, and builds and starts the
+container with SQLite and with PostgreSQL storage (migration command, fail-closed start).
