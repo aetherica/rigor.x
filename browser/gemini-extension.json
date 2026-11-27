@@ -1,5 +1,5 @@
 {
  "name":"aetherica-browser",
  "version":"0.1.0",
- "mcpServers":{"browser":{"command":"node","args":["--experimental-strip-types","${extensionPath}/server.ts"],"env":{"AETHERICA_ALLOW_LOCALHOST":"0"}}}
+ "mcpServers":{"browser":{"command":"node","args":["${extensionPath}/cli.mjs"],"env":{"AETHERICA_ALLOW_LOCALHOST":"0"}}}
 }

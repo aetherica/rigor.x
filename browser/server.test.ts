@@ -3,9 +3,9 @@ import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { once } from "node:events";
-const serverPath=fileURLToPath(new URL("./server.ts",import.meta.url));
+const serverPath=fileURLToPath(new URL("./cli.mjs",import.meta.url));
 test("stdio MCP initialize and tools/list advertise seven guarded browser tools",async()=>{
- const child=spawn(process.execPath,["--no-warnings","--experimental-strip-types",serverPath],{stdio:["pipe","pipe","pipe"]});
+ const child=spawn(process.execPath,[serverPath],{stdio:["pipe","pipe","pipe"]});
  let output="",stderr="";
  child.stdout.setEncoding("utf8");child.stderr.setEncoding("utf8");child.stdout.on("data",chunk=>output+=chunk);child.stderr.on("data",chunk=>stderr+=chunk);
  child.stdin.write(JSON.stringify({jsonrpc:"2.0",id:1,method:"initialize",params:{protocolVersion:"2025-03-26"}})+"\n");
