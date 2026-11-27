@@ -30,4 +30,5 @@ async function processLine(line:string){
  send({jsonrpc:"2.0",id:msg.id,error:{code:-32601,message:"Method not found"}});
 }
 let pending=Promise.resolve();
-rl.on("line",line=>{pending=pending.then(()=>processLine(line)).catch(error=>{send({jsonrpc:"2.0",id:null,error:{code:-32603,message:error instanceof Error?error.message:"Internal error"}});});});\nrl.on("close",()=>{void pending.finally(()=>engine.close())});
+rl.on("line",line=>{pending=pending.then(()=>processLine(line)).catch(error=>{send({jsonrpc:"2.0",id:null,error:{code:-32603,message:error instanceof Error?error.message:"Internal error"}});});});
+rl.on("close",()=>{void pending.finally(()=>engine.close())});

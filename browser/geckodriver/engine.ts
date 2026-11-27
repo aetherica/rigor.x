@@ -4,7 +4,8 @@ import { basename, join } from "node:path";
 import { tmpdir } from "node:os";
 import { guardClick, guardDownload, guardSubmit, guardType, guardUrl, challengeResult } from "../core/safety.ts";
 import { decideRobots, parseRobots, robotsFetchStatusAllowed, type RobotsRule } from "../core/robots.ts";
-import { MAX_IDLE_MS, MAX_PAGES_PER_PREFIX, MIN_SITE_DELAY_MS, validateUrl } from "../core/policy.ts";\nimport { canonicalRef, webLayer } from "../../deploy/cloudflare-ts/src/sources.ts";
+import { MAX_IDLE_MS, MAX_PAGES_PER_PREFIX, MIN_SITE_DELAY_MS, validateUrl } from "../core/policy.ts";
+import { canonicalRef, webLayer } from "../../deploy/cloudflare-ts/src/sources.ts";
 import type { BrowserEngine, BrowserResult, EvidencePacket, OpenOptions, ReadOptions, ClickOptions, TypeOptions, SubmitOptions, ScreenshotOptions, DownloadOptions, DiscoveryLayer } from "../core/types.ts";
 
 type WdResponse<T> = { value: T; sessionId?: string };
