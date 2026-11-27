@@ -4,6 +4,7 @@
 import { accessSync, constants, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { policyFromEnv } from "../cloudflare-ts/src/resilience.ts";
+import { DatabaseConfigError, parseDatabaseSettings, type DatabaseSettings } from "./pg-config.ts";
 
 export interface NodeConfig {
 	/** The public origin clients use (scheme://host[:port]); every request URL and OAuth URL is built on it. */
@@ -18,8 +19,22 @@ export interface NodeConfig {
 	version: { id: string; tag: string; timestamp: string };
 	/** The variables the application reads (Google client, RIGORX_* limits and policy); nothing else from the process environment. */
 	appVars: Record<string, string>;
+	/** Where accounts' data and OAuth records live: SQLite files in DATA_DIR, or PostgreSQL (STORAGE=postgres). */
+	storage: StorageSettings;
 	warnings: string[];
 }
+
+export type StorageSettings =
+	| { kind: "sqlite" }
+	| {
+		kind: "postgres";
+		db: DatabaseSettings;
+		/** HMAC key for owner storage keys (never logged); see README for rotation. */
+		ownerKeySecret: string;
+		previousOwnerKeySecret?: string;
+		maxSnapshotBytes: number;
+		maxAttempts: number;
+	};
 
 export class ConfigError extends Error {}
 
@@ -80,5 +95,36 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): NodeConfig {
 
 	const commit = env.RIGORX_VERSION_TAG || env.RENDER_GIT_COMMIT || env.RAILWAY_GIT_COMMIT_SHA || "";
 	const version = { id: commit || "node-local", tag: commit ? commit.slice(0, 12) : "local", timestamp: new Date().toISOString() };
-	return { origin, host, port, dataDir, shutdownGraceMs, maxBodyBytes, production, version, appVars, warnings };
+	const storage = storageSettings(env, production, warnings);
+	return { origin, host, port, dataDir, shutdownGraceMs, maxBodyBytes, production, version, appVars, storage, warnings };
+}
+
+function storageSettings(env: NodeJS.ProcessEnv, production: boolean, warnings: string[]): StorageSettings {
+	const kind = (env.STORAGE || "sqlite").toLowerCase();
+	if (kind === "sqlite") {
+		if (production) warnings.push("STORAGE=sqlite: data lives only in DATA_DIR; on hosting without a persistent disk every restart deletes it");
+		return { kind: "sqlite" };
+	}
+	if (kind !== "postgres") throw new ConfigError("STORAGE must be sqlite or postgres");
+	let db: DatabaseSettings;
+	try {
+		db = parseDatabaseSettings(env, production);
+	} catch (e) {
+		if (e instanceof DatabaseConfigError) throw new ConfigError(e.message);
+		throw e;
+	}
+	warnings.push(...db.warnings);
+	const secret = env.OWNER_KEY_SECRET ?? "";
+	if (secret.length < 32) throw new ConfigError("OWNER_KEY_SECRET is required with STORAGE=postgres and must be at least 32 characters (for example: openssl rand -base64 48)");
+	const previous = env.OWNER_KEY_SECRET_PREVIOUS || undefined;
+	if (previous !== undefined && previous.length < 32) throw new ConfigError("OWNER_KEY_SECRET_PREVIOUS must be at least 32 characters");
+	if (previous === secret) throw new ConfigError("OWNER_KEY_SECRET_PREVIOUS must differ from OWNER_KEY_SECRET");
+	return {
+		kind: "postgres",
+		db,
+		ownerKeySecret: secret,
+		...(previous ? { previousOwnerKeySecret: previous } : {}),
+		maxSnapshotBytes: int(env, "OWNER_SNAPSHOT_MAX_BYTES", 8 * 1_048_576, 65_536, 64 * 1_048_576),
+		maxAttempts: int(env, "STORAGE_MAX_ATTEMPTS", 4, 1, 5),
+	};
 }
