@@ -48,7 +48,8 @@ try {
 	await check("home page names the brand and no spike", async () => {
 		const r = await fetch(`${base}/`);
 		const text = await r.text();
-		assert.match(text, /<h1>Aetherica<\/h1>/);
+		assert.match(text, /◈ AETHERICA/); // the landing page (src/landing.ts)
+		assert.ok(text.includes(`${base}/mcp`)); // connector address of the serving host
 		assert.match(r.headers.get("content-security-policy") ?? "", /frame-ancestors 'none'/);
 		assert.doesNotMatch(text, /spike/i);
 	});
