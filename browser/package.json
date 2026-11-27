@@ -1,0 +1,11 @@
+{
+ "name":"@aetherica/browser",
+ "version":"0.1.0",
+ "private":true,
+ "description":"Aetherica standalone browser MCP server",
+ "type":"module",
+ "engines":{"node":">=22.18.0"},
+ "bin":{"aetherica-browser":"./server.ts"},
+ "scripts":{"test":"node --no-warnings --experimental-strip-types --test core/*.test.ts","start":"node --experimental-strip-types server.ts"},
+ "license":"MIT"
+}
