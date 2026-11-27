@@ -1,0 +1,60 @@
+name: Staging Migration Gate
+on:
+  pull_request:
+    branches: [main]
+    paths: ["deploy/node/**"]
+  workflow_dispatch:
+    inputs:
+      apply_staging:
+        description: Apply to staging database (owner approval required)
+        type: boolean
+        required: true
+        default: false
+permissions:
+  contents: read
+jobs:
+  validation:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: rigorx
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 2s --health-timeout 5s --health-retries 30
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: "24"
+      - run: npm ci --no-audit --no-fund --prefix deploy/node
+      - name: Run migration twice (idempotency) on disposable Postgres
+        env:
+          DATABASE_URL: postgres://postgres:ci@127.0.0.1:5432/rigorx
+          STORAGE: postgres
+          NODE_ENV: test
+        run: |
+          node --import ./deploy/node/register.mjs --experimental-strip-types deploy/node/migrate.ts
+          node --import ./deploy/node/register.mjs --experimental-strip-types deploy/node/migrate.ts
+          docker exec "${{ job.services.postgres.id }}" psql -U postgres -d rigorx -c "select version from rigorx_private.schema_migrations order by version;"
+  apply-staging:
+    if: github.event_name == 'workflow_dispatch' && inputs.apply_staging
+    needs: validation
+    runs-on: ubuntu-latest
+    environment: staging-migrations
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: "24"
+      - run: npm ci --no-audit --no-fund --prefix deploy/node
+      - name: Apply staging migrations only
+        env:
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+          DATABASE_CA_CERT: ${{ secrets.STAGING_DATABASE_CA_CERT }}
+          STORAGE: postgres
+          NODE_ENV: production
+        run: node --import ./deploy/node/register.mjs --experimental-strip-types deploy/node/migrate.ts
