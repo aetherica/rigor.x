@@ -5,7 +5,8 @@ import { tmpdir } from "node:os";
 import { guardClick, guardDownload, guardSubmit, guardType, guardUrl, challengeResult } from "../core/safety.ts";
 import { decideRobots, parseRobots, robotsFetchStatusAllowed, type RobotsRule } from "../core/robots.ts";
 import { MAX_IDLE_MS, MAX_PAGES_PER_PREFIX, MIN_SITE_DELAY_MS, validateUrl } from "../core/policy.ts";
-const SOURCE_CLASSIFIER_PATH = "../../deploy/cloudflare-ts/src/sources.ts";\nconst SOURCE_SAFETY_PATH = "../../deploy/cloudflare-ts/src/source.ts";
+const SOURCE_CLASSIFIER_PATH = "../../deploy/cloudflare-ts/src/sources.ts";
+const SOURCE_SAFETY_PATH = "../../deploy/cloudflare-ts/src/source.ts";
 import type { BrowserEngine, BrowserResult, EvidencePacket, OpenOptions, ReadOptions, ClickOptions, TypeOptions, SubmitOptions, ScreenshotOptions, DownloadOptions, DiscoveryLayer } from "../core/types.ts";
 
 type WdResponse<T> = { value: T; sessionId?: string };
@@ -75,7 +76,8 @@ export class GeckoDriverEngine implements BrowserEngine {
  private async find(selector:string):Promise<ElementRef>{return this.command<ElementRef>("/session/"+this.sessionId+"/element","POST",{using:"css selector",value:selector});}
  async open(options:OpenOptions):Promise<BrowserResult>{
   const guarded=guardUrl(options.url,false,this.allowLocalhost);if(guarded.status!=="OK")return guarded;
-  const target=guarded.data!.url,parsed=new URL(target),key=prefixKey(parsed),count=pageCounters.get(key)??0;
+  const sharedCheck=await sharedUrlCheck(options.url,this.allowLocalhost);if(!sharedCheck.ok)return{status:"BLOCKED",message:sharedCheck.reason};
+  const target=sharedCheck.url.toString(),parsed=new URL(target),key=prefixKey(parsed),count=pageCounters.get(key)??0;
   if(parsed.hostname.endsWith(".onion"))return{status:"BLOCKED",message:"Tor egress is not configured for this GeckoDriver adapter; onion URLs are not attempted to avoid DNS leaks."};
   if(count>=MAX_PAGES_PER_PREFIX)return{status:"BLOCKED",message:"Page limit reached for this site/path prefix."};
   const previous=lastRequest.get(parsed.origin)??0,delay=MIN_SITE_DELAY_MS-(Date.now()-previous);if(delay>0)await new Promise(r=>setTimeout(r,delay));
