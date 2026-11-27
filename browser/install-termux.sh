@@ -8,7 +8,8 @@ pkg update -y
 pkg install -y nodejs-lts proot-distro git
 echo "[2/3] Install Debian container (first run may take time)"
 # Ask proot-distro itself: list output format and colours change between versions.
-if proot-distro login debian -- true >/dev/null 2>&1; then echo "Debian container already installed"; else proot-distro install debian; fi
+# "already exists" is fine; step 3 fails loudly if the container is really unusable.
+proot-distro install debian || echo "Debian container already present, continuing"
 echo "[3/3] Install Firefox ESR and GeckoDriver in Debian"
 # Debian has no geckodriver package; Mozilla publishes an official linux-aarch64 build on GitHub.
 proot-distro login debian -- sh -lc '
