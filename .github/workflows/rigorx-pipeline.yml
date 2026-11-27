@@ -119,6 +119,12 @@ jobs:
       - name: Install Worker dependencies (locked)
         working-directory: deploy/cloudflare-ts
         run: npm ci --no-audit --no-fund
+      # Before the type check, which also covers deploy/node (it imports the PostgreSQL driver).
+      - name: "Portable Node runtime: install its locked dependencies (PostgreSQL driver) and audit them"
+        working-directory: deploy/node
+        run: |
+          npm ci --no-audit --no-fund
+          npm audit --omit=dev --audit-level=high
       - name: Audit production dependency tree
         working-directory: deploy/cloudflare-ts
         run: npm audit --omit=dev --audit-level=high
@@ -152,11 +158,6 @@ jobs:
           python examples/mcp_smoke.py --url http://127.0.0.1:8787/mcp --token ci-token --mode auto --expect-version 2026-07-28
           python examples/mcp_smoke.py --url http://127.0.0.1:8787/mcp --token ci-token --mode legacy --expect-version 2025-11-25
           python examples/mcp_smoke.py --url http://127.0.0.1:8787/mcp --token ci-token --mode 2026-07-28 --expect-version 2026-07-28
-      - name: "Portable Node runtime: install its locked dependencies (PostgreSQL driver) and audit them"
-        working-directory: deploy/node
-        run: |
-          npm ci --no-audit --no-fund
-          npm audit --omit=dev --audit-level=high
       - name: "Portable Node runtime: KV TTL, owner isolation, OAuth with real tokens, MCP, SSRF guard, shutdown, PostgreSQL storage (CAS, deletion race, TLS, privileges, migrations)"
         env:
           RIGORX_NET_TESTS: "1"
