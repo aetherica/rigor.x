@@ -128,7 +128,7 @@ p{margin:0 0 14px}.muted{color:var(--muted)}
 a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
 .warn{padding:12px 14px;border-radius:12px;background:var(--warn-bg);color:var(--warn);font-size:14px}
 .actions{display:flex;gap:12px;margin-top:26px}
-button{flex:1;font:inherit;font-weight:500;padding:11px 18px;border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--accent);cursor:pointer}
+button{flex:1;font:inherit;font-weight:500;padding:0 18px;height:44px;white-space:nowrap;border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--accent);cursor:pointer}
 button:hover{background:var(--chip)}button.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-text)}
 button.primary:hover{filter:brightness(1.08)}button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 dl{margin:0 0 14px;padding:14px 16px;border:1px solid var(--line);border-radius:16px;font-size:14px}dt{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.04em}dd{margin:0 0 10px;word-break:break-word}dd:last-child{margin:0}
@@ -136,7 +136,9 @@ ul{padding-left:20px}li{margin:0 0 8px}code{font-size:13px;padding:1px 5px;borde
 footer{position:absolute;left:0;right:0;bottom:16px;display:flex;gap:20px;justify-content:center;font-size:12px;color:var(--muted)}footer a{color:var(--muted)}
 .doc{max-width:680px}
 .rows{list-style:none;padding:0;margin:0 0 14px}.rows li{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
-form.inline button{flex:0 0 auto;padding:6px 14px;font-size:14px}.agree{display:flex;gap:10px;align-items:flex-start;margin:18px 0 4px;font-size:14px}.agree input{width:18px;height:18px;margin-top:2px;flex:none;accent-color:var(--accent)}.stack{display:flex;flex-direction:column;gap:10px;margin:22px 0 6px}
+form.inline button{flex:0 0 auto;padding:0 14px;height:34px;font-size:14px}.points{list-style:none;padding:0;margin:4px 0 20px;border:1px solid var(--line);border-radius:16px}.points li{position:relative;margin:0;padding:12px 16px 12px 40px;font-size:14px;line-height:1.5;color:var(--text)}.points li+li{border-top:1px solid var(--line)}.points li::before{content:"";position:absolute;left:17px;top:19px;width:7px;height:7px;border-radius:50%;background:var(--accent)}
+.agree{display:flex;gap:12px;align-items:flex-start;margin:4px 0 0;padding:14px 16px;border-radius:14px;background:var(--chip);font-size:14px;line-height:1.5;cursor:pointer}.agree input{width:18px;height:18px;margin:1px 0 0;flex:none;accent-color:var(--accent);cursor:pointer}.agree .ver{color:var(--muted);white-space:nowrap}
+.terms-actions{margin-top:20px}@media (max-width:480px){h1{font-size:24px}.body{padding:24px 20px 22px}}.stack{display:flex;flex-direction:column;gap:10px;margin:22px 0 6px}
 .small{font-size:13px;margin-top:18px}
 .signin{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;flex:none;height:44px;padding:0 16px;border-radius:999px;font:500 15px/1 Roboto,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;letter-spacing:.01em;text-decoration:none;cursor:pointer;transition:background-color .15s,box-shadow .15s}
 .signin:hover{text-decoration:none;filter:none}.signin svg{flex:none;width:20px;height:20px}
@@ -231,15 +233,15 @@ export function termsPage(o: { token: string; providerLabel: string; isNew: bool
 	return page(`${title} — ${BRAND}`, `${MARK}
 <h1>${escapeHtml(title)}</h1>
 <p class="muted">${o.isNew ? `You signed in with ${escapeHtml(o.providerLabel)}. Before your account is created, please read and accept:` : `Please read and accept the current terms to continue with ${escapeHtml(o.providerLabel)}:`}</p>
-<ul>
+<ul class="points">
 <li>${BRAND} is an early-stage service, provided as is, without warranty or guaranteed availability.</li>
 <li>"Structurally verified" means every requirement had its own recorded evidence. It does not guarantee that claims are true.</li>
 <li>Only your account ID at ${escapeHtml(o.providerLabel)} is stored, not your name or e-mail address. Task text is stored as digests.</li>
 <li>You can delete your tasks, topics or your whole account yourself at any time on your account page.</li>
 </ul>
 <form method="post" action="/signup"><input type="hidden" name="token" value="${escapeHtml(o.token)}">
-<label class="agree"><input type="checkbox" name="agree" value="yes" required> I have read and accept the <a href="/terms" target="_blank" rel="noopener">Terms of Service</a> and the <a href="/privacy" target="_blank" rel="noopener">Privacy Policy</a> (version ${TERMS_VERSION}).</label>
-<div class="actions"><button name="decision" value="decline" formnovalidate>Decline</button><button class="primary" name="decision" value="accept">${o.isNew ? "Create account" : "Accept and continue"}</button></div>
+<label class="agree"><input type="checkbox" name="agree" value="yes" required><span>I have read and accept the <a href="/terms" target="_blank" rel="noopener">Terms of Service</a> and the <a href="/privacy" target="_blank" rel="noopener">Privacy Policy</a> <span class="ver">(version ${TERMS_VERSION})</span>.</span></label>
+<div class="actions terms-actions"><button name="decision" value="decline" formnovalidate>Decline</button><button class="primary" name="decision" value="accept">${o.isNew ? "Create account" : "Accept"}</button></div>
 </form>`);
 }
 
