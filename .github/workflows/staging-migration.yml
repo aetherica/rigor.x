@@ -51,6 +51,8 @@ jobs:
         with:
           node-version: "24"
       - run: npm ci --no-audit --no-fund --prefix deploy/node
+      - name: Enforce main-only migration source
+        run: test "$GITHUB_REF" = "refs/heads/main"
       - name: Apply staging migrations only
         env:
           DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
