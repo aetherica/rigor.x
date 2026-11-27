@@ -22,7 +22,7 @@ jobs:
               echo "$base$path => $code"; test "$code" -ge 200 && test "$code" -lt 400
             done
             code="$(curl -sS --max-time 30 -o /tmp/mcp -w '%{http_code}' -X POST "$base/mcp" -H 'content-type: application/json' --data '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"monitor","version":"1"}}}')"
-            echo "$base MCP initialize => $code"; test "$code" -ge 200 && test "$code" -lt 400
+            echo "$base unauthenticated MCP => $code (401 expected)"; test "$code" = "401"
           done
       - name: Raise issue on failure
         if: failure()
