@@ -28,4 +28,6 @@ async function processLine(line:string){
  if(msg.method==="tools/list"){send({jsonrpc:"2.0",id:msg.id,result:{tools}});return}
  if(msg.method==="tools/call"){try{const r=await callTool(String(msg.params?.name),msg.params?.arguments??{});send({jsonrpc:"2.0",id:msg.id,result:{content:[{type:"text",text:resultText(r)}],isError:r.status==="ERROR"||r.status==="BLOCKED"}})}catch(e){send({jsonrpc:"2.0",id:msg.id,result:{content:[{type:"text",text:JSON.stringify({status:"ERROR",message:e instanceof Error?e.message:"Tool failed"})}],isError:true}})}return}
  send({jsonrpc:"2.0",id:msg.id,error:{code:-32601,message:"Method not found"}});
-}\nlet pending=Promise.resolve();\nrl.on("line",line=>{pending=pending.then(()=>processLine(line)).catch(error=>{send({jsonrpc:"2.0",id:null,error:{code:-32603,message:error instanceof Error?error.message:"Internal error"}});});});\nrl.on("close",()=>{void pending.finally(()=>engine.close())});
+}
+let pending=Promise.resolve();
+rl.on("line",line=>{pending=pending.then(()=>processLine(line)).catch(error=>{send({jsonrpc:"2.0",id:null,error:{code:-32603,message:error instanceof Error?error.message:"Internal error"}});});});\nrl.on("close",()=>{void pending.finally(()=>engine.close())});
