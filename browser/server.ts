@@ -19,7 +19,7 @@ async function callTool(name:string,args:any):Promise<BrowserResult>{
 }
 function send(message:unknown){process.stdout.write(JSON.stringify(message)+"\n")}
 const rl=createInterface({input:process.stdin,crlfDelay:Infinity});
-rl.on("line",async line=>{
+async function processLine(line:string){
  if(!line.trim())return;
  let msg:any;try{msg=JSON.parse(line)}catch{send({jsonrpc:"2.0",id:null,error:{code:-32700,message:"Parse error"}});return}
  if(msg.method==="notifications/initialized"||msg.method?.startsWith("notifications/"))return;
