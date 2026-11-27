@@ -7,7 +7,8 @@ echo "[1/3] Install Termux runtime and proot"
 pkg update -y
 pkg install -y nodejs-lts proot-distro git
 echo "[2/3] Install Debian container (first run may take time)"
-if [[ -d "$PREFIX/var/lib/proot-distro/installed-rootfs/debian" ]] || proot-distro list 2>/dev/null | grep -Eq '^[[:space:]*]*debian([[:space:]]|$)'; then echo "Debian container already installed"; else proot-distro install debian; fi
+# Ask proot-distro itself: list output format and colours change between versions.
+if proot-distro login debian -- true >/dev/null 2>&1; then echo "Debian container already installed"; else proot-distro install debian; fi
 echo "[3/3] Install Firefox ESR and GeckoDriver in Debian"
 # Debian has no geckodriver package; Mozilla publishes an official linux-aarch64 build on GitHub.
 proot-distro login debian -- sh -lc '
