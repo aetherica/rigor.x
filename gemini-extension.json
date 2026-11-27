@@ -1,0 +1,14 @@
+{
+  "name": "aetherica",
+  "version": "0.4.0",
+  "description": "Aetherica (RIGOR-X): rigorous multi-step work with recorded evidence, source checks, logged calculations and a validation gate.",
+  "mcpServers": {
+    "aetherica": {
+      "type": "http",
+      "url": "https://x.aetherica.workers.dev/mcp",
+      "authProviderType": "dynamic_discovery",
+      "timeout": 60000
+    }
+  },
+  "contextFileName": "GEMINI.md"
+}

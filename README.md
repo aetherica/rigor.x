@@ -51,6 +51,23 @@ These inventories do not imply live functionality. Missing source material stays
 
 A portable hybrid Plugin package is maintained in [`plugins/rigor-x/`](plugins/rigor-x/). It bundles focused Skills for structured runs, evidence research, unit-aware computation, and topic memory, and connects to the OAuth-protected Cloudflare MCP service. The package does not bundle or redeploy the hosted Worker. ChatGPT end-to-end OAuth acceptance and fresh-install smoke tests remain unverified; see the Plugin README before testing or submitting it.
 
+## Gemini
+
+**Gemini CLI.** This repository is a Gemini CLI extension (`gemini-extension.json` and `GEMINI.md`
+at the root) that connects to the hosted MCP service:
+
+```bash
+gemini extensions install https://github.com/aetherica/x
+```
+
+On first use Gemini CLI opens a browser for sign-in (Google, GitHub or ChatGPT); re-authenticate
+with `/mcp auth aetherica`. The CLI's OAuth flow needs a local browser, so it does not work in
+headless sessions. Validated with Gemini CLI 0.71.1 (`gemini extensions validate`); the sign-in
+flow itself has not yet been tested end to end.
+
+**Gemini app.** On a personal account, add `https://x.aetherica.workers.dev/mcp` as a custom MCP
+server under Connected Apps.
+
 ## Live runtime
 See [WS21 Live Agent Runtime](engineering/ai-system/15-LIVE-AGENT-RUNTIME.md). A real model endpoint and plugin callbacks must be supplied by the integrating host. This repo does not automatically connect to ChatGPT's internal plugin runtime.
 
