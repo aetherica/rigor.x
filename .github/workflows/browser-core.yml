@@ -15,12 +15,12 @@ jobs:
   tests:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: "22"
       - name: Install temporary type-check dependencies
-        run: npm install --no-save typescript@5.9.3 @types/node
+        run: npm install --no-save typescript@5.9.3 @types/node@22
       - name: Type-check browser implementation
         run: npx tsc -p browser/tsconfig.json
       - name: Check Termux installer syntax

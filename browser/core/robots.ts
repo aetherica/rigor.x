@@ -7,13 +7,14 @@ export function parseRobots(text:string,userAgent="AethericaBrowser"):RobotsRule
  if(key==="user-agent"){if(!group||group.rules.length){group={agents:[],rules:[]};groups.push(group)}group.agents.push(value.toLowerCase())}
  else if((key==="allow"||key==="disallow")&&value&&group)group.rules.push({allow:key==="allow",path:value,specificity:specificity(value)});
  }
- const ua=userAgent.toLowerCase(),specific=groups.filter(g=>g.agents.some(a=>a!=="*"&&ua.includes(a)));
+ // RFC 9309: the group whose user-agent equals our product token (case-insensitive); substrings do not match.
+ const ua=userAgent.toLowerCase().split("/")[0]!.trim(),specific=groups.filter(g=>g.agents.some(a=>a!=="*"&&a.split("/")[0]!.trim()===ua));
  const selected=specific.length?specific:groups.filter(g=>g.agents.includes("*"));
  return selected.flatMap(g=>g.rules);
 }
 function ruleMatches(path:string,pattern:string):boolean {
  const anchored=pattern.endsWith("$"),body=anchored?pattern.slice(0,-1):pattern;let regex="";
- for(const ch of body){if(ch==="*")regex+=".*";else regex+=ch.replace(/[.+?^$()|{}\\]/g,"\\$&")}
+ for(const ch of body){if(ch==="*")regex+=".*";else regex+=ch.replace(/[.+?^$()|{}\\[\]]/g,"\\$&")}
  try{return new RegExp("^"+regex+(anchored?"":".*")).test(path)}catch{return path.startsWith(body)}
 }
 export function decideRobots(path:string,rules:RobotsRule[]):RobotsDecision{

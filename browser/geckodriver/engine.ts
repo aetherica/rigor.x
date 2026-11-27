@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import { basename, join } from "node:path";
 import { tmpdir } from "node:os";
-import { guardClick, guardDownload, guardSubmit, guardType, guardUrl, challengeResult } from "../core/safety.ts";
+import { guardClick, guardDownload, guardSubmit, guardType, guardTypedText, guardUrl, challengeResult } from "../core/safety.ts";
 import { decideRobots, parseRobots, robotsFetchStatusAllowed, type RobotsRule } from "../core/robots.ts";
 import { MAX_IDLE_MS, MAX_PAGES_PER_PREFIX, MIN_SITE_DELAY_MS, validateUrl } from "../core/policy.ts";
 const SOURCE_CLASSIFIER_PATH = "../../deploy/cloudflare-ts/src/sources.ts";
@@ -73,6 +73,21 @@ export class GeckoDriverEngine implements BrowserEngine {
  }
  private async expireIfIdle(): Promise<void> { if(this.sessionId && Date.now()-this.lastUsed>MAX_IDLE_MS)await this.close(); }
  private async script<T>(source:string,args:unknown[]=[]):Promise<T>{await this.expireIfIdle();await this.start();return this.command<T>("/session/"+this.sessionId+"/execute/sync","POST",{script:source,args});}
+ /** Firefox follows HTTP and script redirects on its own, so the URL checked before navigation is not
+  * necessarily where the page ended up. Re-check the current URL; on a blocked destination, leave it. */
+ private async enforceCurrentUrl():Promise<BrowserResult|null>{
+  const url=await this.command<string>("/session/"+this.sessionId+"/url");
+  let reason:string|null=null;
+  if(url!=="about:blank"){
+   let scheme="";try{scheme=new URL(url).protocol}catch{reason="unparseable destination"}
+   if(!reason&&scheme!=="http:"&&scheme!=="https:")reason="non-HTTP(S) destination ("+scheme+")";
+   else if(!reason){if(new URL(url).hostname.endsWith(".onion"))reason="onion destination without Tor egress";else{const c=await sharedUrlCheck(url,this.allowLocalhost);if(!c.ok)reason=c.reason;}}
+  }
+  if(!reason)return null;
+  await this.command("/session/"+this.sessionId+"/url","POST",{url:"about:blank"}).catch(()=>{});
+  this.currentUrl="about:blank";
+  return{status:"BLOCKED",message:"Navigation reached a blocked destination and was stopped: "+reason};
+ }
  private async find(selector:string):Promise<ElementRef>{return this.command<ElementRef>("/session/"+this.sessionId+"/element","POST",{using:"css selector",value:selector});}
  async open(options:OpenOptions):Promise<BrowserResult>{
   const guarded=guardUrl(options.url,false,this.allowLocalhost);if(guarded.status!=="OK")return guarded;
@@ -84,11 +99,12 @@ export class GeckoDriverEngine implements BrowserEngine {
   let robotsRules:RobotsRule[]=[];
   try{const rr=await safeFetch(parsed.origin+"/robots.txt",{headers:{"User-Agent":"AethericaBrowser (+https://github.com/aetherica/x)"}},this.allowLocalhost);if(robotsFetchStatusAllowed(rr.status)&&rr.ok)robotsRules=parseRobots(await rr.text());else if(!robotsFetchStatusAllowed(rr.status))return{status:"BLOCKED",message:"robots.txt server error; fail closed."};}
   catch(e){return{status:"BLOCKED",message:"Could not safely check robots.txt: "+(e instanceof Error?e.message:"error")};}
-  if(parsed.pathname!=="/robots.txt"&&!decideRobots(parsed.pathname,robotsRules).allowed)return{status:"BLOCKED",message:"robots.txt disallows this path."};
+  if(parsed.pathname!=="/robots.txt"&&!decideRobots(parsed.pathname+parsed.search,robotsRules).allowed)return{status:"BLOCKED",message:"robots.txt disallows this path."};
   await this.start();this.requestedUrl=target;this.lastUsed=Date.now();
   await this.command("/session/"+this.sessionId+"/url","POST",{url:target});
-  this.currentUrl=await this.command<string>("/session/"+this.sessionId+"/url");
   lastRequest.set(parsed.origin,Date.now());pageCounters.set(key,count+1);
+  const landed=await this.enforceCurrentUrl();if(landed)return landed;
+  this.currentUrl=await this.command<string>("/session/"+this.sessionId+"/url");
   const text=await this.command<string>("/session/"+this.sessionId+"/execute/sync","POST",{script:"return document.body ? document.body.innerText : '';",args:[]});
   const challenge=challengeResult(text);
   return{status:challenge?.status??"OK",message:challenge?.message,data:{url:this.currentUrl,title:await this.command<string>("/session/"+this.sessionId+"/title")}};
@@ -102,8 +118,8 @@ export class GeckoDriverEngine implements BrowserEngine {
   const packet:EvidencePacket={requested_url:this.requestedUrl||url,final_url:url,redirects:[],fetched_at:new Date().toISOString(),status:null,content_type:null,sha256:await sha256(html),title,layer:await layerFor(url),via_tor:false,engine:this.name,injection_signals:injection};
   const challenge=challengeResult(text);return{status:challenge?.status??"OK",message:challenge?.message,data:{text:text.slice(0,max),title,url,injection_signals:injection},evidence:packet};
  }
- async click(options:ClickOptions):Promise<BrowserResult>{await this.expireIfIdle();await this.start();const meta=await this.script<{tag:string;type:string;role:string}>("const e=document.querySelector(arguments[0]);return e?{tag:e.tagName,type:e.type||'',role:e.getAttribute('role')||''}:{};",[options.selector]);const guard=guardClick(meta);if(guard.status!=="OK")return guard;const el=await this.find(options.selector);await this.command("/session/"+this.sessionId+"/element/"+el[ELEMENT]+"/click","POST",{});return{status:"OK"};}
- async type(options:TypeOptions):Promise<BrowserResult>{await this.expireIfIdle();await this.start();const meta=await this.script<{type:string;name:string;id:string;label:string;autocomplete:string}>("const e=document.querySelector(arguments[0]);if(!e)return{};const l=e.labels&&e.labels[0];return{type:e.type||'',name:e.name||'',id:e.id||'',label:l?l.innerText:'',autocomplete:e.autocomplete||''};",[options.selector]);const guard=guardType(meta);if(guard.status!=="OK")return guard;const el=await this.find(options.selector);await this.command("/session/"+this.sessionId+"/element/"+el[ELEMENT]+"/clear","POST",{});await this.command("/session/"+this.sessionId+"/element/"+el[ELEMENT]+"/value","POST",{text:options.text,value:Array.from(options.text)});return{status:"OK"};}
+ async click(options:ClickOptions):Promise<BrowserResult>{await this.expireIfIdle();await this.start();const meta=await this.script<{tag:string;type:string;role:string}>("const e=document.querySelector(arguments[0]);return e?{tag:e.tagName,type:e.type||'',role:e.getAttribute('role')||''}:{};",[options.selector]);const guard=guardClick(meta);if(guard.status!=="OK")return guard;const el=await this.find(options.selector);await this.command("/session/"+this.sessionId+"/element/"+el[ELEMENT]+"/click","POST",{});const landed=await this.enforceCurrentUrl();if(landed)return landed;return{status:"OK"};}
+ async type(options:TypeOptions):Promise<BrowserResult>{const textGuard=guardTypedText(String(options.text??""));if(textGuard.status!=="OK")return textGuard;await this.expireIfIdle();await this.start();const meta=await this.script<{type:string;name:string;id:string;label:string;autocomplete:string}>("const e=document.querySelector(arguments[0]);if(!e)return{};const l=e.labels&&e.labels[0];return{type:e.type||'',name:e.name||'',id:e.id||'',label:l?l.innerText:'',autocomplete:e.autocomplete||''};",[options.selector]);const guard=guardType(meta);if(guard.status!=="OK")return guard;const el=await this.find(options.selector);await this.command("/session/"+this.sessionId+"/element/"+el[ELEMENT]+"/clear","POST",{});await this.command("/session/"+this.sessionId+"/element/"+el[ELEMENT]+"/value","POST",{text:options.text,value:Array.from(options.text)});return{status:"OK"};}
  async submit(options:SubmitOptions):Promise<BrowserResult>{const guard=guardSubmit(options.confirm);if(guard.status!=="OK")return guard;await this.expireIfIdle();await this.start();const selector=options.selector??"form";const form=await this.script<boolean>("const e=document.querySelector(arguments[0]);return !!e && e.tagName.toLowerCase()==='form';",[selector]);if(!form)return{status:"ERROR",message:"Selector must identify a form element."};await this.script<void>("document.querySelector(arguments[0]).requestSubmit();",[selector]);return{status:"OK",message:"Submission explicitly confirmed."};}
  async screenshot(_options:ScreenshotOptions={}):Promise<BrowserResult<{path:string}>>{await this.expireIfIdle();await this.start();const b64=await this.command<string>("/session/"+this.sessionId+"/screenshot");await mkdir(SAFE_DIR,{recursive:true});const path=join(SAFE_DIR,"screenshot-"+Date.now()+".png");await writeFile(path,Buffer.from(b64,"base64"));return{status:"OK",data:{path}};}
  async download(options:DownloadOptions):Promise<BrowserResult<{path:string;size:number;content_type:string}>>{const g=guardUrl(options.url,false,this.allowLocalhost);if(g.status!=="OK")return{status:g.status,message:g.message};const sharedCheck=await sharedUrlCheck(options.url,this.allowLocalhost);if(!sharedCheck.ok)return{status:"BLOCKED",message:sharedCheck.reason};try{const r=await safeFetch(sharedCheck.url.toString(),{},this.allowLocalhost);if(!r.ok)return{status:"ERROR",message:"Download HTTP "+r.status};const type=r.headers.get("content-type")??"application/octet-stream",filename=cleanFilename(options.filename??new URL(g.data!.url).pathname.split("/").pop()??"download");const chunks:Uint8Array[]=[];let total=0;const reader=r.body?.getReader();if(reader)for(;;){const{done,value}=await reader.read();if(done)break;total+=value.byteLength;if(total>10*1024*1024){await reader.cancel();return{status:"BLOCKED",message:"Download size exceeded 10 MiB."};}chunks.push(value);}const check=guardDownload(filename,type,total);if(check.status!=="OK")return{status:check.status,message:check.message};await mkdir(join(SAFE_DIR,"downloads"),{recursive:true});const path=join(SAFE_DIR,"downloads",filename);await writeFile(path,Buffer.concat(chunks.map(c=>Buffer.from(c))));return{status:"OK",data:{path,size:total,content_type:type}};}catch(e){return{status:"ERROR",message:e instanceof Error?e.message:"Download failed"}}}

@@ -12,9 +12,12 @@ echo "[3/3] Install Firefox ESR and GeckoDriver in Debian"
 proot-distro login debian -- sh -lc 'apt-get update && apt-get install -y firefox-esr geckodriver'
 cat <<'MSG'
 
+Security: keep GeckoDriver on 127.0.0.1. Binding it to 0.0.0.0 lets anyone on the same Wi-Fi
+control the browser.
+
 Installation attempted. Check package availability before assuming success.
 Start GeckoDriver inside Debian:
-  proot-distro login debian -- geckodriver --host 0.0.0.0 --port 4444
+  proot-distro login debian -- geckodriver --host 127.0.0.1 --port 4444
 
 Then in Termux, run the MCP server from the repository:
   AETHERICA_GECKODRIVER_URL=http://127.0.0.1:4444 node --experimental-strip-types browser/server.ts
