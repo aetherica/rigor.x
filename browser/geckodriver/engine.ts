@@ -22,7 +22,7 @@ function layerFor(url: string): DiscoveryLayer {
  if (/wikipedia\.org|wikidata\.org|google\.(com|co\.)|bing\.com|duckduckgo\.com/.test(host)) return "DL02";
  if (/doi\.org|arxiv\.org|pubmed\.ncbi\.nlm\.nih\.gov|crossref\.org|openalex\.org|\.edu$/.test(host)) return "DL03";
  if (/x\.com|twitter\.com|reddit\.com|youtube\.com|youtu\.be|facebook\.com|instagram\.com|tiktok\.com/.test(host)) return "DL07";
- if /blogspot\.|wordpress\.com|medium\.com|substack\.com/.test(host) return "DL12";
+ if (/blogspot\.|wordpress\.com|medium\.com|substack\.com/.test(host)) return "DL12";
  return "DL01";
 }
 function prefixKey(url: URL): string { const first = url.pathname.split("/").filter(Boolean)[0] ?? ""; return url.origin + "/" + first; }
@@ -76,7 +76,7 @@ export class GeckoDriverEngine implements BrowserEngine {
  private async find(selector:string):Promise<ElementRef>{return this.command<ElementRef>("/session/"+this.sessionId+"/element","POST",{using:"css selector",value:selector});}
  async open(options:OpenOptions):Promise<BrowserResult>{
   const guarded=guardUrl(options.url,false,this.allowLocalhost);if(guarded.status!=="OK")return guarded;
-  const target=guarded.data!.url,parsed=new URL(target),key=prefixKey(parsed),count=pageCounters.get(key)??0;
+  const target=guarded.data!.url,parsed=new URL(target),key=prefixKey(parsed),count=pageCounters.get(key)??0;\n  if(parsed.hostname.endsWith(".onion"))return{status:"BLOCKED",message:"Tor egress is not configured for this GeckoDriver adapter; onion URLs are not attempted to avoid DNS leaks."};
   if(count>=MAX_PAGES_PER_PREFIX)return{status:"BLOCKED",message:"Page limit reached for this site/path prefix."};
   const previous=lastRequest.get(parsed.origin)??0,delay=MIN_SITE_DELAY_MS-(Date.now()-previous);if(delay>0)await new Promise(r=>setTimeout(r,delay));
   let robotsRules=[];
