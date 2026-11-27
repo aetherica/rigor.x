@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { guardClick, guardDownload, guardSubmit, guardType, guardUrl, challengeResult } from "../core/safety.ts";
 import { decideRobots, parseRobots, robotsFetchStatusAllowed, type RobotsRule } from "../core/robots.ts";
 import { MAX_IDLE_MS, MAX_PAGES_PER_PREFIX, MIN_SITE_DELAY_MS, validateUrl } from "../core/policy.ts";
-const SOURCE_CLASSIFIER_PATH = "../../deploy/cloudflare-ts/src/sources.ts";
+const SOURCE_CLASSIFIER_PATH = "../../deploy/cloudflare-ts/src/sources.ts";\nconst SOURCE_SAFETY_PATH = "../../deploy/cloudflare-ts/src/source.ts";
 import type { BrowserEngine, BrowserResult, EvidencePacket, OpenOptions, ReadOptions, ClickOptions, TypeOptions, SubmitOptions, ScreenshotOptions, DownloadOptions, DiscoveryLayer } from "../core/types.ts";
 
 type WdResponse<T> = { value: T; sessionId?: string };
@@ -18,10 +18,17 @@ const lastRequest = new Map<string, number>();
 
 async function layerFor(url: string): Promise<DiscoveryLayer> { const shared = await import(SOURCE_CLASSIFIER_PATH); return shared.webLayer(shared.canonicalRef(url)) as DiscoveryLayer; }
 function prefixKey(url: URL): string { const first = url.pathname.split("/").filter(Boolean)[0] ?? ""; return url.origin + "/" + first; }
+async function sharedUrlCheck(raw:string,allowLocalhost=false):Promise<{ok:true;url:URL}|{ok:false;reason:string}>{
+ const local=validateUrl(raw,{allowLocalhost});
+ if(local.ok&&allowLocalhost){const h=local.url.hostname.toLowerCase();if(h==="localhost"||h.endsWith(".localhost")||h.endsWith(".local")||h.endsWith(".internal")||h.endsWith(".lan")||h.endsWith(".home.arpa"))return local;}
+ const shared=await import(SOURCE_SAFETY_PATH);const checked=shared.checkUrl(raw);
+ if("error"in checked)return{ok:false,reason:checked.error};
+ return{ok:true,url:new URL(checked.url)};
+}
 async function safeFetch(url: string, options: RequestInit = {}, allowLocalhost = false): Promise<Response> {
  let current = url;
  for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
-  const check = validateUrl(current, { allowLocalhost });
+  const check = await sharedUrlCheck(current, allowLocalhost);
   if (!check.ok) throw new Error("Blocked redirect: " + check.reason);
   const response = await fetch(check.url, { ...options, redirect: "manual" });
   if (![301,302,303,307,308].includes(response.status)) return response;
@@ -96,6 +103,6 @@ export class GeckoDriverEngine implements BrowserEngine {
  async type(options:TypeOptions):Promise<BrowserResult>{await this.expireIfIdle();await this.start();const meta=await this.script<{type:string;name:string;id:string;label:string;autocomplete:string}>("const e=document.querySelector(arguments[0]);if(!e)return{};const l=e.labels&&e.labels[0];return{type:e.type||'',name:e.name||'',id:e.id||'',label:l?l.innerText:'',autocomplete:e.autocomplete||''};",[options.selector]);const guard=guardType(meta);if(guard.status!=="OK")return guard;const el=await this.find(options.selector);await this.command("/session/"+this.sessionId+"/element/"+el[ELEMENT]+"/clear","POST",{});await this.command("/session/"+this.sessionId+"/element/"+el[ELEMENT]+"/value","POST",{text:options.text,value:Array.from(options.text)});return{status:"OK"};}
  async submit(options:SubmitOptions):Promise<BrowserResult>{const guard=guardSubmit(options.confirm);if(guard.status!=="OK")return guard;await this.expireIfIdle();await this.start();const selector=options.selector??"form";const form=await this.script<boolean>("const e=document.querySelector(arguments[0]);return !!e && e.tagName.toLowerCase()==='form';",[selector]);if(!form)return{status:"ERROR",message:"Selector must identify a form element."};await this.script<void>("document.querySelector(arguments[0]).requestSubmit();",[selector]);return{status:"OK",message:"Submission explicitly confirmed."};}
  async screenshot(_options:ScreenshotOptions={}):Promise<BrowserResult<{path:string}>>{await this.expireIfIdle();await this.start();const b64=await this.command<string>("/session/"+this.sessionId+"/screenshot");await mkdir(SAFE_DIR,{recursive:true});const path=join(SAFE_DIR,"screenshot-"+Date.now()+".png");await writeFile(path,Buffer.from(b64,"base64"));return{status:"OK",data:{path}};}
- async download(options:DownloadOptions):Promise<BrowserResult<{path:string;size:number;content_type:string}>>{const g=guardUrl(options.url,false,this.allowLocalhost);if(g.status!=="OK")return{status:g.status,message:g.message};try{const r=await safeFetch(g.data!.url,{},this.allowLocalhost);if(!r.ok)return{status:"ERROR",message:"Download HTTP "+r.status};const type=r.headers.get("content-type")??"application/octet-stream",filename=cleanFilename(options.filename??new URL(g.data!.url).pathname.split("/").pop()??"download");const chunks:Uint8Array[]=[];let total=0;const reader=r.body?.getReader();if(reader)for(;;){const{done,value}=await reader.read();if(done)break;total+=value.byteLength;if(total>10*1024*1024){await reader.cancel();return{status:"BLOCKED",message:"Download size exceeded 10 MiB."};}chunks.push(value);}const check=guardDownload(filename,type,total);if(check.status!=="OK")return{status:check.status,message:check.message};await mkdir(join(SAFE_DIR,"downloads"),{recursive:true});const path=join(SAFE_DIR,"downloads",filename);await writeFile(path,Buffer.concat(chunks.map(c=>Buffer.from(c))));return{status:"OK",data:{path,size:total,content_type:type}};}catch(e){return{status:"ERROR",message:e instanceof Error?e.message:"Download failed"}}}
+ async download(options:DownloadOptions):Promise<BrowserResult<{path:string;size:number;content_type:string}>>{const g=guardUrl(options.url,false,this.allowLocalhost);if(g.status!=="OK")return{status:g.status,message:g.message};const sharedCheck=await sharedUrlCheck(options.url,this.allowLocalhost);if(!sharedCheck.ok)return{status:"BLOCKED",message:sharedCheck.reason};try{const r=await safeFetch(sharedCheck.url.toString(),{},this.allowLocalhost);if(!r.ok)return{status:"ERROR",message:"Download HTTP "+r.status};const type=r.headers.get("content-type")??"application/octet-stream",filename=cleanFilename(options.filename??new URL(g.data!.url).pathname.split("/").pop()??"download");const chunks:Uint8Array[]=[];let total=0;const reader=r.body?.getReader();if(reader)for(;;){const{done,value}=await reader.read();if(done)break;total+=value.byteLength;if(total>10*1024*1024){await reader.cancel();return{status:"BLOCKED",message:"Download size exceeded 10 MiB."};}chunks.push(value);}const check=guardDownload(filename,type,total);if(check.status!=="OK")return{status:check.status,message:check.message};await mkdir(join(SAFE_DIR,"downloads"),{recursive:true});const path=join(SAFE_DIR,"downloads",filename);await writeFile(path,Buffer.concat(chunks.map(c=>Buffer.from(c))));return{status:"OK",data:{path,size:total,content_type:type}};}catch(e){return{status:"ERROR",message:e instanceof Error?e.message:"Download failed"}}}
  async close():Promise<void>{if(!this.sessionId)return;const id=this.sessionId;this.sessionId=null;await fetch(this.endpoint+"/session/"+id,{method:"DELETE"}).catch(()=>{});}
 }
