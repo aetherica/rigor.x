@@ -22,6 +22,6 @@ jobs:
       - name: Install temporary type-check dependencies
         run: npm install --no-save typescript @types/node
       - name: Type-check browser implementation
-        run: npx tsc --noEmit --strict --target ES2022 --module NodeNext --moduleResolution NodeNext --allowImportingTsExtensions --skipLibCheck browser/core/*.ts browser/geckodriver/*.ts browser/server.ts
+        run: npx tsc -p browser/tsconfig.json
       - name: Test browser core and GeckoDriver adapter
         run: node --no-warnings --experimental-strip-types --test browser/core/*.test.ts browser/geckodriver/*.test.ts
