@@ -70,6 +70,35 @@ REVOKE ALL ON ALL TABLES IN SCHEMA ${SCHEMA} FROM PUBLIC;
 ${revokeApiRoles}
 `,
 	},
+	{
+		version: 2,
+		name: "account registry (D1 accounts schema 0001+0002)",
+		// The same tables and columns as deploy/cloudflare-ts/migrations/accounts (Cloudflare D1), so the
+		// shared AccountRegistry runs unchanged: provider subjects, owner keys, timestamps, terms version.
+		sql: `
+CREATE TABLE ${SCHEMA}.accounts (
+	id text PRIMARY KEY,
+	owner_key text NOT NULL UNIQUE,
+	created_at text NOT NULL,
+	unlimited integer NOT NULL DEFAULT 0 CHECK (unlimited IN (0, 1)),
+	terms_version text,
+	terms_accepted_at text
+);
+CREATE TABLE ${SCHEMA}.identities (
+	provider text NOT NULL CHECK (provider IN ('google', 'github', 'openai')),
+	subject text NOT NULL,
+	account_id text NOT NULL REFERENCES ${SCHEMA}.accounts(id) ON DELETE CASCADE,
+	created_at text NOT NULL,
+	last_login_at text NOT NULL,
+	PRIMARY KEY (provider, subject)
+);
+CREATE INDEX identities_by_account ON ${SCHEMA}.identities(account_id);
+ALTER TABLE ${SCHEMA}.accounts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ${SCHEMA}.identities ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON ALL TABLES IN SCHEMA ${SCHEMA} FROM PUBLIC;
+${revokeApiRoles}
+`,
+	},
 ];
 
 export const checksum = (m: Migration) => createHash("sha256").update(`${m.version}\n${m.name}\n${m.sql}`).digest("hex");

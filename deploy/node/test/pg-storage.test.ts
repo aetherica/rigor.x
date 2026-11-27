@@ -227,13 +227,13 @@ t("least privilege: private schema, RLS on every table with no policies, API rol
 	}
 	await migrate(d.pool);
 	const tables = (await d.pool.query(`SELECT c.relname, c.relrowsecurity FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = $1 AND c.relkind = 'r' ORDER BY 1`, [SCHEMA])).rows;
-	assert.deepEqual(tables.map((r) => r.relname), ["kv", "owner_tombstones", "owners", "schema_migrations"]);
+	assert.deepEqual(tables.map((r) => r.relname), ["accounts", "identities", "kv", "owner_tombstones", "owners", "schema_migrations"]);
 	assert.ok(tables.every((r) => r.relrowsecurity === true));
 	assert.equal((await d.pool.query(`SELECT count(*)::int AS n FROM pg_policies WHERE schemaname = $1`, [SCHEMA])).rows[0].n, 0);
 	assert.equal((await d.pool.query(`SELECT count(*)::int AS n FROM pg_tables WHERE schemaname = 'public' AND tablename IN ('owners','kv','owner_tombstones')`)).rows[0].n, 0);
 	for (const role of ["anon", "authenticated", "service_role", "public"]) {
 		assert.equal((await d.pool.query("SELECT has_schema_privilege($1, $2, 'USAGE') AS u", [role, SCHEMA])).rows[0].u, false, `${role} schema usage`);
-		for (const table of ["owners", "kv", "owner_tombstones", "schema_migrations"]) {
+		for (const table of ["owners", "kv", "owner_tombstones", "schema_migrations", "accounts", "identities"]) {
 			assert.equal((await d.pool.query("SELECT has_table_privilege($1, $2, 'SELECT') AS s", [role, `${SCHEMA}.${table}`])).rows[0].s, false, `${role} ${table}`);
 		}
 	}

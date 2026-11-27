@@ -37,6 +37,7 @@ COPY --from=deps /app/deploy/node/node_modules deploy/node/node_modules
 COPY deploy/cloudflare-ts/package.json deploy/cloudflare-ts/
 COPY deploy/cloudflare-ts/src deploy/cloudflare-ts/src
 COPY deploy/cloudflare-ts/public deploy/cloudflare-ts/public
+COPY deploy/cloudflare-ts/migrations/accounts deploy/cloudflare-ts/migrations/accounts
 COPY deploy/node/package.json deploy/node/*.ts deploy/node/*.mjs deploy/node/
 RUN mkdir -p /data && chown node:node /data
 USER node
