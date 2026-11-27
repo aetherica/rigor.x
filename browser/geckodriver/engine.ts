@@ -93,7 +93,7 @@ export class GeckoDriverEngine implements BrowserEngine {
   const challenge=challengeResult(text);
   return{status:challenge?.status??"OK",message:challenge?.message,data:{url:this.currentUrl,title:await this.command<string>("/session/"+this.sessionId+"/title")}};
  }
- async read(options:ReadOptions={}):Promise<BrowserResult<{text:string;title:string;url:string}>>{
+ async read(options:ReadOptions={}):Promise<BrowserResult<{text:string;title:string;url:string;injection_signals:string[]}>>{
   await this.expireIfIdle();await this.start();const selector=options.selector??"body",max=Math.max(1,Math.min(options.max_chars??20000,100000));
   const text=await this.script<string>("const e=document.querySelector(arguments[0]);return e?e.innerText:'';",[selector]);
   const title=await this.command<string>("/session/"+this.sessionId+"/title"),url=await this.command<string>("/session/"+this.sessionId+"/url");
