@@ -160,7 +160,10 @@ export class PgOwnerStore {
 				this.drop(key); // the local copy holds an uncommitted change: never reuse it
 				if (e instanceof Conflict) {
 					if (e.kind === "generation") return fail("OWNER_DELETED_DURING_OPERATION", "this account's data was deleted while the operation ran; nothing was saved");
-					continue; // version conflict: reload the latest snapshot and re-run
+					// Version conflict: wait a short random time (so two writers do not collide again in
+					// lockstep and one cannot starve the other), then reload the latest snapshot and re-run.
+					if (attempt < this.o.maxAttempts) await new Promise((r) => setTimeout(r, Math.floor(Math.random() * 25 * attempt) + 5));
+					continue;
 				}
 				return fail("STORAGE_UNAVAILABLE", "owner storage is unavailable; nothing was saved");
 			}
