@@ -17,7 +17,7 @@ Variable: https://github.com/aetherica/x/settings/variables/actions
 Create at https://dash.cloudflare.com/profile/api-tokens
 Custom, scoped to Aetherica account:
 - Workers Scripts: Edit
-- D1: Read
+- D1: Edit (remote SQL export permission)
 - Analytics: Read (WP3 quota integration remains pending verification)
 No DNS permissions, no Global API Key. Save token in GitHub secret `CLOUDFLARE_API_TOKEN`.
 Account ID: https://dash.cloudflare.com/ → select account → overview sidebar → Account ID.
@@ -30,7 +30,7 @@ Create `staging-migrations` with required reviewer = owner and restrict deployme
 ## Staging database
 Render service environment: https://dashboard.render.com/web/srv-dc4lshbl550s739r9580/env
 Supabase DB settings: https://supabase.com/dashboard/project/jlobzwneufhzgpdszsau/settings/database
-Use staging-only connection; do not edit existing service secrets. Put verified staging URL into `STAGING_DATABASE_URL`. Add CA PEM only if required.
+Use the Supabase **Session pooler** connection string, port 5432 (not Transaction pooler port 6543), externally reachable. Download the Supabase CA certificate from Database settings and paste its PEM into `STAGING_DATABASE_CA_CERT` only if required by the TLS verifier. Use staging-only connection; do not edit existing service secrets. Put verified URL into `STAGING_DATABASE_URL`.
 
 ## Google OAuth staging redirect
 https://console.cloud.google.com/apis/credentials
