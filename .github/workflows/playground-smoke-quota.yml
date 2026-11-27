@@ -1,0 +1,57 @@
+name: Playground Smoke and Quota Guard
+on:
+  schedule:
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+permissions:
+  contents: read
+  issues: write
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Probe production and staging
+        env:
+          PROD: https://x.aetherica.workers.dev
+          STAGING: https://x-8xah.onrender.com
+        run: |
+          set -euo pipefail
+          for base in "$PROD" "$STAGING"; do
+            for path in /health /version /.well-known/oauth-authorization-server /.well-known/oauth-protected-resource; do
+              code="$(curl -sS --max-time 30 -o /tmp/response -w '%{http_code}' "$base$path")"
+              echo "$base$path => $code"; test "$code" -ge 200 && test "$code" -lt 400
+            done
+            code="$(curl -sS --max-time 30 -o /tmp/mcp -w '%{http_code}' -X POST "$base/mcp" -H 'content-type: application/json' --data '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"monitor","version":"1"}}}')"
+            echo "$base unauthenticated MCP => $code (401 expected)"; test "$code" = "401"
+          done
+      - name: Raise issue on failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh issue create --title "Scheduled smoke failure ${{ github.run_id }}" --body "Check workflow run ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}. Do not put secrets in issue." || true
+  quota:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate Cloudflare, staging DB, and backup recipient without revealing values
+        env:
+          CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          STAGING_DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+          STAGING_DATABASE_CA_CERT: ${{ secrets.STAGING_DATABASE_CA_CERT }}
+          AGE_RECIPIENT: ${{ vars.AGE_BACKUP_RECIPIENT }}
+        run: |
+          set -euo pipefail
+          test -n "$CF_TOKEN" && test -n "$CF_ACCOUNT" || { echo "Cloudflare credential presence: FAIL"; exit 1; }
+          token_status="$(curl -fsS --max-time 20 https://api.cloudflare.com/client/v4/user/tokens/verify -H "Authorization: Bearer $CF_TOKEN" | jq -r '.result.status')"
+          test "$token_status" = "active" || { echo "Cloudflare token validation: FAIL"; exit 1; }
+          echo "Cloudflare token validation: PASS (active; value redacted)"
+          if [ -n "$STAGING_DATABASE_URL" ]; then
+            if [ -n "$STAGING_DATABASE_CA_CERT" ]; then printf '%s' "$STAGING_DATABASE_CA_CERT" > /tmp/staging-ca.pem; export PGSSLROOTCERT=/tmp/staging-ca.pem; fi
+            psql "$STAGING_DATABASE_URL" -X -v ON_ERROR_STOP=1 -Atc 'SELECT 1' >/dev/null
+            echo "Staging PostgreSQL authentication and read-only query: PASS"
+          else
+            echo "Staging database credential: MISSING"; exit 1
+          fi
+          test -n "$AGE_RECIPIENT" && [[ "$AGE_RECIPIENT" =~ ^age1[[:alnum:]]+$ ]] || { echo "Backup public recipient: FAIL"; exit 1; }
+          echo "Backup recipient format: PASS (public value redacted)"
+          echo "Quota GraphQL measurement: NOT IMPLEMENTED; no usage figures claimed."

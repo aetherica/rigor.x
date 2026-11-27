@@ -1,0 +1,40 @@
+name: Encrypted Database Backups
+on:
+  schedule:
+    - cron: "41 2 * * *"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - name: Install encryption and PostgreSQL tools
+        run: sudo apt-get update && sudo apt-get install -y age postgresql-client
+      - name: Export then encrypt
+        env:
+          CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          STAGING_DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+          AGE_RECIPIENT: ${{ vars.AGE_BACKUP_RECIPIENT }}
+        run: |
+          set -euo pipefail
+          test -n "$AGE_RECIPIENT" || { echo "AGE recipient missing"; exit 78; }
+          test -n "$CF_API_TOKEN" && test -n "$CF_ACCOUNT_ID" || { echo "Cloudflare credentials missing"; exit 78; }
+          mkdir -p backup
+          npx --yes wrangler@4.114.0 d1 export aetherica-accounts --remote --output backup/accounts.sql
+          if [ -n "$STAGING_DATABASE_URL" ]; then pg_dump --no-owner --no-privileges --schema=rigorx_private "$STAGING_DATABASE_URL" > backup/staging.sql; fi
+          tar -czf backup/payload.tar.gz backup/*.sql
+          age -r "$AGE_RECIPIENT" -o backup/payload.tar.gz.age backup/payload.tar.gz
+          sha256sum backup/payload.tar.gz.age > backup/SHA256SUMS
+          rm -f backup/*.sql backup/payload.tar.gz
+      - name: Upload ciphertext only
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa8 # v4
+        with:
+          name: encrypted-backup-${{ github.run_id }}
+          path: |
+            backup/payload.tar.gz.age
+            backup/SHA256SUMS
+          retention-days: 7
+          if-no-files-found: error
