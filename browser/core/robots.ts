@@ -7,12 +7,14 @@ export function parseRobots(text:string,userAgent="AethericaBrowser"):RobotsRule
  if(key==="user-agent"){if(!group||group.rules.length){group={agents:[],rules:[]};groups.push(group)}group.agents.push(value.toLowerCase())}
  else if((key==="allow"||key==="disallow")&&value&&group)group.rules.push({allow:key==="allow",path:value,specificity:specificity(value)});
  }
- const ua=userAgent.toLowerCase();return groups.filter(g=>g.agents.some(a=>a==="*"||ua.includes(a))).flatMap(g=>g.rules);
+ const ua=userAgent.toLowerCase(),specific=groups.filter(g=>g.agents.some(a=>a!=="*"&&ua.includes(a)));
+ const selected=specific.length?specific:groups.filter(g=>g.agents.includes("*"));
+ return selected.flatMap(g=>g.rules);
 }
 function ruleMatches(path:string,pattern:string):boolean {
- const anchored=pattern.endsWith("$"),body=anchored?pattern.slice(0,-1):pattern;
- let regex="";for(const ch of body){if(ch==="*")regex+=".*";else regex+=ch.replace(/[.+?^$()|{}\\]/g,"\\$&")}
- try{return new RegExp("^"+regex+(anchored?"":" .*".trim())).test(path)}catch{return path.startsWith(body)}
+ const anchored=pattern.endsWith("$"),body=anchored?pattern.slice(0,-1):pattern;let regex="";
+ for(const ch of body){if(ch==="*")regex+=".*";else regex+=ch.replace(/[.+?^$()|{}\\]/g,"\\$&")}
+ try{return new RegExp("^"+regex+(anchored?"":".*")).test(path)}catch{return path.startsWith(body)}
 }
 export function decideRobots(path:string,rules:RobotsRule[]):RobotsDecision{
  const matched=rules.filter(r=>ruleMatches(path,r.path)).sort((a,b)=>b.specificity-a.specificity||Number(b.allow)-Number(a.allow))[0]??null;
