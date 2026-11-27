@@ -18,6 +18,7 @@ jobs:
           node-version: "24"
       - name: Verify and test
         run: |
+          test "$GITHUB_REF" = "refs/heads/main"
           test "$(git rev-parse --abbrev-ref HEAD)" = main
           test -z "$(git status --porcelain)"
           cd deploy/cloudflare-ts
@@ -50,7 +51,7 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: npx --yes wrangler@4.114.0 deploy --config wrangler.jsonc --message "main ${{ github.sha }}"
+        run: npx --yes wrangler@4.114.0 deploy --config wrangler.jsonc --tag "${GITHUB_SHA:0:12}" --message "main ${{ github.sha }}"
   smoke:
     needs: deploy
     runs-on: ubuntu-latest
@@ -65,4 +66,4 @@ jobs:
             echo "$path => $code"; test "$code" -ge 200 && test "$code" -lt 400
           done
           code="$(curl -sS --max-time 30 -o /tmp/mcp -w '%{http_code}' -X POST "$BASE/mcp" -H 'content-type: application/json' --data '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"release-smoke","version":"1"}}}')"
-          echo "MCP initialize => $code"; test "$code" -ge 200 && test "$code" -lt 400
+          echo "Unauthenticated MCP request => $code (401 expected)"; test "$code" = "401"
