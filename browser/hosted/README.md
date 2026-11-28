@@ -1,23 +1,27 @@
 # Hosted Browser Worker — preparation only (NOT deployed)
 
-The hosted browser is a separate Cloudflare Worker and a separate OAuth-protected MCP connector. It is not the Core MCP and is not submitted to any connector directory. No Cloudflare Browser Rendering binding, deployment, secret, or billing setting has been changed.
+This is a separate OAuth-protected Browser MCP service, not the RIGOR-X Core MCP. No Browser Rendering binding, deployment, secret, or billing setting has been changed.
 
-## Proposed architecture
-- Cloudflare Browser Rendering binding, launched with the supported Playwright adapter.
-- Streamable HTTP MCP endpoint `/mcp` protected by OAuth; reuse Core account identity/auth flow where appropriate, but issue resource-scoped tokens for the Browser Worker.
-- BrowserSession Durable Object per user/session. Fresh isolated context, close on idle (60 s), no cookie persistence.
-- BrowserBudget Durable Object per owner/day: reserve before launch; max 10 browser-minutes/day; max 3 concurrent sessions; charge actual elapsed time, release reservations on close/failure.
-- Use shared Core source URL checks, redirect checks, DL01–DL12 classifier and injection detector. Apply a platform-level egress firewall as defence against DNS rebinding and client-side redirects.
-- A4/A5 (submit or irreversible external actions) require Core USER_APPROVAL plus tool-level confirm. Never accept credentials/OTP; stop at CAPTCHA, login, age challenge or paywall.
-- Robots.txt RFC9309, 1-second host pacing, 20 pages/site-prefix, backoff 429/503; downloads capped and allow-listed.
+Cross-host feasibility, tool contract, ownership/security policy, acceptance gates and roadmap: [Cross-AI Browser MCP](../../engineering/ai-system/25-CROSS-AI-BROWSER-MCP.md).
 
-## Required gates before deployment
-1. Browser Rendering availability and zero-cost entitlement confirmed in the owner Cloudflare account; do not enable billing.
-2. OAuth audience/resource binding and account identity verified with tests; tokens cannot be replayed against Core.
-3. Budget Durable Object atomicity, daily reset/time zone, concurrency and reservation-release tests.
-4. Hosted SSRF/network egress tests including DNS rebinding, IPv6, redirect chains, metadata addresses, private IPs and client-side navigation.
-5. CAPTCHA/login/paywall and secret-field refusal tests; submit approval integration tests.
-6. Browser evidence tests (status/content type/redirect chain/hash), screenshot/download sandbox tests.
-7. Deploy to staging only after owner approval; production deployment is a separate explicit decision.
+## Proposed runtime
 
-**Current state:** architecture recorded only. Worker source, OAuth integration, Durable Objects and real hosted-browser tests remain unimplemented.
+- Cloudflare Browser Rendering, subject to account entitlement and cost verification; do not enable billing for the spike.
+- Streamable HTTP MCP endpoint `/mcp`, protected by resource-scoped OAuth. Do not reuse Core access tokens.
+- Browser session Durable Object per owner/session; fresh isolated context, 60-second idle close, no cookie persistence by default.
+- Owner/day budget Durable Object: proposed maximum 10 browser-minutes/day and 3 concurrent sessions; reserve before launch, charge actual elapsed time, release reservations on close/failure.
+- Reuse Browser Core URL/redirect checks, robots policy, DL01–DL12 classification and injection detector. Enforce network egress policy to mitigate DNS rebinding and client-side navigation.
+- External submit/irreversible action requires explicit, single-use approval bound to the exact operation. Never accept passwords/OTP; stop at CAPTCHA, login, age challenge or paywall.
+- One-second host pacing, 20 pages/site-prefix, backoff on 429/503, bounded downloads.
+
+## Deployment gates
+
+1. Confirm Browser Rendering is available and a zero-cost entitlement is sufficient; do not enable billing.
+2. Verify OAuth resource/audience binding and account identity; tokens cannot be replayed against Core.
+3. Test budget atomicity, daily reset, concurrency and reservation release.
+4. Test SSRF/egress: DNS rebinding, IPv4/IPv6 special ranges, redirect chains, metadata and private destinations, client-side navigation.
+5. Test CAPTCHA/login/paywall and sensitive fields; submit approval.
+6. Test evidence metadata, screenshot/download sandbox and artifact cleanup.
+7. Owner approves staging deployment explicitly; production is a separate approval.
+
+**State:** architecture only. Hosted worker, OAuth, Durable Objects and real-browser tests are not implemented/deployed.
