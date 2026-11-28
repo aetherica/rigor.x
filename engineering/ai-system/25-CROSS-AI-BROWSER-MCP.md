@@ -122,6 +122,9 @@ Reuse Browser Core policies and add runtime network egress controls:
 - Added a provider router with deterministic preference order (Steel → Hyperbrowser → Browserbase). It only falls back for known transient/capacity HTTP failures (408, 425, 429, 5xx); authentication/validation errors fail closed.
 - Added mocked HTTP adapter tests and included them in Browser Core CI.
 - Provider health currently checks whether required environment variables exist. It does not verify live authentication, account entitlements, credits, concurrency or remaining quota.
+- Added an owner-scoped session manager with an injected storage interface. It issues opaque session handles, enforces per-owner concurrency, hides provider CDP URLs from callers, and stops a provider session if ownership persistence fails.
+- The storage interface has no production Durable Object/database implementation yet; a durable backend and authenticated MCP gateway are still required.
+- Browser Core CI currently passes 25 tests (including provider adapters and owner-isolation/session-cleanup tests), plus TypeScript type-check. This is mocked/unit verification, not a live provider browser test.
 - No real provider session was created during this implementation. The adapters are not yet wired into the MCP server and do not constitute a hosted service.
 - GitHub Actions secrets must be explicitly mapped into workflow environments; they are not automatically injected into Render or Cloudflare runtime environments.
 
