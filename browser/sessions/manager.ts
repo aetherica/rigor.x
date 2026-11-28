@@ -26,11 +26,15 @@ export interface PublicSessionHandle {
 }
 
 export class BrowserSessionManager {
-  constructor(
-    private readonly router: ProviderRouter,
-    private readonly store: BrowserSessionStore,
-    private readonly maxConcurrentPerOwner = 3,
-  ) {}
+  private readonly router: ProviderRouter;
+  private readonly store: BrowserSessionStore;
+  private readonly maxConcurrentPerOwner: number;
+
+  constructor(router: ProviderRouter, store: BrowserSessionStore, maxConcurrentPerOwner = 3) {
+    this.router = router;
+    this.store = store;
+    this.maxConcurrentPerOwner = maxConcurrentPerOwner;
+  }
 
   async create(ownerId: string, options: ProviderSessionOptions = {}): Promise<PublicSessionHandle> {
     this.assertOwner(ownerId);
