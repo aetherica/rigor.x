@@ -66,7 +66,7 @@ export class BrowserMcpHttpTransport {
     const contentType=request.headers.get("content-type")?.split(";")[0]?.trim().toLowerCase();
     if(contentType!=="application/json") return json({error:"Content-Type must be application/json."},415);
     const accept=request.headers.get("accept")??"";
-    if(!accept.includes("application/json") && !accept.includes("text/event-stream")) return json({error:"Accept must include application/json or text/event-stream."},406);
+    if(!accept.includes("application/json") || !accept.includes("text/event-stream")) return json({error:"Accept must include both application/json and text/event-stream."},406);
 
     const auth=request.headers.get("authorization")??"";
     const match=/^Bearer ([A-Za-z0-9._~+\/-]+=*)$/.exec(auth);
