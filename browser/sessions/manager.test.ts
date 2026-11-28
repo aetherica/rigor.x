@@ -9,7 +9,11 @@ class MemoryStore implements BrowserSessionStore {
   reservations = new Map<string, number>();
   async get(handle: string) { return this.records.get(handle); }
   async listByOwner(ownerId: string) { return [...this.records.values()].filter((r) => r.ownerId === ownerId); }
-  async put(record: BrowserSessionRecord) { this.records.set(record.handle, record); }
+  async put(record: BrowserSessionRecord) {
+    this.records.set(record.handle, record);
+    const next=(this.reservations.get(record.ownerId)??0)-1;
+    if(next>0)this.reservations.set(record.ownerId,next);else this.reservations.delete(record.ownerId);
+  }
   async delete(handle: string) { this.records.delete(handle); }
   async reserve(ownerId: string, maximum: number) {
     const pending=this.reservations.get(ownerId) ?? 0;
