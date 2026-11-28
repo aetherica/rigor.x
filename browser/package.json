@@ -6,6 +6,6 @@
  "type":"module",
  "engines":{"node":">=22.18.0"},
  "bin":{"aetherica-browser":"./cli.mjs"},
- "scripts":{"test":"node --no-warnings --experimental-strip-types --test core/*.test.ts","start":"node --experimental-strip-types server.ts"},
+ "scripts":{"test":"node --no-warnings --experimental-strip-types --test core/*.test.ts geckodriver/*.test.ts providers/*.test.ts routing/*.test.ts","start":"node --experimental-strip-types server.ts","typecheck":"npx tsc -p tsconfig.json"},
  "license":"MIT"
 }
