@@ -26,4 +26,4 @@ jobs:
       - name: Check Termux installer syntax
         run: bash -n browser/install-termux.sh
       - name: Test Browser Core, GeckoDriver and hosted provider adapters
-        run: node --no-warnings --experimental-strip-types --test browser/core/*.test.ts browser/geckodriver/*.test.ts browser/providers/*.test.ts browser/routing/*.test.ts browser/*.test.ts
+        run: node --no-warnings --experimental-strip-types --test browser/core/*.test.ts browser/geckodriver/*.test.ts browser/providers/*.test.ts browser/routing/*.test.ts browser/sessions/*.test.ts browser/*.test.ts
