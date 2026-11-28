@@ -1,4 +1,5 @@
 import type { BrowserToolRegistry } from "./tool-registry.ts";
+import { BrowserProviderError } from "../providers/contract.ts";
 
 export interface BrowserTokenClaims {
   /** Stable opaque account subject from a verified access token. */
@@ -112,7 +113,12 @@ export class BrowserMcpHttpTransport {
       }
       return json({jsonrpc:"2.0",id:rpc.id??null,result});
     } catch(error) {
-      if(rpc.method==="tools/call") return json({jsonrpc:"2.0",id:rpc.id??null,result:{content:[{type:"text",text:error instanceof Error?error.message:"Browser tool failed."}],isError:true}});
+      if(rpc.method==="tools/call") {
+        // Provider errors have deliberately sanitized messages. Do not echo arbitrary Playwright,
+        // filesystem or transport exceptions: they can contain local paths or capability URLs.
+        const message=error instanceof BrowserProviderError?error.message:"Browser action failed; inspect the session state and retry if appropriate.";
+        return json({jsonrpc:"2.0",id:rpc.id??null,result:{content:[{type:"text",text:message}],isError:true}});
+      }
       return rpcError(rpc.id??null,-32603,"Internal error");
     }
   }
