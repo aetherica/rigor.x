@@ -11,7 +11,7 @@
     "aetherica-browser": "./cli.mjs"
   },
   "scripts": {
-    "test": "node --no-warnings --experimental-strip-types --test core/*.test.ts geckodriver/*.test.ts providers/*.test.ts routing/*.test.ts sessions/*.test.ts",
+    "test": "node --no-warnings --experimental-strip-types --test core/*.test.ts geckodriver/*.test.ts providers/*.test.ts routing/*.test.ts sessions/*.test.ts providers/*.test.ts",
     "start": "node --experimental-strip-types server.ts",
     "typecheck": "npx tsc -p tsconfig.json"
   },
