@@ -17,6 +17,7 @@
     "providers/**/*.ts",
     "routing/**/*.ts",
     "server.ts",
-    "server.test.ts"
+    "server.test.ts",
+    "sessions/**/*.ts"
   ]
 }
