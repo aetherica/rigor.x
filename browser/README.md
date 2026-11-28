@@ -13,10 +13,18 @@ Architecture and feasibility: [Cross-AI Browser MCP](../engineering/ai-system/25
 - Platform-neutral Browser Core safety policy, robots policy and contracts.
 - Local GeckoDriver adapter and standalone stdio MCP server.
 - Seven local tools: `browser_open`, `browser_read`, `browser_screenshot`, `browser_scrape`, `browser_click`, `browser_type`, `browser_submit`.
-- Hosted provider session adapters for Steel, Hyperbrowser and Browserbase under `providers/`.
-- Provider-independent session contract and an initial transient-error fallback router under `routing/`.
-- Adapter unit tests are included in the Browser Core CI workflow.
-- Provider adapters currently manage session lifecycle and expose CDP/live-view connection metadata. They are **not yet wired into the public MCP server**; no remote hosted MCP endpoint exists yet.
+- Hosted provider session adapters for Steel, Hyperbrowser and Browserbase.
+- Provider-independent session contract and transient/capacity fallback router.
+- Playwright CDP engine plus owner-scoped runtime for hosted browser actions.
+- Hosted MCP tool registry with create, navigate, read, scrape, write/type, click, confirmed submit, screenshot, fetch and close.
+- Durable SQLite browser-session metadata store for a single Node process, including atomic per-owner session-slot reservations.
+- Provider/runtime/session/registry tests run in Browser Core CI.
+
+## Hosted runtime status
+
+The engine, provider adapters, runtime and tool registry are implementation components. They are **not yet mounted into a separate authenticated remote MCP endpoint**. The SQLite session store is implemented but is not yet wired into a deployed service. Browser MCP still requires its own OAuth resource/audience, Streamable HTTP transport, Node runtime integration, network-level egress controls and host acceptance tests.
+
+The existing RIGOR-X `/mcp` endpoint is a separate service. Browser MCP must not accept or reuse RIGOR-X access tokens as Browser MCP credentials.
 
 ## Developer/local runtime (optional)
 
@@ -28,21 +36,17 @@ Requirements: Node 22.18+, Firefox, GeckoDriver.
 
 Android/Termux setup is optional developer experimentation, not a consumer requirement. See `install-termux.sh`.
 
-## Hosted runtime
-
-The hosted Browser MCP gateway, OAuth resource, session ownership store and deployment are **not implemented or deployed**. Provider session adapters are an integration foundation only. No browser session has been launched by this implementation work and no billing configuration has been changed.
-
 ## Safety
 
 - URL validation and source-layer classification reuse RIGOR-X policies.
 - Robots RFC9309: longest match, Allow wins ties; 5xx disallow, 4xx allow.
 - One-second host pacing; 20-page per site/path-prefix cap.
-- Private/reserved/metadata destinations blocked; redirects checked; final URL rechecked. Local runtimes additionally need OS/network egress restrictions.
+- Private/reserved/metadata destinations blocked; redirects checked; final URL rechecked. Hosted deployment additionally requires OS/network egress restrictions.
 - Password, OTP, token, secret and hidden fields blocked. Submit requires explicit `confirm:true`.
 - CAPTCHA, login, age challenges and paywalls stop with `NEEDS_HUMAN`.
 - Downloads limited to 10 MiB and PDF/CSV/JSON/TXT/DOCX/XLSX. Tor egress is not implemented; onion URLs are refused.
 - Page content is untrusted; injection signals are returned with evidence.
-- Provider CDP endpoints are credentials and must not be logged or exposed to untrusted clients.
+- Provider CDP endpoints are bearer capabilities and must not be logged or exposed to untrusted clients.
 
 ## Evidence limitations
 
@@ -50,4 +54,4 @@ Open/read return requested/final URL, timestamp, rendered-DOM SHA-256, title, DL
 
 ## CI
 
-Browser Core CI type-checks and runs fake-WebDriver and provider-adapter tests. It does not launch real provider sessions, install Firefox, or perform a real-browser smoke test. Hosted runtime, OAuth isolation, host integration and real-browser acceptance remain pending.
+Browser Core CI type-checks and runs fake-WebDriver and provider-adapter tests. It does not launch real provider sessions, install Firefox, or perform a real-browser smoke test. Hosted OAuth, remote gateway, network egress, live-provider and cross-host acceptance remain pending.
