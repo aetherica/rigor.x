@@ -34,7 +34,7 @@ export interface SourceMetadata {
 
 import { TOR2WEB, crossrefLookup, isOverlayHost, openalexLookup, waybackLookup, type CrossrefRecord, type OpenAlexRecord, type WaybackRecord } from "./sources.ts";
 import { EngineError, type JsonObject } from "./text.ts";
-import { DEFAULT_POLICY, Deadline, ResilienceRegistry, ResourceExhaustedError, resilientFetch, type ResiliencePolicy } from "./resilience.ts";
+import { DEFAULT_POLICY, Deadline, ResilienceRegistry, ResourceExhaustedError, policyDigest, resilientFetch, type ResiliencePolicy } from "./resilience.ts";
 
 export interface SourceCheck {
 	ok: boolean;
@@ -318,23 +318,29 @@ export const DOH_PROVIDERS: readonly { name: string; url: (host: string, type: s
 ];
 
 export function dohResolver(fetcher: typeof fetch, reg: ResilienceRegistry, deadline: Deadline): Resolver {
-	const query = async (provider: (typeof DOH_PROVIDERS)[number], host: string): Promise<DnsAnswer> => {
-		const addresses: string[] = [];
-		for (const type of ["A", "AAAA"]) {
-			let res: Response;
-			try {
-				res = await resilientFetch(fetcher, provider.url(host, type), { headers: { Accept: "application/dns-json" }, redirect: "manual" },
-					{ policy: reg.policy, deadline, breaker: reg.breaker(`doh:${provider.name}`), perAttemptMs: reg.policy.lookupTimeoutMs });
-			} catch (e) {
-				return { addresses, error: `DNS lookup unavailable at ${provider.name} (${e instanceof Error ? e.name : "error"})` };
-			}
-			if (!res.ok) return { addresses, error: `DNS lookup failed at ${provider.name}: HTTP ${res.status}` };
-			const j = (await res.json().catch(() => null)) as { Status?: number; Answer?: { type: number; data: string }[] } | null;
-			if (!j || typeof j.Status !== "number") return { addresses, error: `DNS lookup at ${provider.name} returned an unreadable answer` };
-			if (j.Status !== 0 && j.Status !== 3) return { addresses, error: `DNS lookup failed at ${provider.name} (rcode ${j.Status})` };
-			for (const a of j.Answer ?? []) if ((a.type === 1 || a.type === 28) && typeof a.data === "string") addresses.push(a.data);
+	const one = async (provider: (typeof DOH_PROVIDERS)[number], host: string, type: "A" | "AAAA"): Promise<DnsAnswer> => {
+		let res: Response;
+		try {
+			res = await resilientFetch(fetcher, provider.url(host, type), { headers: { Accept: "application/dns-json" }, redirect: "manual" },
+				{ policy: reg.policy, deadline, breaker: reg.breaker(`doh:${provider.name}`), perAttemptMs: reg.policy.lookupTimeoutMs });
+		} catch (e) {
+			return { addresses: [], error: `DNS lookup unavailable at ${provider.name} (${e instanceof Error ? e.name : "error"})` };
 		}
-		return { addresses, error: null };
+		if (!res.ok) {
+			await res.body?.cancel().catch(() => undefined);
+			return { addresses: [], error: `DNS lookup failed at ${provider.name}: HTTP ${res.status}` };
+		}
+		const j = (await res.json().catch(() => null)) as { Status?: number; Answer?: { type: number; data: string }[] } | null;
+		if (!j || typeof j.Status !== "number") return { addresses: [], error: `DNS lookup at ${provider.name} returned an unreadable answer` };
+		if (j.Status !== 0 && j.Status !== 3) return { addresses: [], error: `DNS lookup failed at ${provider.name} (rcode ${j.Status})` };
+		return { addresses: (j.Answer ?? []).filter((a) => (a.type === 1 || a.type === 28) && typeof a.data === "string").map((a) => a.data), error: null };
+	};
+	// A and AAAA are asked at the same time (2026-11-28 audit: sequential lookups doubled the DNS wait
+	// on every redirect hop). Both must answer: either failing fails the provider (fail closed).
+	const query = async (provider: (typeof DOH_PROVIDERS)[number], host: string): Promise<DnsAnswer> => {
+		const [a, aaaa] = await Promise.all([one(provider, host, "A"), one(provider, host, "AAAA")]);
+		const error = a.error ?? aaaa.error;
+		return { addresses: [...a.addresses, ...aaaa.addresses], error };
 	};
 	return async (host) => {
 		const errors: string[] = [];
@@ -376,10 +382,18 @@ export interface CheckOptions {
 const TOR_TEXT = /\b(text\/html|application\/xhtml\+xml|text\/plain)\b/i;
 
 let defaultRegistry: ResilienceRegistry | null = null;
-/** The isolate's registry (breakers, limiter); the Worker replaces it with one built from its vars. */
+let defaultDigest = "";
+/**
+ * The isolate's registry (breakers, limiter). It is replaced only when the policy's VALUES change:
+ * policyFromEnv builds a new object on every request, so comparing by reference rebuilt the registry
+ * per request and circuit breakers and the concurrency limit never carried over (2026-11-28 audit).
+ */
 export function sharedRegistry(policy?: ResiliencePolicy): ResilienceRegistry {
-	if (!defaultRegistry || (policy && defaultRegistry.policy !== policy)) {
-		defaultRegistry = new ResilienceRegistry(policy ?? DEFAULT_POLICY, (e) => console.log(JSON.stringify({ evt: "rigorx_circuit", ...e })));
+	const p = policy ?? defaultRegistry?.policy ?? DEFAULT_POLICY;
+	const d = policyDigest(p);
+	if (!defaultRegistry || d !== defaultDigest) {
+		defaultRegistry = new ResilienceRegistry(p, (e) => console.log(JSON.stringify({ evt: "rigorx_circuit", ...e })));
+		defaultDigest = d;
 	}
 	return defaultRegistry;
 }

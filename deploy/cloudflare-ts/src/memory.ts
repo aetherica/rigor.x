@@ -379,13 +379,17 @@ export class MemoryStore {
 				if (terms.some((x) => hasTerm(hay, x, words))) candidateIds.add(String(r.id));
 			}
 		}
-		// 3. Lexical score = best coverage of one query by the item (trigrams, or short terms/bigrams).
+		// 3. One read per candidate: filter by status, scope and kind first (cheap), then score lexically
+		// (trigram sets are the expensive part). Lexical score = best coverage of one query by the item.
+		// Reading full rows here once replaced a second SELECT of the survivors (2026-11-28 audit).
 		const lexical = new Map<string, number>();
+		const rows: ItemRow[] = [];
 		const perQuery = queries.map((q) => ({ grams: trigrams(q), shorts: shortTerms(q) }));
 		for (let i = 0, ids = [...candidateIds]; i < ids.length; i += 90) {
 			const chunk = ids.slice(i, i + 90);
-			for (const r of this.sql.exec(`SELECT id, text_norm, keywords_norm FROM memory_items WHERE owner_id = ? AND id IN (${chunk.map(() => "?").join(",")})`, owner, ...chunk).toArray()) {
-				const hay = `${String(r.text_norm)}\n${String(r.keywords_norm)}`;
+			for (const r of this.sql.exec(`SELECT * FROM memory_items WHERE owner_id = ? AND id IN (${chunk.map(() => "?").join(",")})`, owner, ...chunk).toArray() as unknown as ItemRow[]) {
+				if (!(opts.include_superseded || r.status === "active") || (scope && !scope.has(r.topic_id)) || (opts.kinds?.length && !opts.kinds.includes(r.kind))) continue;
+				const hay = `${r.text_norm}\n${r.keywords_norm}`;
 				const itemGrams = new Set(trigrams(hay));
 				const words = wordSet(hay);
 				let best = 0;
@@ -394,19 +398,12 @@ export class MemoryStore {
 					const sh = q.shorts.length ? q.shorts.filter((x) => hasTerm(hay, x, words)).length / q.shorts.length : 0;
 					best = Math.max(best, tri, sh);
 				}
-				if (best >= (opts.minLexical ?? MIN_LEXICAL)) lexical.set(String(r.id), best);
+				if (best >= (opts.minLexical ?? MIN_LEXICAL)) { lexical.set(String(r.id), best); rows.push(r); }
 			}
 		}
 		if (!lexical.size) return this.envelope([], 0);
-		const ids = [...lexical.keys()];
-		const rows: ItemRow[] = [];
-		for (let i = 0; i < ids.length; i += 90) {
-			const chunk = ids.slice(i, i + 90);
-			rows.push(...(this.sql.exec(`SELECT * FROM memory_items WHERE owner_id = ? AND id IN (${chunk.map(() => "?").join(",")})`, owner, ...chunk).toArray() as unknown as ItemRow[]));
-		}
 		const at = this.clock().getTime();
 		const ranked = rows
-			.filter((r) => (opts.include_superseded || r.status === "active") && (!scope || scope.has(r.topic_id)) && (!opts.kinds?.length || opts.kinds.includes(r.kind)))
 			.map((r) => {
 				const age = Math.max(0, (at - Date.parse(r.created_at)) / 86_400_000);
 				return { r, score: 0.6 * lexical.get(r.id)! + 0.2 * Math.exp(-age / 180) + 0.2 * TRUST_WEIGHT[r.trust] };

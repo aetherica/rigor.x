@@ -8,10 +8,12 @@ import {
 	PROTOCOL_VERSION, STAGES, STAGE_GUIDANCE, STAKES_FLOOR, isMandatory, isStage, mandatoryStages, type Level, type Stage,
 } from "./protocol.ts";
 import { route } from "./router.ts";
+import { MECHANISMS, mechanismHint, selectMechanisms, taskProfile, type Mechanism } from "./mechanisms.ts";
+import { LOOP_REPEAT_LIMIT, LOOP_STALL_WINDOW, fingerprintState, loopHistory, loopView, observeLoop, type LoopSignal } from "./loop.ts";
 import { resolvePrompt } from "./commands.ts";
 import { RunNotFound, canonicalJson, type RunStore } from "./store.ts";
 import {
-	DEFAULT_TEXT_POLICY, EngineError, chars, conflict, digest, invalid, jsonish, limit, normalized, notFound, object, quota,
+	DEFAULT_TEXT_POLICY, EngineError, chars, conflict, digest, invalid, jsonish, limit, list, normalized, notFound, object, oneOf, quota,
 	storedNote, substantial, text, type Json, type JsonObject, type TextPolicy,
 } from "./text.ts";
 import {
@@ -167,9 +169,15 @@ export class HostEngine {
 
 	// ---------------------------------------------------------------- stateless
 
-	route(task: unknown): JsonObject {
+	route(task: unknown, args: { available_mechanisms?: unknown; tool_capable?: unknown } = {}): JsonObject {
 		const t = text("task", task, this.maxTextChars);
-		return { profile: route(t) as unknown as JsonObject, heuristic: true };
+		const profile = route(t);
+		// Candidate analytical mechanisms for this task shape (mechanisms.ts). The caller may declare
+		// which it can actually run; the rest come back as gaps rather than being dropped quietly.
+		const available = args.available_mechanisms === undefined || args.available_mechanisms === null ? undefined
+			: list("available_mechanisms", jsonish(args.available_mechanisms), 16, false).map((m, i) => oneOf(`available_mechanisms[${i}]`, m, MECHANISMS) as Mechanism);
+		const plan = selectMechanisms(taskProfile(profile, t, { ...(available ? { available } : {}), toolCapable: args.tool_capable === true }));
+		return { profile: profile as unknown as JsonObject, mechanisms: plan as unknown as JsonObject, heuristic: true };
 	}
 
 	resolveCommands(value: unknown): JsonObject {
@@ -190,16 +198,18 @@ export class HostEngine {
 			intent: profile.intent,
 			level: run.level,
 			modes: profile.modes,
+			risk_score: profile.risk_score,
+			time_sensitive: taskProfile(profile, t).timeSensitive,
 		};
 		this.store.create(owner, run.run_id, run as unknown as JsonObject, meta);
-		return this.view(run);
+		return this.view(run, meta);
 	}
 
 	getRun(ownerId: string, runId: unknown): JsonObject {
 		const owner = this.owner(ownerId);
 		const stored = this.loadAny(owner, runId);
 		if (!isRunState(stored.snapshot)) return v1View(stored.snapshot, stored.meta);
-		return this.view(stored.snapshot);
+		return this.view(stored.snapshot, stored.meta);
 	}
 
 	submitStage(ownerId: string, runId: unknown, args: { stage?: unknown; outcome?: unknown; summary?: unknown; reason?: unknown; data?: unknown }): JsonObject {
@@ -312,6 +322,13 @@ export class HostEngine {
 		const answers = parseAnswers(jsonish(requirements), run);
 		const at = this.now();
 		const result = runGate(run, answers, at);
+		// Validating the same answers again, or validating repeatedly without getting closer, is the
+		// loop this protocol is most prone to (VALIDATE fails, re-enter, fix, validate again).
+		// Progress is how many requirements are met, so "no progress" is measured, not guessed.
+		// Reported, never refused: a run must always be able to answer its own requirements.
+		const met = answers.filter((a) => a.met === true).length;
+		const state = JSON.stringify(answers.map((a) => [a.id, a.met, [...a.evidence_ids].sort(), a.items.map((i) => [i.id, [...i.evidence_ids].sort()])]));
+		const loop = this.observeOne(run, "validation", state, met);
 		run.verifications.push({
 			gate_version: GATE_VERSION, passed: result.passed, at: at.toISOString(), checks: result.checks,
 			answers: answers.map((a) => ({ id: a.id, met: a.met, evidence_ids: a.evidence_ids, items: a.items })) as unknown as JsonObject[],
@@ -326,19 +343,54 @@ export class HostEngine {
 			run.status = "VALIDATION_FAILED";
 			event(run, "VALIDATION_FAILED", { failed_checks: result.checks.filter((c) => c.passed !== true).map((c) => c.check) as Json[] });
 		}
+		if (loop.action !== "continue" && !result.passed) {
+			event(run, loop.action === "diversify" ? "LOOP_WARNING" : "LOOP_DETECTED", { kind: "validation", action: loop.action, repeats: loop.repeats, reason: loop.reason });
+		}
 		const view = this.save(l);
-		return { passed: result.passed, wording: result.passed ? "structurally verified" : "not verified", checks: result.checks, levels: result.levels, ...view };
+		const out: JsonObject = { passed: result.passed, wording: result.passed ? "structurally verified" : "not verified", checks: result.checks, levels: result.levels, ...view };
+		if (!result.passed && loop.action !== "continue") {
+			out.loop = loopView(loop);
+			out.loop_guidance = loop.action === "stalled"
+				? "The last attempts met the same number of requirements, so the gaps are not closing. Change what the run does (gather the missing evidence, or narrow a requirement at CLASSIFY and record the revision) rather than re-answering, or deliver what holds and disclose the rest."
+				: "This validation repeats an earlier one. Fix what the failed checks name before validating again, or deliver what holds with the unmet requirements disclosed.";
+		}
+		return out;
 	}
 
 	reenter(ownerId: string, runId: unknown, args: { target_stage?: unknown; trigger?: unknown; reason?: unknown }): JsonObject {
 		const l = this.load(ownerId, runId);
 		if (!isStage(args.target_stage)) throw invalid(`Unknown stage: ${JSON.stringify(args.target_stage)}`);
-		const reset = reenter(l.run, args.target_stage, text("trigger", args.trigger, this.maxRefChars), text("reason", args.reason, this.maxRefChars));
+		const trigger = text("trigger", args.trigger, this.maxRefChars);
+		const because = text("reason", args.reason, this.maxRefChars);
+		// Returning to the same stage for the same reason again and again is a loop, not progress.
+		// The re-entry budget alone does not catch it: a host can spend the whole budget repeating
+		// itself. Refuse the identical attempt past the limit and warn one attempt earlier.
+		const signal = this.observeOne(l.run, "reentry", `${args.target_stage}\n${trigger}\n${because}`);
+		if (signal.action === "repeated") {
+			throw conflict(`You have already re-entered ${args.target_stage} with this trigger and reason ${signal.repeats - 1} times. ${signal.reason}: re-enter with what you will do differently, or deliver what you have with the gap disclosed.`);
+		}
+		const reset = reenter(l.run, args.target_stage, trigger, because);
 		for (const s of reset) {
 			const key = STAGE_LEDGER_KEY[s];
 			if (key && s !== "CLASSIFY") delete l.run.ledger[key];
 		}
-		return this.save(l);
+		if (signal.action === "diversify") event(l.run, "LOOP_WARNING", { kind: "reentry", repeats: signal.repeats, reason: signal.reason });
+		const view = this.save(l);
+		if (signal.action !== "continue") view.loop = loopView(signal);
+		return view;
+	}
+
+	/**
+	 * Record one state of a loop kind in the run and judge it (loop.ts). Synchronous on purpose: one
+	 * engine operation is one SQLite transaction. The history lives in the snapshot, so it survives
+	 * between calls even though nothing is kept in memory.
+	 */
+	private observeOne(run: RunState, kind: string, state: string, progress?: number | null): LoopSignal {
+		run.loops ??= {};
+		const history = loopHistory(run.loops, kind);
+		const signal = observeLoop(history, fingerprintState(state), progress, { repeatLimit: LOOP_REPEAT_LIMIT, stallWindow: LOOP_STALL_WINDOW });
+		run.loops[kind] = history;
+		return signal;
 	}
 
 	cancelRun(ownerId: string, runId: unknown, reason: unknown): JsonObject {
@@ -1007,10 +1059,10 @@ export class HostEngine {
 		l.meta.level = l.run.level;
 		l.meta.intent = l.run.intent;
 		l.revision = this.store.save(l.owner, l.run.run_id, l.run as unknown as JsonObject, l.meta, l.revision);
-		return this.view(l.run);
+		return this.view(l.run, l.meta);
 	}
 
-	private view(run: RunState): JsonObject {
+	private view(run: RunState, meta?: JsonObject): JsonObject {
 		const active = !TERMINAL.has(run.status);
 		const actions = run.evidence.filter((e) => e.type === ACTION).map((a) => {
 			const x: JsonObject = { id: a.id, tool_name: a.details.tool_name ?? null, status: a.details.status ?? null };
@@ -1021,6 +1073,18 @@ export class HostEngine {
 		let guidance: string | null = null;
 		if (run.status === "VALIDATION_FAILED") guidance = FAILED_GUIDANCE;
 		else if (active) guidance = STAGE_GUIDANCE[run.current_stage];
+		// At SELECT_METHODS the engine suggests the mechanisms this task shape calls for instead of
+		// asking the host to invent a list (mechanisms.ts). Runs started before this was added carry
+		// no profile in meta, so they simply get the plain guidance.
+		if (active && run.current_stage === "SELECT_METHODS" && meta) {
+			const modes = Array.isArray(meta.modes) ? meta.modes.filter((m): m is string => typeof m === "string") : [];
+			const riskScore = typeof meta.risk_score === "number" ? meta.risk_score : 0;
+			const plan = selectMechanisms({
+				...taskProfile({ intent: run.intent as never, modes, level: run.level, methods: [], signals: [], risk_score: riskScore, explicit_override: false }, ""),
+				timeSensitive: meta.time_sensitive === true,
+			});
+			guidance = (guidance ?? "") + mechanismHint(plan);
+		}
 		const requirements = (run.ledger.classify?.requirements ?? []).map((r) => ({ id: r.id, importance: r.importance, items: r.items.map((i) => i.id), max_age_days: r.max_age_days }));
 		const view: JsonObject = {
 			run_id: run.run_id,
@@ -1044,6 +1108,13 @@ export class HostEngine {
 				requirement_revisions: run.requirement_revisions,
 			},
 			reentries: { ...run.reentries },
+			// Repeat counters per loop kind (loop.ts), so a host can see it is going in circles
+			// before the engine refuses the next identical attempt.
+			loops: Object.fromEntries(Object.entries(run.loops ?? {}).map(([kind, h]) => [kind, {
+				attempts: Object.values(h.counts).reduce((a, b) => a + b, 0),
+				most_repeated: Math.max(0, ...Object.values(h.counts)),
+				repeat_limit: LOOP_REPEAT_LIMIT,
+			}])) as unknown as JsonObject,
 			optimize: { cycles: run.optimize.cycles, max: run.optimize.max, stopped: run.optimize.stopped },
 			evidence_count: run.evidence.filter((e) => e.type !== ACTION).length,
 			actions: actions.slice(-RECENT_ACTIONS),
@@ -1149,7 +1220,10 @@ export function dispatch(engine: HostEngine, ownerId: string, operation: string,
 				case "request_approval": return engine.requestApproval(ownerId, a);
 				case "approval_view": return engine.approvalView(ownerId, a);
 				case "approval_decide": return engine.approvalDecide(ownerId, a);
-				default: return engine.deleteRun(ownerId, a.run_id);
+				case "delete_run": return engine.deleteRun(ownerId, a.run_id);
+				// Fail closed: an operation added to RUN_OPERATIONS without its own case must never fall
+				// through to a destructive one (2026-11-28 audit).
+				default: throw new EngineError(`Operation not implemented: ${JSON.stringify(operation)}`);
 			}
 		});
 		return JSON.stringify({ ok: true, result });

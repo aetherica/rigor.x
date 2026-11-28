@@ -59,12 +59,14 @@ const RISK_PATTERNS = [
 	// WS32 N2: security and incident vocabulary the original list missed ("authentication bypass" scored 0).
 	"authenticat", "authoriz", "bypass", "vulnerab", "exploit", "breach", "leak", "secret",
 	"tokens?\\b", "privilege", "malware", "incident", "encrypt",
+	// 2026-11-28 (Lab A/B eval): weapons and poisons scored 0 ("build a pipe bomb" was routed as L02).
+	"weapon", "bombs?\\b", "explosiv", "firearm", "gunpowder", "detonat", "poison", "toxin", "nerve agent", "ransomware",
 ];
 // Same risk categories in other languages (WS32 decision: language-agnostic, not one language special-cased).
 // Matched at a Unicode word start (a term may be a stem); Han and Kana terms are matched as substrings.
 const RISK_TERMS_MULTILINGUAL = [
 	// Bengali
-	"ব্যাংক", "পাসওয়ার্ড", "ওষুধ", "ডাক্তার", "চিকিৎসা", "রোগ", "ডোজ", "আইন", "মামলা", "আদালত", "বিনিয়োগ", "ঋণ", "নিরাপত্তা", "হ্যাক", "জরুরি", "গোপন",
+	"ব্যাংক", "পাসওয়ার্ড", "ওষুধ", "ডাক্তার", "চিকিৎসা", "রোগ", "ডোজ", "আইন", "মামলা", "আদালত", "বিনিয়োগ", "ঋণ", "নিরাপত্তা", "হ্যাক", "জরুরি", "গোপন", "বোমা", "বিস্ফোরক", "অস্ত্র", "বিষ",
 	// Hindi
 	"बैंक", "पासवर्ड", "दवा", "डॉक्टर", "इलाज", "कानून", "अदालत", "निवेश", "सुरक्षा", "आपातकाल", "कर्ज",
 	// Spanish, Portuguese, French, German
@@ -119,17 +121,30 @@ const DEFAULT_MODES: Record<TaskIntent, string[]> = {
 	INFORMATION: ["DESCRIPTIVE"], RESEARCH: ["EXPLORATORY"], ANALYSIS: ["DIAGNOSTIC"], DECISION: ["STRATEGIC"],
 	EXECUTION: ["ACTION_RESEARCH"], TECHNICAL: ["SYSTEMS"], CREATIVE: ["EXPLORATORY"], COMMUNICATION: ["QUALITATIVE"], UNKNOWN: ["EXPLORATORY"],
 };
+/**
+ * Suggested methods per intent. Widened in the 2026-11-28 reasoning pass: the additions name work
+ * the VALIDATE gate already checks (source freshness against max_age_days, dependency order,
+ * independent origins), so a host that follows them passes for the right reason rather than
+ * discovering the requirement at validation time.
+ */
 const METHODS: Record<TaskIntent, string[]> = {
-	INFORMATION: ["direct-answer"],
-	RESEARCH: ["source-discovery", "evidence-validation", "synthesis"],
-	ANALYSIS: ["decomposition", "causal-or-diagnostic-analysis", "alternative-explanations"],
-	DECISION: ["options", "criteria", "risk-reward", "recommendation"],
-	EXECUTION: ["action-planning", "capability-check", "authorization", "receipt-validation"],
-	TECHNICAL: ["specification", "implementation", "test", "security-review"],
+	INFORMATION: ["direct-answer", "scope-check"],
+	RESEARCH: ["source-discovery", "evidence-validation", "independent-corroboration", "recency-check", "synthesis"],
+	ANALYSIS: ["decomposition", "causal-or-diagnostic-analysis", "alternative-explanations", "sensitivity-analysis"],
+	DECISION: ["options", "criteria", "risk-reward", "base-rates", "reversibility-check", "stakeholder-impact", "recommendation"],
+	EXECUTION: ["action-planning", "capability-check", "dependency-order", "authorization", "reversibility-check", "receipt-validation"],
+	TECHNICAL: ["specification", "implementation", "test", "failure-modes", "rollback-plan", "security-review"],
 	CREATIVE: ["divergent-generation", "constraint-check", "refinement"],
-	COMMUNICATION: ["audience-fit", "tone", "clarity", "revision"],
-	UNKNOWN: ["clarification"],
+	COMMUNICATION: ["audience-fit", "tone", "clarity", "accuracy-check", "revision"],
+	UNKNOWN: ["clarification", "stakes-declaration"],
 };
+/** Methods the gate starts requiring evidence of at a given level, added from that level up. */
+const METHODS_BY_LEVEL: [AdaptiveLevel, string[]][] = [
+	["L03_DEEP", ["claim-status-assignment"]],
+	["L04_COMPLEX", ["assumption-register"]],
+	["L05_CRITICAL", ["uncertainty-disclosure", "independent-verification", "failure-mode-review"]],
+	["L06_HYPER_RIGOROUS", ["adversarial-review", "provenance-audit", "computation-receipts", "stop-condition-check"]],
+];
 
 const cache = new Map<string, RegExp>();
 function rx(source: string, flags = ""): RegExp {
@@ -213,8 +228,7 @@ export function route(prompt: string, overrideLevel?: AdaptiveLevel): AdaptivePr
 		level = riskFloor;
 	}
 	let methods = [...METHODS[intent]];
-	if (level === "L05_CRITICAL" || level === "L06_HYPER_RIGOROUS") methods.push("uncertainty-disclosure", "independent-verification", "failure-mode-review");
-	if (level === "L06_HYPER_RIGOROUS") methods.push("adversarial-review", "provenance-audit", "stop-condition-check");
+	for (const [from, added] of METHODS_BY_LEVEL) if (rank(level) >= rank(from)) methods.push(...added);
 	methods = unique(methods);
 	return { intent, modes: unique(modes), level, methods, signals, risk_score: riskScore, explicit_override: explicit };
 }

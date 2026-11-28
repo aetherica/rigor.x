@@ -22,7 +22,7 @@ export function localBackend(engine?: HostEngine, fetcher: typeof fetch = fetch,
 		return r.result;
 	};
 	return {
-		route: (t) => e.route(t),
+		route: (t, args) => e.route(t, args),
 		resolveCommands: (t) => e.resolveCommands(t),
 		compute: (args) => e.computeOp(null, args),
 		run,

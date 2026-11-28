@@ -6,6 +6,7 @@ import {
 } from "./protocol.ts";
 import { conflict, type Json, type JsonObject } from "./text.ts";
 import type { Ledger } from "./ledger.ts";
+import type { LoopHistory } from "./loop.ts";
 
 export type StageStatus = "NOT_STARTED" | "IN_PROGRESS" | "COMPLETED" | "AUTO_SKIPPED" | "PARTIAL" | "BLOCKED" | "FAILED";
 export type RunStatus =
@@ -55,6 +56,8 @@ export interface RunState {
 	reentries: { used: number; max: number };
 	optimize: { cycles: number; max: number; fingerprints: string[]; stopped: null | "no_progress" | "budget"; unvalidated_change: boolean };
 	requirement_revisions: number;
+	/** Repeat/stall history per loop kind (loop.ts). Absent on runs started before it existed. */
+	loops?: Record<string, LoopHistory>;
 	ledger: Ledger;
 	evidence: EvidenceRecord[];
 	verifications: Verification[];
@@ -77,6 +80,7 @@ export function newRun(runId: string, level: Level, intent: string, unknown: boo
 		reentries: { used: 0, max: maxReentries },
 		optimize: { cycles: 0, max: MAX_OPTIMIZE_CYCLES, fingerprints: [], stopped: null, unvalidated_change: false },
 		requirement_revisions: 0,
+		loops: {},
 		ledger: {},
 		evidence: [],
 		verifications: [],

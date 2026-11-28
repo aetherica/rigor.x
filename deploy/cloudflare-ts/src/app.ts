@@ -96,7 +96,7 @@ export function createApp<Env extends AppEnv>(platform: Platform<Env>) {
 			return response.result;
 		}
 		return {
-			route: (task) => localEngine.route(task),
+			route: (task, args) => localEngine.route(task, args),
 			resolveCommands: (text) => localEngine.resolveCommands(text),
 			compute: (args) => localEngine.computeOp(null, args),
 			run,

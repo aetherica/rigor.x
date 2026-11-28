@@ -57,7 +57,7 @@ export const SERVER_INSTRUCTIONS =
 
 /** Engine operations the MCP layer needs; implemented locally or over RPC to a Durable Object. */
 export interface EngineBackend {
-	route(task: unknown): JsonObject;
+	route(task: unknown, args?: { available_mechanisms?: unknown; tool_capable?: unknown }): JsonObject;
 	resolveCommands(text: unknown): JsonObject;
 	/** Stateless rigorx_compute (no run_id). */
 	compute(args: JsonObject): JsonObject;
@@ -87,8 +87,8 @@ const optStr = (description?: string): JsonObject => ({ anyOf: [{ type: "string"
 
 export const TOOLS: ToolSpec[] = [
 	{ name: "rigorx_route", title: "Plan the approach", hint: "read",
-		description: "Suggest intent, intensity level (L01-L06), analysis modes and methods for a task. Heuristic; stores nothing.",
-		properties: { task: str() }, required: ["task"] },
+		description: "Suggest intent, intensity level (L01-L06), analysis modes, methods and the analytical mechanisms the task's shape calls for (STRUCTURED_DECOMPOSITION, EVIDENCE_SEARCH, CAUSAL_COUNTERFACTUAL, PROBABILISTIC, CONSTRAINT_OPTIMIZATION, TEMPORAL_SEQUENTIAL, TOOL_AUGMENTED, STRATEGIC_SYSTEMS, CREATIVE_DIVERGENCE), each with its reason. Declare available_mechanisms to have the ones you cannot run returned as capability_gaps instead of suggestions, and tool_capable: true if you have tools (RIGOR-X cannot see them). Candidates, not a requirement. Heuristic; stores nothing.",
+		properties: { task: str(), available_mechanisms: { anyOf: [{ type: "array", items: { type: "string" } }, { type: "null" }], default: null }, tool_capable: { type: "boolean", default: false } }, required: ["task"] },
 	{ name: "rigorx_resolve_commands", title: "Read shortcut commands", hint: "read",
 		description: "Resolve leading slash commands in text against the RIGOR-X catalogue. Stores nothing.",
 		properties: { text: str() }, required: ["text"] },
@@ -162,7 +162,12 @@ function annotations(hint: Hint, openWorld = false): JsonObject {
 const IDEMPOTENCY_PROPERTY: JsonObject = { anyOf: [{ type: "string" }, { type: "null" }], default: null,
 	description: "Optional: a unique key (8-128 characters, for example a UUID) for this call. If the answer is lost and you retry with the same key and arguments, RIGOR-X returns the first result instead of acting twice." };
 
+let toolListCache: Json[] | null = null;
+/** The tool list is constant for a deploy, so it is built once per isolate. */
 export function toolList(): Json[] {
+	return toolListCache ??= buildToolList();
+}
+function buildToolList(): Json[] {
 	return TOOLS.map((t) => {
 		const properties = t.operation && IDEMPOTENT_OPERATIONS.has(t.operation) ? { ...t.properties, idempotency_key: IDEMPOTENCY_PROPERTY } : t.properties;
 		const tool: JsonObject = {
@@ -226,7 +231,7 @@ export async function handleMessage(message: unknown, backend: EngineBackend, ow
 			const missing = tool.required.filter((k) => args[k] === undefined || args[k] === null);
 			if (missing.length) return rpcResult(m.id, toolError(`INVALID_REQUEST: missing required arguments: ${missing.join(", ")}`));
 			try {
-				if (tool.name === "rigorx_route") return rpcResult(m.id, toolResult(backend.route(args.task)));
+				if (tool.name === "rigorx_route") return rpcResult(m.id, toolResult(backend.route(args.task, args)));
 				if (tool.name === "rigorx_resolve_commands") return rpcResult(m.id, toolResult(backend.resolveCommands(args.text)));
 				if (tool.name === "rigorx_compute" && (args.run_id === undefined || args.run_id === null)) return rpcResult(m.id, toolResult(backend.compute(args)));
 				if (!owner) return rpcResult(m.id, toolError("AUTH_REQUIRED: sign in to use this tool"));
