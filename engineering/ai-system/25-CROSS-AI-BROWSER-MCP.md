@@ -123,8 +123,8 @@ Reuse Browser Core policies and add runtime network egress controls:
 - Added mocked HTTP adapter tests and included them in Browser Core CI.
 - Provider health currently checks whether required environment variables exist. It does not verify live authentication, account entitlements, credits, concurrency or remaining quota.
 - Added an owner-scoped session manager with an injected storage interface. It issues opaque session handles, enforces per-owner concurrency, hides provider CDP URLs from callers, and stops a provider session if ownership persistence fails.
-- The storage interface has no production Durable Object/database implementation yet; a durable backend and authenticated MCP gateway are still required.
-- Browser Core CI currently passes 25 tests (including provider adapters and owner-isolation/session-cleanup tests), plus TypeScript type-check. This is mocked/unit verification, not a live provider browser test.
+- Added a SQLite-backed owner session store for a single Node process. `BEGIN IMMEDIATE` reservations prevent concurrent create races; persisting the provider session atomically consumes its reservation. Multi-replica hosting still needs a shared transactional store.
+- Browser Core CI currently passes 42 tests, including provider adapters, owner-isolation, atomic reservations, hosted service composition and Streamable HTTP transport tests, plus TypeScript type-check. This is mocked/unit verification, not a live provider browser test.
 - No real provider session was created during this implementation. The adapters are not yet wired into the MCP server and do not constitute a hosted service.
 - GitHub Actions secrets must be explicitly mapped into workflow environments; they are not automatically injected into Render or Cloudflare runtime environments.
 
@@ -167,6 +167,9 @@ For each eligible client: connect, list tools, open safe test page, read, screen
 - Added `BrowserRuntime`: create provider-backed owner sessions, resolve owner-scoped handles before each action, serialize actions per session, and close the engine before releasing provider resources.
 - Added a hosted MCP tool registry: create session, navigate, read, scrape, write/type, click, submit, screenshot, fetch and close session. Owner identity is supplied as authenticated context and is not accepted from tool arguments.
 - Added unit tests for action routing, per-session serialization, owner isolation and registry tool descriptors. The CI workflow now installs `playwright-core` and includes hosted registry tests.
-- The tool registry is not yet mounted behind a Streamable HTTP MCP transport. OAuth verification, durable production session storage, atomic quota accounting, private artifact delivery/cleanup, provider smoke tests and host acceptance are still not implemented.
+- Added a hosted service factory that composes provider adapters, SQLite session storage, runtime and registry without launching a provider session.
+- Added a stateless Streamable HTTP MCP transport implementing initialize, tools/list, tools/call and notifications. It requires an injected token verifier, checks the exact Browser MCP resource audience and token expiry, and derives owner identity only from verified claims. Arbitrary filesystem/Playwright exceptions are not echoed to clients.
+- The transport is not yet mounted in the Node HTTP server, and the concrete Browser OAuth issuer/resource/token verifier does not exist yet. The injected verifier is a deliberate security boundary, not an OAuth implementation.
+- Multi-replica persistence, durable provider-session expiry/reconciliation, atomic browser-time budget accounting, network-level egress/SSRF controls, private artifact retention policy, live provider smoke tests and host acceptance remain outstanding.
 - No real provider session was launched and no credentials, quota or billing settings were changed. Do not claim this is a deployed cross-AI browser.
 
