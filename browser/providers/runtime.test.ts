@@ -11,7 +11,7 @@ class Store implements BrowserSessionStore {
   reservations=new Map<string,number>();
   async get(id:string){return this.records.get(id);}
   async listByOwner(owner:string){return [...this.records.values()].filter(r=>r.ownerId===owner);}
-  async put(record:BrowserSessionRecord){this.records.set(record.handle,record);}
+  async put(record:BrowserSessionRecord){this.records.set(record.handle,record);const n=(this.reservations.get(record.ownerId)??0)-1;if(n>0)this.reservations.set(record.ownerId,n);else this.reservations.delete(record.ownerId);}
   async delete(id:string){this.records.delete(id);}
   async reserve(owner:string,max:number){const n=this.reservations.get(owner)??0;if((await this.listByOwner(owner)).length+n>=max)return false;this.reservations.set(owner,n+1);return true;}
   async releaseReservation(owner:string){const n=(this.reservations.get(owner)??0)-1;if(n>0)this.reservations.set(owner,n);else this.reservations.delete(owner);}
