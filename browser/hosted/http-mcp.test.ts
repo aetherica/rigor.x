@@ -62,3 +62,11 @@ test("notifications receive 202 and unknown methods return JSON-RPC method-not-f
   const unknown=await transport.fetch(request("POST",{jsonrpc:"2.0",id:5,method:"browser/unknown"}));
   assert.equal((await unknown.json() as any).error.code,-32601);
 });
+
+test("transport refuses a resource path other than the dedicated browser audience",()=>{
+  assert.throws(()=>new BrowserMcpHttpTransport({
+    registry:registry as any,
+    resourceUri:"https://browser.example.com/mcp",
+    verifyToken:async()=>null
+  }),/path must be \/browser-mcp/);
+});
