@@ -3,11 +3,15 @@ import { BrowserProviderError, type BrowserProviderId } from "./contract.ts";
 export type FetchLike = typeof fetch;
 
 export abstract class HttpProvider {
-  protected constructor(
-    protected readonly providerId: BrowserProviderId,
-    protected readonly apiKey: string | undefined,
-    protected readonly fetcher: FetchLike = fetch,
-  ) {}
+  protected readonly providerId: BrowserProviderId;
+  protected readonly apiKey: string | undefined;
+  protected readonly fetcher: FetchLike;
+
+  protected constructor(providerId: BrowserProviderId, apiKey: string | undefined, fetcher: FetchLike = fetch) {
+    this.providerId = providerId;
+    this.apiKey = apiKey;
+    this.fetcher = fetcher;
+  }
 
   protected requireKey(): string {
     if (!this.apiKey) throw new BrowserProviderError(this.providerId, "Provider credential is not configured.");
@@ -36,14 +40,6 @@ export abstract class HttpProvider {
     } catch {
       throw new BrowserProviderError(this.providerId, "Provider returned an invalid JSON response.", response.status);
     }
-  }
-
-  protected json(method: string, body?: unknown): RequestInit {
-    return {
-      method,
-      headers: { "Content-Type": "application/json" },
-      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-    };
   }
 
   protected safeId(id: string): string {
