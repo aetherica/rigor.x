@@ -1,3 +1,5 @@
+import { readFile, unlink } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
 import type { BrowserRuntime } from "../providers/runtime.ts";
 
 export interface AuthenticatedBrowserContext {
@@ -49,10 +51,32 @@ export class BrowserToolRegistry {
         return this.runtime.click(context.ownerId,sessionId,{selector:String(args.selector??"")});
       case "aetherica_browser_submit":
         return this.runtime.submit(context.ownerId,sessionId,{...(typeof args.selector==="string"?{selector:args.selector}:{}),confirm:args.confirm===true});
-      case "aetherica_browser_screenshot":
-        return this.runtime.screenshot(context.ownerId,sessionId,{full_page:args.full_page===true});
-      case "aetherica_browser_fetch":
-        return this.runtime.fetch(context.ownerId,sessionId,{url:String(args.url??""),...(typeof args.filename==="string"?{filename:args.filename}:{})});
+      case "aetherica_browser_screenshot": {
+        const result = await this.runtime.screenshot(context.ownerId,sessionId,{full_page:args.full_page===true});
+        if (result.status !== "OK") return result;
+        const artifact = result.data as {path?:string}|undefined;
+        if (!artifact?.path) return {status:"ERROR",message:"Screenshot artifact was not produced."};
+        try {
+          const bytes = await readFile(artifact.path);
+          if (bytes.byteLength > 8 * 1024 * 1024) return {status:"BLOCKED",message:"Screenshot exceeds the 8 MiB MCP artifact limit."};
+          return {content:[{type:"image",data:bytes.toString("base64"),mimeType:"image/png"}],isError:false};
+        } finally {
+          await unlink(artifact.path).catch(()=>{});
+        }
+      }
+      case "aetherica_browser_fetch": {
+        const result = await this.runtime.fetch(context.ownerId,sessionId,{url:String(args.url??""),...(typeof args.filename==="string"?{filename:args.filename}:{})});
+        if (result.status !== "OK") return result;
+        const artifact = result.data as {path?:string;content_type?:string;size?:number}|undefined;
+        if (!artifact?.path) return {status:"ERROR",message:"Fetched artifact was not produced."};
+        try {
+          const bytes = await readFile(artifact.path);
+          if (bytes.byteLength > 10 * 1024 * 1024) return {status:"BLOCKED",message:"Fetched artifact exceeds the 10 MiB MCP artifact limit."};
+          return {content:[{type:"resource",resource:{uri:"aetherica-browser://artifact/"+randomUUID(),mimeType:artifact.content_type ?? "application/octet-stream",blob:bytes.toString("base64")}}],isError:false};
+        } finally {
+          await unlink(artifact.path).catch(()=>{});
+        }
+      }
       case "aetherica_browser_close_session":
         await this.runtime.close(context.ownerId,sessionId);
         return {status:"OK",closed:true};
