@@ -8,10 +8,13 @@ import { BrowserRuntime } from "./runtime.ts";
 
 class Store implements BrowserSessionStore {
   records=new Map<string,BrowserSessionRecord>();
+  reservations=new Map<string,number>();
   async get(id:string){return this.records.get(id);}
   async listByOwner(owner:string){return [...this.records.values()].filter(r=>r.ownerId===owner);}
   async put(record:BrowserSessionRecord){this.records.set(record.handle,record);}
   async delete(id:string){this.records.delete(id);}
+  async reserve(owner:string,max:number){const n=this.reservations.get(owner)??0;if((await this.listByOwner(owner)).length+n>=max)return false;this.reservations.set(owner,n+1);return true;}
+  async releaseReservation(owner:string){const n=(this.reservations.get(owner)??0)-1;if(n>0)this.reservations.set(owner,n);else this.reservations.delete(owner);}
 }
 class FakeEngine implements BrowserEngine {
   readonly name="fake";
