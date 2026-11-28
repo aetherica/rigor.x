@@ -13,6 +13,7 @@ export interface BrowserSessionRecord {
 export interface BrowserSessionStore {
   get(handle: string): Promise<BrowserSessionRecord | undefined>;
   listByOwner(ownerId: string): Promise<BrowserSessionRecord[]>;
+  /** Atomically persist a session and consume the reservation acquired by reserve(). */
   put(record: BrowserSessionRecord): Promise<void>;
   delete(handle: string): Promise<void>;
   /** Atomically reserve one of an owner's active-session slots before creating a billable provider session. */
@@ -46,7 +47,7 @@ export class BrowserSessionManager {
       throw new BrowserProviderError("steel", "Per-owner browser concurrency limit reached.", 429);
     }
 
-    let routed: Awaited<ReturnType<ProviderRouter["createSession"]>> | undefined;
+    let reservationHeld = true;
     try {
       routed = await this.router.createSession(options);
       const record: BrowserSessionRecord = {
@@ -57,7 +58,9 @@ export class BrowserSessionManager {
         createdAt: new Date().toISOString(),
       };
       try {
+        // put() atomically converts the reserved slot into an active session row.
         await this.store.put(record);
+        reservationHeld = false;
       } catch {
         // Do not orphan a billable provider session if durable ownership storage fails.
         await this.router.getProvider(record.provider)?.stopSession(record.providerSessionId).catch(() => {});
@@ -71,7 +74,8 @@ export class BrowserSessionManager {
         ...(routed.session.liveViewUrl ? { liveViewUrl: routed.session.liveViewUrl } : {}),
       };
     } finally {
-      await this.store.releaseReservation(ownerId);
+      // Provider creation or persistence failed before the reservation was committed.
+      if (reservationHeld) await this.store.releaseReservation(ownerId);
     }
   }
 
