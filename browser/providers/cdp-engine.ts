@@ -82,6 +82,19 @@ export class CdpBrowserEngine implements BrowserEngine {
     const context = contexts[0] ?? await this.browser.newContext({ acceptDownloads:false });
     const pages = context.pages();
     this.page = pages[0] ?? await context.newPage();
+    // Inspect every browser-originated HTTP(S) request, not only top-level navigation.
+    // Network-level egress filtering is still required to defeat DNS rebinding.
+    await this.page.route("**/*", async route => {
+      const target = route.request().url();
+      if (/^https?:\\/\\//i.test(target)) {
+        const checked = await checkUrl(target);
+        if (!checked.ok) { await route.abort("blockedbyclient"); return; }
+        await route.continue();
+        return;
+      }
+      if (/^(about:|data:|blob:)/i.test(target)) { await route.continue(); return; }
+      await route.abort("blockedbyclient");
+    });
     this.lastUsed = Date.now();
     return this.page;
   }
@@ -150,7 +163,7 @@ export class CdpBrowserEngine implements BrowserEngine {
 
     const page = await this.connect();
     this.requestedUrl = target;
-    await page.goto(target,{waitUntil:options.wait_until ?? "domcontentloaded",timeout:options.timeout_ms ?? 30_000});
+    await page.goto(target,{waitUntil:options.wait_until ?? "domcontentloaded",timeout:Math.max(1_000,Math.min(options.timeout_ms ?? 30_000,60_000))});
     this.lastRequest.set(checked.url.origin,Date.now());
     this.pageCounters.set(key,count+1);
     const blocked = await this.enforceCurrentUrl(page);
