@@ -234,7 +234,7 @@ export class CdpBrowserEngine implements BrowserEngine {
 
   async download(options: DownloadOptions): Promise<BrowserResult<{path:string;size:number;content_type:string}>> {
     const guard = guardUrl(options.url,true);
-    if (guard.status !== "OK") return guard;
+    if (guard.status !== "OK") return {status:guard.status,message:guard.message};
     try {
       const checked = await checkUrl(options.url);
       if (!checked.ok) return {status:"BLOCKED",message:checked.reason};
