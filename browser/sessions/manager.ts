@@ -15,6 +15,9 @@ export interface BrowserSessionStore {
   listByOwner(ownerId: string): Promise<BrowserSessionRecord[]>;
   put(record: BrowserSessionRecord): Promise<void>;
   delete(handle: string): Promise<void>;
+  /** Atomically reserve one of an owner's active-session slots before creating a billable provider session. */
+  reserve(ownerId: string, maximum: number): Promise<boolean>;
+  releaseReservation(ownerId: string): Promise<void>;
 }
 
 export interface PublicSessionHandle {
@@ -38,35 +41,38 @@ export class BrowserSessionManager {
 
   async create(ownerId: string, options: ProviderSessionOptions = {}): Promise<PublicSessionHandle> {
     this.assertOwner(ownerId);
-    const owned = await this.store.listByOwner(ownerId);
-    if (owned.length >= this.maxConcurrentPerOwner) {
+    // Reservation is atomic in the store, so concurrent create calls cannot exceed the owner limit.
+    if (!(await this.store.reserve(ownerId, this.maxConcurrentPerOwner))) {
       throw new BrowserProviderError("steel", "Per-owner browser concurrency limit reached.", 429);
     }
 
-    const routed = await this.router.createSession(options);
-    const record: BrowserSessionRecord = {
-      handle: randomUUID(),
-      ownerId,
-      provider: routed.session.provider,
-      providerSessionId: routed.session.id,
-      createdAt: new Date().toISOString(),
-    };
-
+    let routed: Awaited<ReturnType<ProviderRouter["createSession"]>> | undefined;
     try {
-      await this.store.put(record);
-    } catch {
-      // Do not orphan a billable provider session if durable ownership storage fails.
-      await this.router.getProvider(record.provider)?.stopSession(record.providerSessionId).catch(() => {});
-      throw new BrowserProviderError(record.provider, "Could not persist session ownership; provider session was stopped.");
+      routed = await this.router.createSession(options);
+      const record: BrowserSessionRecord = {
+        handle: randomUUID(),
+        ownerId,
+        provider: routed.session.provider,
+        providerSessionId: routed.session.id,
+        createdAt: new Date().toISOString(),
+      };
+      try {
+        await this.store.put(record);
+      } catch {
+        // Do not orphan a billable provider session if durable ownership storage fails.
+        await this.router.getProvider(record.provider)?.stopSession(record.providerSessionId).catch(() => {});
+        throw new BrowserProviderError(record.provider, "Could not persist session ownership; provider session was stopped.");
+      }
+      return {
+        sessionId: record.handle,
+        provider: record.provider,
+        status: "running",
+        createdAt: record.createdAt,
+        ...(routed.session.liveViewUrl ? { liveViewUrl: routed.session.liveViewUrl } : {}),
+      };
+    } finally {
+      await this.store.releaseReservation(ownerId);
     }
-
-    return {
-      sessionId: record.handle,
-      provider: record.provider,
-      status: "running",
-      createdAt: record.createdAt,
-      ...(routed.session.liveViewUrl ? { liveViewUrl: routed.session.liveViewUrl } : {}),
-    };
   }
 
   async resolve(ownerId: string, handle: string): Promise<ProviderSession> {
