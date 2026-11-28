@@ -50,3 +50,13 @@ GitHub Actions repository secrets are available to workflows that explicitly map
 7. Owner approves staging deployment explicitly; production is a separate approval.
 
 **State:** provider session adapters committed; hosted MCP gateway, OAuth, durable session ownership, real provider smoke tests and deployment remain pending.
+
+## Hosted browser action runtime (implementation in progress)
+
+- Added a Playwright CDP engine that connects to provider-issued secure CDP endpoints and implements the existing Browser Core contract: navigate, read, click, type, confirmed submit, screenshot and bounded file fetch.
+- Added an owner-scoped runtime orchestrator that maps opaque session handles to provider sessions, serializes actions per session, and closes the browser engine before releasing provider resources.
+- Added a hosted MCP tool registry for create-session, navigate, read, scrape, write/type, click, submit, screenshot, fetch and close-session. The registry requires an authenticated owner subject supplied by a future OAuth gateway; it does not trust an owner ID from tool arguments.
+- Browser-originated HTTP(S) requests are URL-checked before being allowed. This is defense-in-depth only: production must still enforce network-level egress restrictions to prevent DNS rebinding and other resolution-time SSRF.
+- playwright-core is a runtime dependency. CI/unit tests still need to be run against this commit; provider credentials and a real browser session have not been used.
+
+**Not yet complete:** the registry is not exposed by a Streamable HTTP MCP server; OAuth middleware/resource metadata, durable production storage, quota accounting, private artifact delivery/cleanup, real provider smoke tests and deployment are still pending. The existing stdio server remains the local GeckoDriver implementation.
