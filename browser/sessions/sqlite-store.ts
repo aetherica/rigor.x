@@ -43,9 +43,22 @@ export class SqliteBrowserSessionStore implements BrowserSessionStore {
 
   async put(record: BrowserSessionRecord): Promise<void> {
     this.assertOpen();
-    this.db.prepare("INSERT INTO browser_sessions(handle, owner_id, provider, provider_session_id, created_at) VALUES (?, ?, ?, ?, ?)").run(
-      record.handle, record.ownerId, record.provider, record.providerSessionId, record.createdAt
-    );
+    // Convert the pending reservation to an active row in one transaction. A process crash
+    // cannot leave a stale reservation behind after the session row has committed.
+    this.db.exec("BEGIN IMMEDIATE");
+    try {
+      const pending=this.db.prepare("SELECT count FROM browser_session_reservations WHERE owner_id = ?").get(record.ownerId) as {count:number}|undefined;
+      if(!pending || pending.count<1) throw new Error("Browser session has no capacity reservation.");
+      this.db.prepare("INSERT INTO browser_sessions(handle, owner_id, provider, provider_session_id, created_at) VALUES (?, ?, ?, ?, ?)").run(
+        record.handle, record.ownerId, record.provider, record.providerSessionId, record.createdAt
+      );
+      this.db.prepare("UPDATE browser_session_reservations SET count = count - 1 WHERE owner_id = ?").run(record.ownerId);
+      this.db.prepare("DELETE FROM browser_session_reservations WHERE owner_id = ? AND count <= 0").run(record.ownerId);
+      this.db.exec("COMMIT");
+    } catch (error) {
+      this.db.exec("ROLLBACK");
+      throw error;
+    }
   }
 
   async delete(handle: string): Promise<void> {
