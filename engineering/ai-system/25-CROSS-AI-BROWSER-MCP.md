@@ -110,9 +110,10 @@ Reuse Browser Core policies and add runtime network egress controls:
 - Confirm all development is in `x`, on a feature branch.
 
 ### B1 — Hosted runtime spike
-- Confirm Cloudflare Browser Rendering availability and cost entitlement without enabling paid billing.
-- Create an isolated proof-of-concept browser session in a non-production environment.
-- If zero-cost path is unavailable, stop and compare free/low-cost hosted alternatives; do not deploy or incur charges.
+- Cloudflare docs (checked 2026-11-28) state Browser Run is available on Workers Free and Workers Paid. Workers Free currently has 10 browser minutes/day, 3 concurrent browser sessions, 1 new browser every 20 seconds, and a 60-second browser timeout. Paid includes 10 browser hours/month, then $0.09/hour; concurrent sessions have a separate charge after the included limit. See [pricing](https://developers.cloudflare.com/browser-run/pricing/) and [limits](https://developers.cloudflare.com/browser-run/limits/).
+- Confirm the owner's actual account plan and usage/remaining allowance via account dashboard/API before runtime testing; documentation entitlement is not proof of account status.
+- Use a read-only Live View URL or the documented session API to prove visibility; do not create sessions or consume allowance before owner approval.
+- If account free quota is exhausted, stop and compare free/low-cost alternatives; do not enable billing.
 
 ### B2 — MCP Gateway and session API
 - Implement create/open/state/read/screenshot/stop/close.
@@ -127,10 +128,10 @@ Reuse Browser Core policies and add runtime network egress controls:
 ### B4 — Host smoke tests
 For each eligible client: connect, list tools, open safe test page, read, screenshot, click/scroll, stop, close; verify OAuth isolation and denial cases. Record client/version/platform and observed behavior. Never mark a host PASS without an actual test.
 
-### B5 — Optional interactive UI
-- MCP Apps viewport experiment.
-- Test each host's rendering and mobile behavior.
-- If unavailable, retain text + screenshot + action progress portable UX.
+### B5 — Interactive browser viewport
+- Cloudflare Browser Run has documented Live View and time-limited view URLs; a remote live viewport is therefore technically available at the runtime layer.
+- Test whether MCP Apps/interactive connectors can surface that view inside each host. A host may still show a link or screenshot rather than embedding it.
+- Keep text + screenshot + action progress as the portable fallback.
 
 ### B6 — Release
 - Publish separate browser connector/package and documentation.
