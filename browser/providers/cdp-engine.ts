@@ -86,7 +86,7 @@ export class CdpBrowserEngine implements BrowserEngine {
     // Network-level egress filtering is still required to defeat DNS rebinding.
     await this.page.route("**/*", async route => {
       const target = route.request().url();
-      if (/^https?:\\/\\//i.test(target)) {
+      if (target.startsWith("http://") || target.startsWith("https://")) {
         const checked = await checkUrl(target);
         if (!checked.ok) { await route.abort("blockedbyclient"); return; }
         await route.continue();
