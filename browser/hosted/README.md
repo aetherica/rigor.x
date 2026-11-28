@@ -56,6 +56,7 @@ GitHub Actions repository secrets are available to workflows that explicitly map
 - Added a Playwright CDP engine that connects to provider-issued secure CDP endpoints and implements the existing Browser Core contract: navigate, read, click, type, confirmed submit, screenshot and bounded file fetch.
 - Added an owner-scoped runtime orchestrator that maps opaque session handles to provider sessions, serializes actions per session, and closes the browser engine before releasing provider resources.
 - Added a hosted MCP tool registry for create-session, navigate, read, scrape, write/type, click, submit, screenshot, fetch and close-session. The registry requires an authenticated owner subject supplied by a future OAuth gateway; it does not trust an owner ID from tool arguments.
+- Screenshot results are returned as MCP image content and fetched files as embedded MCP resources; temporary server-side files are removed after packaging, so local filesystem paths are not exposed.
 - Browser-originated HTTP(S) requests are URL-checked before being allowed. This is defense-in-depth only: production must still enforce network-level egress restrictions to prevent DNS rebinding and other resolution-time SSRF.
 - playwright-core is a runtime dependency. CI/unit tests still need to be run against this commit; provider credentials and a real browser session have not been used.
 
