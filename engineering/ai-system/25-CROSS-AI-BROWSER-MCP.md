@@ -158,3 +158,15 @@ For each eligible client: connect, list tools, open safe test page, read, screen
 - Do not expose GeckoDriver port publicly.
 - Do not require Termux for end users.
 - Do not claim a host integration is live before a real smoke test.
+
+
+### B2.1 — Provider CDP action runtime and hosted tool contract (implementation committed; acceptance pending)
+
+- Added `CdpBrowserEngine` using `playwright-core` and provider-issued secure CDP endpoints. It implements the existing BrowserEngine interface: navigate, read, click, type, confirmed form submit, screenshot and bounded file fetch.
+- Added browser request interception with URL checks for browser-originated HTTP(S) requests. This is defense-in-depth; it does not replace network-level egress restrictions against DNS rebinding or resolution-time SSRF.
+- Added `BrowserRuntime`: create provider-backed owner sessions, resolve owner-scoped handles before each action, serialize actions per session, and close the engine before releasing provider resources.
+- Added a hosted MCP tool registry: create session, navigate, read, scrape, write/type, click, submit, screenshot, fetch and close session. Owner identity is supplied as authenticated context and is not accepted from tool arguments.
+- Added unit tests for action routing, per-session serialization, owner isolation and registry tool descriptors. The CI workflow now installs `playwright-core` and includes hosted registry tests.
+- The tool registry is not yet mounted behind a Streamable HTTP MCP transport. OAuth verification, durable production session storage, atomic quota accounting, private artifact delivery/cleanup, provider smoke tests and host acceptance are still not implemented.
+- No real provider session was launched and no credentials, quota or billing settings were changed. Do not claim this is a deployed cross-AI browser.
+
