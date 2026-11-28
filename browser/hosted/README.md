@@ -14,7 +14,7 @@ Cross-host feasibility, tool contract, ownership/security policy, acceptance gat
 - External submit/irreversible action requires explicit, single-use approval bound to the exact operation. Never accept passwords/OTP; stop at CAPTCHA, login, age challenge or paywall.
 - One-second host pacing, 20 pages/site-prefix, backoff on 429/503, bounded downloads.
 
-## Deployment gates
+## Pricing and Live View (docs checked 2026-11-28)\n- Browser Run is documented as available on Workers Free and Paid. Free includes 10 browser minutes/day. Paid includes 10 hours/month, then $0.09 per browser hour; browser concurrency can have separate charges. See [pricing](https://developers.cloudflare.com/browser-run/pricing/) and [limits](https://developers.cloudflare.com/browser-run/limits/).\n- Cloudflare documents Live View and time-limited remote view URLs. This is runtime-level capability; embedding it inside each AI host's chat UI remains client-dependent.\n- Account plan, actual usage, and allowance have not been verified. Do not launch test sessions or enable billing without approval.\n\n## Deployment gates
 
 1. Confirm Browser Rendering is available and a zero-cost entitlement is sufficient; do not enable billing.
 2. Verify OAuth resource/audience binding and account identity; tokens cannot be replayed against Core.
