@@ -6,7 +6,9 @@
 	"workers_dev": true,
 	"preview_urls": false,
 	"services": [
-		{ "binding": "APP", "service": "rigorx-mcp" }
+		{ "binding": "APP", "service": "rigorx-mcp" },
+		// Aetherica Lab, invitation-only, served at /ai on this host.
+		{ "binding": "LAB", "service": "rigorx-lab" }
 	],
 	"observability": { "enabled": true, "head_sampling_rate": 0.1 }
 }
