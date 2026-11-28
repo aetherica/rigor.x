@@ -11,6 +11,7 @@ The cross-AI browser implementation is in the public repository `aetherica/x`. T
 - Hosted MCP tool registry: create session, navigate, read, scrape, write/type, click, submit, screenshot, fetch and close.
 - Artifact packaging: screenshots and fetched files are embedded as MCP content; temporary files are removed.
 - SQLite session store: persistent owner-scoped session metadata and atomic per-owner capacity reservations for a single Node process.
+- Hosted service factory composes the provider router, SQLite store, runtime and MCP tool registry without starting provider sessions.
 - Browser Core CI tests the provider/runtime/registry/session components.
 
 ## Existing Aetherica infrastructure and integration boundary
@@ -19,7 +20,7 @@ The repository already contains an OAuth-protected Streamable HTTP RIGOR-X MCP e
 
 That does **not** mean Browser MCP should reuse the RIGOR-X access token. Browser MCP must have its own resource/audience-bound token and isolated browser-session authorization. Core tokens must not be replayable against Browser MCP. Do not modify or overload the production RIGOR-X OAuth route as a shortcut.
 
-The current Playwright/CDP engine needs a Node execution boundary; it cannot run directly inside the Cloudflare Worker runtime. The hosted tool registry and SQLite session store are not yet mounted/wired into an authenticated remote MCP endpoint. The current SQLite store is single-process only; multi-replica deployment requires a shared transactional store.
+The current Playwright/CDP engine needs a Node execution boundary; it cannot run directly inside the Cloudflare Worker runtime. The hosted service factory now wires the provider router, SQLite session store, runtime and tool registry together, but it is not yet mounted behind an authenticated remote MCP endpoint. The current SQLite store is single-process only; multi-replica deployment requires a shared transactional store.
 
 ## Runtime secrets
 
@@ -36,7 +37,7 @@ GitHub Actions secrets are not automatically injected into Render, Railway, Clou
 
 1. Implement a distinct Browser MCP OAuth resource/audience and authenticated Streamable HTTP route; reject RIGOR-X tokens.
 2. Mount the browser tool registry into that route and derive owner identity only from verified Browser MCP token claims.
-3. Wire the SQLite store into a single-process Node service or implement a shared transactional store for multi-replica use. Add durable provider-session expiry/reconciliation and atomic time-budget accounting.
+3. Mount the hosted service factory into a single-process Node service or implement a shared transactional store for multi-replica use. Add durable provider-session expiry/reconciliation and atomic time-budget accounting.
 4. Enforce network-level egress restrictions against DNS rebinding, IPv4/IPv6 special ranges, metadata endpoints, redirects and client-side navigation.
 5. Complete artifact privacy, size, retention and cleanup policy. Do not expose local filesystem paths or provider CDP URLs.
 6. Run minimal live provider smoke tests only after explicit approval of possible free-credit use or charge exposure.
