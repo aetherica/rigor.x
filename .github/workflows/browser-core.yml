@@ -20,10 +20,10 @@ jobs:
         with:
           node-version: "22"
       - name: Install temporary type-check dependencies
-        run: npm install --no-save typescript@5.9.3 @types/node@22
+        run: npm install --no-save typescript@5.9.3 @types/node@22 playwright-core@1.56.1
       - name: Type-check browser implementation
         run: npx tsc -p browser/tsconfig.json
       - name: Check Termux installer syntax
         run: bash -n browser/install-termux.sh
-      - name: Test browser core and GeckoDriver adapter
-        run: node --no-warnings --experimental-strip-types --test browser/core/*.test.ts browser/geckodriver/*.test.ts browser/*.test.ts
+      - name: Test Browser Core, GeckoDriver, provider adapters and hosted MCP registry
+        run: node --no-warnings --experimental-strip-types --test browser/core/*.test.ts browser/geckodriver/*.test.ts browser/providers/*.test.ts browser/routing/*.test.ts browser/sessions/*.test.ts browser/hosted/*.test.ts browser/*.test.ts

@@ -1,13 +1,24 @@
 {
- "compilerOptions":{
-  "target":"ES2022",
-  "module":"NodeNext",
-  "moduleResolution":"NodeNext",
-  "strict":true,
-  "noEmit":true,
-  "allowImportingTsExtensions":true,
-  "skipLibCheck":true,
-  "types":["node"]
- },
- "include":["core/**/*.ts","geckodriver/**/*.ts","server.ts","server.test.ts"]
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "skipLibCheck": true,
+    "types": [
+      "node"
+    ]
+  },
+  "include": [
+    "core/**/*.ts",
+    "geckodriver/**/*.ts",
+    "providers/**/*.ts",
+    "routing/**/*.ts",
+    "server.ts",
+    "server.test.ts",
+    "sessions/**/*.ts",
+    "hosted/**/*.ts"
+  ]
 }

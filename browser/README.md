@@ -1,36 +1,59 @@
-# Aetherica Browser MCP — standalone local browser
+# Aetherica Browser — engine and MCP adapters
 
-This browser is separate from the Core RIGOR-X MCP. Do **not** submit it as the Core connector to Anthropic, OpenAI, or Gemini directories. Gemini integration is local through its extension manifest.
+Aetherica Browser is designed as a standalone capability that can be connected to multiple AI hosts through MCP. It is **separate from the RIGOR-X control-plane MCP**.
 
-## Local engine (GeckoDriver)
-Requirements: Node 22.18+, Firefox, and GeckoDriver on a local endpoint.
+## End-user target (not yet deployed)
 
-1. Start GeckoDriver separately at `http://127.0.0.1:4444`.
-2. From the repository root run:
-   ```sh
-   node --experimental-strip-types browser/server.ts
-   ```
-3. Add the MCP server to your client using Node and the absolute `browser/server.ts` path.
+The target is one authenticated remote Browser MCP service for ChatGPT, Claude, Gemini (where available), and other compatible MCP clients. General users should not need Termux, Node, Firefox, GeckoDriver, or a local server.
 
-The MCP surface is seven tools: `browser_open`, `browser_read`, `browser_screenshot`, `browser_scrape`, `browser_click`, `browser_type`, `browser_submit`.
+Architecture and feasibility: [Cross-AI Browser MCP](../engineering/ai-system/25-CROSS-AI-BROWSER-MCP.md).
 
-## Android / Termux
+## Current implementation
 
-**Clone inside Termux home, not shared storage:** `cd ~ && git clone https://github.com/aetherica/x.git && cd x`. Git may report `dubious ownership` when repositories are cloned under `/storage/emulated/...`; keep the working copy in `$HOME`.
-The `browser/install-termux.sh` script is a best-effort installer: it installs Node and proot-distro, then attempts Firefox ESR and GeckoDriver in Debian. Android/ARM and the Firefox-in-proot compatibility matrix is not verified. Review the output and don't assume the packages installed if apt reports an error.
+- Platform-neutral Browser Core safety policy, robots policy and contracts.
+- Local GeckoDriver adapter and standalone stdio MCP server.
+- Seven local tools: `browser_open`, `browser_read`, `browser_screenshot`, `browser_scrape`, `browser_click`, `browser_type`, `browser_submit`.
+- Hosted provider session adapters for Steel, Hyperbrowser and Browserbase.
+- Provider-independent session contract and transient/capacity fallback router.
+- Playwright CDP engine plus owner-scoped runtime for hosted browser actions.
+- Hosted MCP tool registry with create, navigate, read, scrape, write/type, click, confirmed submit, screenshot, fetch and close.
+- Stateless Streamable HTTP MCP transport with initialize, tools/list and tools/call, protected by an injected resource/audience-aware token-verifier contract.
+- Durable SQLite browser-session metadata store for a single Node process, including atomic per-owner session-slot reservations.
+- Hosted service factory composes providers, storage, runtime and registry without launching a provider session.
+- Provider/runtime/session/registry tests run in Browser Core CI.
+
+## Hosted runtime status
+
+The engine, provider adapters, runtime and tool registry are implementation components. They are **not yet mounted into a separate authenticated remote MCP endpoint**. The SQLite session store is implemented but is not yet wired into a deployed service. Browser MCP still requires its own concrete OAuth issuer/resource/audience and token verifier, Node HTTP runtime mounting, network-level egress controls and host acceptance tests.
+
+The existing RIGOR-X `/mcp` endpoint is a separate service. Browser MCP must not accept or reuse RIGOR-X access tokens as Browser MCP credentials.
+
+## Developer/local runtime (optional)
+
+Requirements: Node 22.18+, Firefox, GeckoDriver.
+
+1. Start GeckoDriver locally at `http://127.0.0.1:4444`.
+2. From the repository root, run `node --experimental-strip-types browser/server.ts`.
+3. Connect a compatible MCP client to the local stdio process.
+
+Android/Termux setup is optional developer experimentation, not a consumer requirement. See `install-termux.sh`.
 
 ## Safety
-- URL validation and discovery-layer classification dynamically reuse Core RIGOR-X `source.ts` and `sources.ts` policies.
-- Robots RFC9309 handling: longest match, Allow wins ties; 5xx disallow, 4xx allow.
+
+- URL validation and source-layer classification reuse RIGOR-X policies.
+- Robots RFC9309: longest match, Allow wins ties; 5xx disallow, 4xx allow.
 - One-second host pacing; 20-page per site/path-prefix cap.
-- Private/reserved/metadata destinations blocked, redirect hops checked, final browser URL rechecked. Client-side navigation can still occur between checks; local deployments should enforce OS/network egress restrictions.
-- Credentials, password/OTP/token/secret fields blocked. Submit buttons cannot be clicked; `browser_submit` requires `confirm:true`.
+- Private/reserved/metadata destinations blocked; redirects checked; final URL rechecked. Hosted deployment additionally requires OS/network egress restrictions.
+- Password, OTP, token, secret and hidden fields blocked. Submit requires explicit `confirm:true`.
 - CAPTCHA, login, age challenges and paywalls stop with `NEEDS_HUMAN`.
 - Downloads limited to 10 MiB and PDF/CSV/JSON/TXT/DOCX/XLSX. Tor egress is not implemented; onion URLs are refused.
 - Page content is untrusted; injection signals are returned with evidence.
+- Provider CDP endpoints are bearer capabilities and must not be logged or exposed to untrusted clients.
 
-## Evidence
-Open and read return requested/final URL, timestamp, rendered-DOM SHA-256, title, shared DL01–DL12 layer classification, and injection signals. HTTP status, response content type and redirect chain are not exposed by this WebDriver adapter; they remain null/empty and `metadata_note` explains why. Redirect history is not inferred from requested/final URL.
+## Evidence limitations
+
+Open/read return requested/final URL, timestamp, rendered-DOM SHA-256, title, DL01–DL12 layer and injection signals. HTTP status, response content type and redirect chain are not exposed by the WebDriver adapter and remain null/empty; `metadata_note` explains this. Redirect history is not inferred from requested/final URL.
 
 ## CI
-The Browser Core workflow type-checks (TypeScript 5.9.3) and runs fake-WebDriver tests. It does not install Firefox or perform a real-browser smoke test.
+
+Browser Core CI type-checks and runs fake-WebDriver and provider-adapter tests. It does not launch real provider sessions, install Firefox, or perform a real-browser smoke test. Hosted OAuth, remote gateway, network egress, live-provider and cross-host acceptance remain pending.

@@ -76,7 +76,7 @@ try {
 		const run = await call(owner, "start_run", { task: "integration quota task" });
 		assert.equal(run.ok, true, JSON.stringify(run));
 		const id = run.result.run_id;
-		for (let i = 0; i < 5; i++) assert.equal((await call(owner, "reenter", { run_id: id, target_stage: "QUERY", trigger: "t", reason: "r" })).ok, true);
+		for (let i = 0; i < 5; i++) assert.equal((await call(owner, "reenter", { run_id: id, target_stage: "QUERY", trigger: `quota-${i}`, reason: `quota accounting attempt ${i}` })).ok, true);
 		const refused = await call(owner, "reenter", { run_id: id, target_stage: "QUERY", trigger: "t", reason: "r" });
 		assert.equal(refused.code, "QUOTA_EXCEEDED");
 		const usage = await call(owner, "usage");
