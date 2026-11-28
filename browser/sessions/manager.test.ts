@@ -6,19 +6,32 @@ import { BrowserSessionManager, type BrowserSessionRecord, type BrowserSessionSt
 
 class MemoryStore implements BrowserSessionStore {
   records = new Map<string, BrowserSessionRecord>();
+  reservations = new Map<string, number>();
   async get(handle: string) { return this.records.get(handle); }
   async listByOwner(ownerId: string) { return [...this.records.values()].filter((r) => r.ownerId === ownerId); }
   async put(record: BrowserSessionRecord) { this.records.set(record.handle, record); }
   async delete(handle: string) { this.records.delete(handle); }
+  async reserve(ownerId: string, maximum: number) {
+    const pending=this.reservations.get(ownerId) ?? 0;
+    const active=[...this.records.values()].filter(r=>r.ownerId===ownerId).length;
+    if(active+pending>=maximum)return false;
+    this.reservations.set(ownerId,pending+1);return true;
+  }
+  async releaseReservation(ownerId: string) {
+    const next=(this.reservations.get(ownerId)??0)-1;
+    if(next>0)this.reservations.set(ownerId,next);else this.reservations.delete(ownerId);
+  }
 }
 
-function makeProvider(): BrowserProvider {
+function makeProvider(delayMs=0): BrowserProvider {
   const sessions = new Map<string, ProviderSession>();
+  let sequence=0;
   return {
     id: "steel" as BrowserProviderId,
     health: () => ({provider:"steel",configured:true,status:"configured"}),
     createSession: async () => {
-      const session={provider:"steel" as const,id:"remote-1",status:"running" as const,cdpUrl:"wss://provider.example/cdp"};
+      if(delayMs)await new Promise(resolve=>setTimeout(resolve,delayMs));
+      const session={provider:"steel" as const,id:"remote-"+(++sequence),status:"running" as const,cdpUrl:"wss://provider.example/cdp"};
       sessions.set(session.id,session);return session;
     },
     getSession: async (id) => {
@@ -52,16 +65,25 @@ test("session creation is denied at per-owner concurrency limit", async () => {
   assert.equal(store.records.size,1);
 });
 
-test("ownership storage failure triggers provider session cleanup", async () => {
-  let stopped=false;
-  const provider:BrowserProvider={
-    ...makeProvider(),
-    stopSession:async()=>{stopped=true;},
-  };
+test("concurrent creates cannot race past the per-owner limit", async () => {
+  const store=new MemoryStore();
+  const manager=new BrowserSessionManager(new ProviderRouter([makeProvider(15)]),store,1);
+  const results=await Promise.allSettled([manager.create("owner-a"),manager.create("owner-a")]);
+  assert.equal(results.filter(r=>r.status==="fulfilled").length,1);
+  assert.equal(results.filter(r=>r.status==="rejected").length,1);
+  assert.equal(store.records.size,1);
+  assert.equal(store.reservations.size,0);
+});
+
+test("ownership storage failure triggers provider session cleanup and releases reservation", async () => {
+  let stopped=false,released=false;
+  const provider:BrowserProvider={...makeProvider(),stopSession:async()=>{stopped=true;}};
   const store:BrowserSessionStore={
     get:async()=>undefined,listByOwner:async()=>[],put:async()=>{throw new Error("storage down");},delete:async()=>{},
+    reserve:async()=>true,releaseReservation:async()=>{released=true;}
   };
   const manager=new BrowserSessionManager(new ProviderRouter([provider]),store);
   await assert.rejects(()=>manager.create("owner-a"),/persist session ownership/);
   assert.equal(stopped,true);
+  assert.equal(released,true);
 });
