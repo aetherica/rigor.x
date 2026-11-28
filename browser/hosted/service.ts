@@ -58,13 +58,15 @@ export async function createHostedBrowserService(options:{
   const dataDir=resolve(options.dataDir);
   await mkdir(dataDir,{recursive:true,mode:0o700});
   const env=options.env;
+  const order=providerOrder(env.AETHERICA_BROWSER_PROVIDER_ORDER);
+  const maxSessions=ownerLimit(env.AETHERICA_BROWSER_MAX_SESSIONS_PER_OWNER);
   const providers=new ProviderRouter([
     new SteelProvider({apiKey:env.STEEL_API_KEY}),
     new HyperbrowserProvider({apiKey:env.HYPERBROWSER_API_KEY}),
     new BrowserbaseProvider({apiKey:env.BROWSERBASE_API_KEY,projectId:env.BROWSERBASE_PROJECT_ID}),
-  ],{order:providerOrder(env.AETHERICA_BROWSER_PROVIDER_ORDER)});
+  ],{order});
   const store=new SqliteBrowserSessionStore(join(dataDir,"browser-sessions.sqlite"));
-  const sessions=new BrowserSessionManager(providers,store,ownerLimit(env.AETHERICA_BROWSER_MAX_SESSIONS_PER_OWNER));
+  const sessions=new BrowserSessionManager(providers,store,maxSessions);
   const runtime=new BrowserRuntime(sessions,options.engineFactory);
   const registry=new BrowserToolRegistry(runtime);
   return {registry,runtime,store,providers,close:()=>store.close()};
