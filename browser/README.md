@@ -17,12 +17,14 @@ Architecture and feasibility: [Cross-AI Browser MCP](../engineering/ai-system/25
 - Provider-independent session contract and transient/capacity fallback router.
 - Playwright CDP engine plus owner-scoped runtime for hosted browser actions.
 - Hosted MCP tool registry with create, navigate, read, scrape, write/type, click, confirmed submit, screenshot, fetch and close.
+- Stateless Streamable HTTP MCP transport with initialize, tools/list and tools/call, protected by an injected resource/audience-aware token-verifier contract.
 - Durable SQLite browser-session metadata store for a single Node process, including atomic per-owner session-slot reservations.
+- Hosted service factory composes providers, storage, runtime and registry without launching a provider session.
 - Provider/runtime/session/registry tests run in Browser Core CI.
 
 ## Hosted runtime status
 
-The engine, provider adapters, runtime and tool registry are implementation components. They are **not yet mounted into a separate authenticated remote MCP endpoint**. The SQLite session store is implemented but is not yet wired into a deployed service. Browser MCP still requires its own OAuth resource/audience, Streamable HTTP transport, Node runtime integration, network-level egress controls and host acceptance tests.
+The engine, provider adapters, runtime and tool registry are implementation components. They are **not yet mounted into a separate authenticated remote MCP endpoint**. The SQLite session store is implemented but is not yet wired into a deployed service. Browser MCP still requires its own concrete OAuth issuer/resource/audience and token verifier, Node HTTP runtime mounting, network-level egress controls and host acceptance tests.
 
 The existing RIGOR-X `/mcp` endpoint is a separate service. Browser MCP must not accept or reuse RIGOR-X access tokens as Browser MCP credentials.
 
