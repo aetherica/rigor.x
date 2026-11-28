@@ -53,8 +53,9 @@ export class BrowserMcpHttpTransport {
       throw new Error("Browser MCP resource URI must use HTTPS.");
     }
     if(resource.username||resource.password||resource.search||resource.hash) throw new Error("Browser MCP resource URI must not contain credentials, query or fragment.");
+    if(resource.pathname.replace(/\/$/,"")!=="/browser-mcp") throw new Error("Browser MCP resource URI path must be /browser-mcp.");
     this.registry=options.registry;
-    this.resourceUri=resource.origin+resource.pathname.replace(/\/$/,"");
+    this.resourceUri=resource.origin+"/browser-mcp";
     this.verifyToken=options.verifyToken;
   }
 
@@ -65,7 +66,7 @@ export class BrowserMcpHttpTransport {
     if(request.method!=="POST") return new Response("Method not allowed",{status:405,headers:{allow:"POST"}});
     const contentType=request.headers.get("content-type")?.split(";")[0]?.trim().toLowerCase();
     if(contentType!=="application/json") return json({error:"Content-Type must be application/json."},415);
-    const accept=request.headers.get("accept")??"";
+    const accept=(request.headers.get("accept")??"").toLowerCase();
     if(!accept.includes("application/json") || !accept.includes("text/event-stream")) return json({error:"Accept must include both application/json and text/event-stream."},406);
 
     const auth=request.headers.get("authorization")??"";
