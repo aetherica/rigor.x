@@ -11,8 +11,7 @@ test("SQLite store persists owner-scoped sessions across reopen",async()=>{
   try {
     const first=new SqliteBrowserSessionStore(path);
     assert.equal(await first.reserve("owner-a",1),true);
-    await first.put(record);
-    await first.releaseReservation("owner-a");
+    await first.put(record); // atomically consumes the pending reservation
     assert.equal(await first.reserve("owner-a",1),false);
     first.close();
     const second=new SqliteBrowserSessionStore(path);
