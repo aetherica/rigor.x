@@ -70,3 +70,15 @@ test("transport refuses a resource path other than the dedicated browser audienc
     verifyToken:async()=>null
   }),/path must be \/browser-mcp/);
 });
+
+test("transport does not expose raw internal exception messages or local paths",async()=>{
+  const unsafe=new BrowserMcpHttpTransport({
+    registry:{list:()=>[],call:async()=>{throw new Error("ENOENT /tmp/aetherica-browser/private-cdp-token");}} as any,
+    resourceUri:resource,
+    verifyToken:async(_token,audience)=>({ownerId:"verified-owner",audience,expiresAt:now+60})
+  });
+  const response=await unsafe.fetch(request("POST",{jsonrpc:"2.0",id:6,method:"tools/call",params:{name:"aetherica_browser_read",arguments:{}}}));
+  const body=await response.text();
+  assert.equal(body.includes("/tmp/aetherica-browser"),false);
+  assert.match(body,/Browser action failed/);
+});
