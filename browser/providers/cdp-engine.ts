@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { chromium, type Browser, type Page } from "playwright-core";
 import { guardClick, guardDownload, guardSubmit, guardType, guardTypedText, guardUrl, challengeResult } from "../core/safety.ts";
 import { decideRobots, parseRobots, robotsFetchStatusAllowed, type RobotsRule } from "../core/robots.ts";
-import { MAX_PAGES_PER_PREFIX, MAX_IDLE_MS, MIN_SITE_DELAY_MS, validateUrl } from "../core/policy.ts";
+import { MAX_PAGES_PER_PREFIX, MIN_SITE_DELAY_MS, validateUrl } from "../core/policy.ts";
 import type { BrowserEngine, BrowserResult, EvidencePacket, OpenOptions, ReadOptions, ClickOptions, TypeOptions, SubmitOptions, ScreenshotOptions, DownloadOptions, DiscoveryLayer } from "../core/types.ts";
 
 const SOURCE_CLASSIFIER_PATH = "../../deploy/cloudflare-ts/src/sources.ts";
@@ -100,10 +100,8 @@ export class CdpBrowserEngine implements BrowserEngine {
   }
 
   private async activePage(): Promise<Page> {
-    if (Date.now() - this.lastUsed > MAX_IDLE_MS) {
-      await this.close();
-      throw new Error("Browser session expired after idle timeout; create a new session.");
-    }
+    // Provider session expiry is authoritative; local engine disconnection alone must
+    // not leave an owner-scoped session handle permanently unusable.
     return this.connect();
   }
 
