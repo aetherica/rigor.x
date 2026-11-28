@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
@@ -227,7 +227,7 @@ export class CdpBrowserEngine implements BrowserEngine {
   async screenshot(options: ScreenshotOptions = {}): Promise<BrowserResult<{path:string}>> {
     const page = await this.activePage();
     await mkdir(OUTPUT_DIR,{recursive:true});
-    const path = join(OUTPUT_DIR,"screenshot-" + Date.now() + ".png");
+    const path = join(OUTPUT_DIR,"screenshot-" + randomUUID() + ".png");
     await page.screenshot({path,fullPage:options.full_page ?? false,animations:"disabled"});
     return {status:"OK",data:{path}};
   }
