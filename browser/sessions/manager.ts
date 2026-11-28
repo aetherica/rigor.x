@@ -49,7 +49,7 @@ export class BrowserSessionManager {
 
     let reservationHeld = true;
     try {
-      routed = await this.router.createSession(options);
+      const routed = await this.router.createSession(options);
       const record: BrowserSessionRecord = {
         handle: randomUUID(),
         ownerId,
