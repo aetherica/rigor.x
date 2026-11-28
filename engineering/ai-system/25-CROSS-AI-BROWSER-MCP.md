@@ -111,7 +111,7 @@ Reuse Browser Core policies and add runtime network egress controls:
 
 ### B1 — Hosted runtime spike
 - Cloudflare docs (checked 2026-11-28) state Browser Run is available on Workers Free and Workers Paid. Workers Free currently has 10 browser minutes/day, 3 concurrent browser sessions, 1 new browser every 20 seconds, and a 60-second browser timeout. Paid includes 10 browser hours/month, then $0.09/hour; concurrent sessions have a separate charge after the included limit. See [pricing](https://developers.cloudflare.com/browser-run/pricing/) and [limits](https://developers.cloudflare.com/browser-run/limits/).
-- Confirm the owner's actual account plan and usage/remaining allowance via account dashboard/API before runtime testing; documentation entitlement is not proof of account status.
+- Read-only Cloudflare account check on 2026-11-28: Browser Run session-list API is accessible and currently returns an empty session list. This confirms API access, not plan tier or remaining allowance. Confirm actual account plan and usage/remaining allowance before runtime testing.
 - Use a read-only Live View URL or the documented session API to prove visibility; do not create sessions or consume allowance before owner approval.
 - If account free quota is exhausted, stop and compare free/low-cost alternatives; do not enable billing.
 
