@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import type { BrowserEngine, BrowserResult } from "../core/types.ts";
-import type { BrowserProvider, BrowserSession, BrowserSessionOptions, BrowserProviderId, ProviderSession } from "./contract.ts";
+import type { BrowserProvider, BrowserProviderId, ProviderSession } from "./contract.ts";
 import { ProviderRouter } from "../routing/provider-router.ts";
 import { BrowserSessionManager, type BrowserSessionRecord, type BrowserSessionStore } from "../sessions/manager.ts";
 import { BrowserRuntime } from "./runtime.ts";
