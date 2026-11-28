@@ -115,6 +115,16 @@ Reuse Browser Core policies and add runtime network egress controls:
 - Use a read-only Live View URL or the documented session API to prove visibility; do not create sessions or consume allowance before owner approval.
 - If account free quota is exhausted, stop and compare free/low-cost alternatives; do not enable billing.
 
+### B1.1 — Multi-provider session adapters (implementation committed; live credentials not tested)
+
+- Added the provider-independent contract in `browser/providers/contract.ts`.
+- Added Steel, Hyperbrowser and Browserbase session lifecycle adapters. Each adapter creates, retrieves and stops/releases a provider session and normalizes the returned CDP endpoint.
+- Added a provider router with deterministic preference order (Steel → Hyperbrowser → Browserbase). It only falls back for known transient/capacity HTTP failures (408, 425, 429, 5xx); authentication/validation errors fail closed.
+- Added mocked HTTP adapter tests and included them in Browser Core CI.
+- Provider health currently checks whether required environment variables exist. It does not verify live authentication, account entitlements, credits, concurrency or remaining quota.
+- No real provider session was created during this implementation. The adapters are not yet wired into the MCP server and do not constitute a hosted service.
+- GitHub Actions secrets must be explicitly mapped into workflow environments; they are not automatically injected into Render or Cloudflare runtime environments.
+
 ### B2 — MCP Gateway and session API
 - Implement create/open/state/read/screenshot/stop/close.
 - Add OAuth resource binding and owner isolation.
