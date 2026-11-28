@@ -27,7 +27,7 @@ export abstract class HttpProvider {
         redirect: "error",
       });
     } catch {
-      throw new BrowserProviderError(this.providerId, "Provider request failed or timed out.");
+      throw new BrowserProviderError(this.providerId, "Provider request failed or timed out.", 503);
     }
 
     if (!response.ok) {
